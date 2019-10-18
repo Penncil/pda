@@ -1,0 +1,15 @@
+Package: ODACO
+Type: Package
+Title:  One-shot Distributed Algorithm of COx regression
+Version: 2.0
+Date: 2019-08-31
+Author:  Chongliang Luo, Rui Duan, Yong Chen
+Maintainer: Chongliang Luo <chongliang.luo@pennmedicine.upenn.edu>
+Description: Fit a  Distributed Cox regression that only requires one-shot communication between the local and remote sites, by optimizing Jordan's surrogate log-likelihood (Jordan2018JASA) function.
+              v2.0: Now allow heterogenous baseline hazard among sites
+License: GPL (>= 2)
+Imports: Rcpp (>= 0.12.19), stats
+Suggests: survival
+LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 6.1.1
+Encoding: UTF-8
