@@ -8,11 +8,28 @@
 
 ## broadcast: upload/download shared info to/from the cloud folder
 ## write to csv or excel files for better observation on the cloud?
-pda_broadcast <- function(obj,                    # list: object to be broadcasted
+
+
+#' @useDynLib PDA
+#' @title Function to communicate files (upload/download summary statistics to/from the cloud)
+#' 
+#' @usage pda_broadcast(obj, obj_type=c('initialize', 'summary_stat', 'derivatives', 'surrogate_est'), file_name = NULL, upload=TRUE, site_i, control)
+#' @author Chongliang Luo, Steven Vitale
+#' 
+#' @param obj R object to be broadcasted
+#' @param obj_type object type to be communicated, can be 'initialize', 'summary_stat', 'derivatives', 'surrogate_est' depends on which PDA step
+#' @param file_name file name to be communicated
+#' @param upload   Logical, TRUE/FALSE = upload/download summary statistics to/from the cloud
+#' @param site_i name of site on the cloud, only for upload==FALSE (i.e. download from cloud)
+#' @param control PDA control
+#'
+#' @return  
+#' @export
+pda_broadcast <- function(obj,                    
                           obj_type=c('initialize', 'summary_stat', 'derivatives', 'surrogate_est'),
                           file_name = NULL,
                           upload=TRUE,
-                          site_i,                 # name of site on the cloud, only for upload==FALSE (i.e. download from cloud)
+                          site_i,                 
                           control){
   
   if(is.null(file_name)){
@@ -36,9 +53,18 @@ pda_broadcast <- function(obj,                    # list: object to be broadcast
 }
 
 
-## step-1: initialize, such as (bhat, Vhat) from each site
-## output: list(T_i = T_i, bhat_i = fit_i$coef, Vhat_i = summary(fit_i)$coef[,2]^2, site=control$mysite, site_size= nrow(mydata))
-pda_initialize <- function(mydata,          # dataframe including: time, status and X (numeric)
+#' @useDynLib PDA
+#' @title PDA initialize
+#' 
+#' @usage pda_initialize <- function(mydata, broadcast=TRUE, control=pda_control)
+#' @author Chongliang Luo, Steven Vitale
+#' 
+#' @param mydata local data in data frame
+#' @param broadcast Logical, broadcast to the cloud? 
+#' @param control PDA control
+#'
+#' @return  list(T_i = T_i, bhat_i = fit_i$coef, Vhat_i = summary(fit_i)$coef[,2]^2, site=control$mysite, site_size= nrow(mydata))
+pda_initialize <- function(mydata,          
                            broadcast=TRUE,
                            control=pda_control){
   # data sanity check ...
@@ -99,17 +125,27 @@ pda_initialize <- function(mydata,          # dataframe including: time, status 
 }
 
 
-
-## step-2: calculate and broadcast 1st and 2nd order derivative at initial bbar
-##        for ODAC, this requires 2 substeps: 1st calculate summary stats (U, W, Z), 
-##        2nd calculate derivatives (logL_D1, logL_D2)
-## output: list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(mydata),  
-##              U=U, W=W, Z=Z,
-##              logL_D1=logL_D1, logL_D2=logL_D2)
+#' @useDynLib PDA
+#' @title PDA derivatives
+#' 
+#' @usage pda_derivatives(bbar, mydata, broadcast=TRUE, derivatives_ODAC_substep='first', control=pda_control)
+#' @author Chongliang Luo, Steven Vitale
+#' 
+#' @param bbar  initial estimate
+#' @param mydata local data in data frame
+#' @param broadcast Logical, broadcast to the cloud? 
+#' @param derivatives_ODAC_substep character, only for Cox regression, 'first' / 'second' indicate which substep of ODAC   
+#' @param control PDA control
+#' 
+#' @details ONly for ODAC: step-2: calculate and broadcast 1st and 2nd order derivative at initial bbar
+#'        for ODAC, this requires 2 substeps: 1st calculate summary stats (U, W, Z), 
+#'        2nd calculate derivatives (logL_D1, logL_D2)
+#'
+#' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(mydata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 pda_derivatives <- function(bbar = NULL,
                              mydata, 
                              broadcast = TRUE,
-                             derivatives_ODAC_substep='first',  # 'second'
+                             derivatives_ODAC_substep='first',   
                              control = pda_control){
   # data sanity check ...
   
@@ -328,12 +364,23 @@ pda_derivatives <- function(bbar = NULL,
 }
 
 
-
-## step-3: construct and solve surrogate logL at the master/lead site
-## output: list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(mydata))
+#' @useDynLib PDA
+#' @title PDA surrogate estimation
+#' 
+#' @usage pda_surrogate_est(bbar, mydata, broadcast=TRUE, control=pda_control)
+#' @author Chongliang Luo, Steven Vitale
+#' 
+#' @param bbar  initial estimate
+#' @param mydata local data in data frame
+#' @param broadcast Logical, broadcast to the cloud? 
+#' @param control PDA control
+#' 
+#' @details step-3: construct and solve surrogate logL at the master/lead site
+#'
+#' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(mydata))
 pda_surrogate_est <- function(bbar = NULL,
                               mydata, 
-                              broadcast = FALSE,       # broadcasting is optional for this step
+                              broadcast = FALSE,        
                               control = pda_control){
   # data sanity check ...
   
@@ -509,8 +556,17 @@ pda_surrogate_est <- function(bbar = NULL,
 
 
 
-
-## step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
+#' @useDynLib PDA
+#' @title PDA synthesize surrogate estimates from all sites, optional
+#' 
+#' @usage pda_synthesize(control=pda_control)
+#' @author Chongliang Luo, Steven Vitale
+#' 
+#' @param control PDA control
+#' 
+#' @details Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
+#'
+#' @return  list(btilde=btilde,  Vtilde=Vtilde)
 pda_synthesize <- function(control = pda_control){
   
   px <- length(control$risk_factor)
@@ -543,43 +599,27 @@ pda_synthesize <- function(control = pda_control){
 
 
 
-pda_main <- function(mydata = mydata,
-                     step = 1,                       # c('initialize', 'derivatives', 'surrogate_est', 'synthesize'),
-                     derivatives_ODAC_substep=NULL,  # c('first', 'second'),  only for control$model=='ODAC' and step==2
-                     control = pda_control){
-  if(step==1 | step=='initialize'){
-    output <- pda_initialize(mydata, control=control)
-    print(output$bhat_i)
-    print(output$site)
-    print(output$site_size)
-  } 
-  
-  # if(step==2 | step=='summary_stat'){
-  #   output <- pda_summary_stat(bbar=NULL, mydata, control=control)
-  #   print(output$b_meta) 
-  # }
-  
-  if(step==2 | step=='derivatives') 
-    output <- pda_derivatives(bbar=NULL, mydata, derivatives_ODAC_substep=derivatives_ODAC_substep, control=control)
-    
-  
-  if(step==3 | step=='surrogate_est'){
-    output <- pda_surrogate_est(bbar=NULL, mydata, control=control)
-    cat('\n', output$btilde)
-    return(output)
-  }
-  
-  if(step==4 | step=='synthesize'){
-    output <- pda_synthesize(control=control)
-    print(output$btilde)
-    return(output)
-  }
-  
-  # return(output)
-}
-
-
-
+#' @useDynLib PDA
+#' @import stats
+#' @import Rcpp
+#' @import survival 
+#' @title PDA: Privacy-preserving Distributed Algorithm
+#' 
+#' @description  Fit Privacy-preserving Distributed Algorithms for linear, logistic, 
+#'                Poisson and Cox PH regression with possible heterogeneous data across sites.
+#' @usage pda(data = mydata, mysite = NULL, mycloud = NULL)
+#' @author Chongliang Luo, Steven Vitale, Jiayi Tong, Rui Duan, Yong Chen
+#' 
+#' @param mydata  Local IPD data in data frame, should include at least one column for the outcome and one column for the covariates 
+#' @param mysite Character, site name as decided by all the sites when initialize the collaboration
+#' @param mycloud Character, dir for the cloud folder 
+#'
+#'          
+#' @references Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018).
+#' @examples
+#'  ## Steve can you make an ODAl example here as we tested?
+#' 
+#' @export
 pda <- function(data = mydata,
                 mysite = NULL,
                 mycloud = NULL){
@@ -639,7 +679,6 @@ pda <- function(data = mydata,
   if(step==2 | step=='derivatives') 
     output <- pda_derivatives(bbar=pda_control$beta_init, mydata, derivatives_ODAC_substep=derivatives_ODAC_substep, control=pda_control)
   
-  
   if(step==3 | step=='surrogate_est'){
     output <- pda_surrogate_est(bbar=pda_control$beta_init, mydata, control=pda_control, broadcast = T)
     cat('\n', output$btilde)
@@ -652,15 +691,19 @@ pda <- function(data = mydata,
     output <- pda_synthesize(control=pda_control)
     print(output$btilde)
     return(output)
-  }
-  
-  # return(output)
+  } 
 }
 
 
-
+#' update the PDA control, used by the master site
+#' @usage pda_control_update <- function(mycloud=NULL, control_update=TRUE)
+#' 
+#' @param mycloud  Character, dir for the cloud folder 
+#' @param control_update Logical, update the PDA control?
+#' 
+#' @export
 pda_control_update <- function(mycloud=NULL, 
-                                control_update=TRUE){      # update pda_control?
+                                control_update=TRUE){      
   if(is.null(mycloud)) 
     stop('please specify the full directory of the public cloud... \n')
   
@@ -724,3 +767,46 @@ return(res)
 
 }
  
+
+
+
+
+
+
+
+################################# backup  ################################## 
+
+pda_main <- function(mydata = mydata,
+                     step = 1,                       # c('initialize', 'derivatives', 'surrogate_est', 'synthesize'),
+                     derivatives_ODAC_substep=NULL,  # c('first', 'second'),  only for control$model=='ODAC' and step==2
+                     control = pda_control){
+  if(step==1 | step=='initialize'){
+    output <- pda_initialize(mydata, control=control)
+    print(output$bhat_i)
+    print(output$site)
+    print(output$site_size)
+  } 
+  
+  # if(step==2 | step=='summary_stat'){
+  #   output <- pda_summary_stat(bbar=NULL, mydata, control=control)
+  #   print(output$b_meta) 
+  # }
+  
+  if(step==2 | step=='derivatives') 
+    output <- pda_derivatives(bbar=NULL, mydata, derivatives_ODAC_substep=derivatives_ODAC_substep, control=control)
+  
+  
+  if(step==3 | step=='surrogate_est'){
+    output <- pda_surrogate_est(bbar=NULL, mydata, control=control)
+    cat('\n', output$btilde)
+    return(output)
+  }
+  
+  if(step==4 | step=='synthesize'){
+    output <- pda_synthesize(control=control)
+    print(output$btilde)
+    return(output)
+  }
+  
+  # return(output)
+}
