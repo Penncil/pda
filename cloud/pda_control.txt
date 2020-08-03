@@ -1,0 +1,49 @@
+$project_name
+[1] "Lung cancer study"
+
+$step
+[1] 4
+
+$all_site
+[1] "CL" "SV" "JT"
+
+$common_data_model
+[1] "OMOP"
+
+$formula
+status ~ age + sex
+
+$family
+[1] "binomial"
+
+$heterogeneity
+[1] FALSE
+
+$PDA_model
+[1] "ODAL"
+
+$master_site
+[1] "CL"
+
+$last_update
+[1] "2020-07-29 00:36:23"
+
+$upload_date
+[1] "2020-08-15"
+
+$optim_maxit
+[1] 100
+
+$reference
+[1] "https://academic.oup.com/jamia/article-abstract/27/3/376/5670808"
+
+$cloud_website
+[1] "www.dropbox.com"
+
+$mycloud
+[1] "/Users/chl18019/Dropbox/Lung_ODAL_test/cloud/"
+
+$beta_init
+`(Intercept)`           age           sex 
+  -0.26949141    0.02749399   -1.02141386 
+
