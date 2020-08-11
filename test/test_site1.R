@@ -16,6 +16,7 @@ lung2 <- data.table(lung2)
 write.csv(lung2[inst=='site1', -'inst'], file='data/Lung_site1.csv', row.names = F)
 write.csv(lung2[inst=='site2', -'inst'], file='data/Lung_site2.csv', row.names = F)
 write.csv(lung2[inst=='site3', -'inst'], file='data/Lung_site3.csv', row.names = F)
+write.csv(lung2[,-'inst'], file='data/Lung.csv')
 ## research project setting, decided by all collaborators before analysis 
 pda_control <- list(project_name = 'Lung cancer study',
                     step = 1,      # current step of iteration. updated by the master site  
@@ -38,34 +39,20 @@ mysite <- 'site1'    # provide your site abbre
 ## Rcpp::sourceCpp('../../PDA/src/rcpp_coxph.cpp')
 source('R/PDA_engine.R')
 pda_put(pda_control,'pda_control',mysite)
-
 # pda_control = readRDS('pda_control.RDS')
 mydata = fread('data/Lung_site1.csv')
 pda(data = mydata, mysite='site1')
-
 # -0.46925660    0.03174699   -1.52156716
 ## waiting for other sites to initialize
 ## master site update pda_control by adding beta_init (meta estimate), and step=2
 pda_control_update()
-
 ## derivatives
-mydata = fread('data/Lung_site1.csv')
 pda(data = mydata, mysite='site1')
-
 ## waiting for other sites to upload derivatives
-
-
 ## master site update pda_control$step = 3
 pda_control_update()
-
-
-
 ## surrogate_est
-mydata = fread('data/site1/Lung_site1.csv')
 b_surr = pda(data = mydata, mysite='site1')
-
-
- 
 ## compare
 lung2 = fread('data/Lung.csv')
 fit.pool <- glm(status ~ age + sex, data = lung2, family = "binomial")
@@ -73,23 +60,8 @@ fit.pool$coef
 rbind(pooled= fit.pool$coef,
       meta = pda_control$beta_init,
       odal = b_surr$btilde) 
-
-
-
 ## (optional) 
 ## master site update pda_control$step = 4 for further synthesize 
 pda_control_update()
-
-setwd('../site1')
-# mydata = fread('Lung_site3.csv')
 b_surr_syn = pda(data = mydata, mysite='site1')
-
 c(b_surr_syn$btilde)
-
-
-
-
-
-
-
- 

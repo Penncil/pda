@@ -35,7 +35,7 @@ pda_broadcast <- function(obj,
     site = ifelse(upload==TRUE, control$mysite, site_i)
     file_name = paste0(site, '_', obj_type)
   }
-  ff <- paste0('./data/', file_name, '.rds')
+  ff <- paste0('./tmp/', file_name, '.rds')
   if(upload==TRUE){
     cat('The following summary statistics have been uploaded to the public cloud: \n')
     print(obj)
@@ -66,7 +66,7 @@ pda_put <- function(obj,name,control){
     username<-Sys.getenv('PDA_USER')
     dav<-Sys.getenv('PDA_URI')
     file_name <- paste0(name, '.RDS')
-    file_path <- paste0('data/', file_name)
+    file_path <- paste0('tmp/', file_name)
     saveRDS(obj,file_path)
     # the file to upload
     # create the url target of the file
@@ -93,7 +93,7 @@ pda_get <- function(name){
     username<-Sys.getenv('PDA_USER')
     dav<-Sys.getenv('PDA_URI')
     file_name <- paste0(name, '.RDS')
-    file_path <- paste0('data/', file_name)
+    file_path <- paste0('tmp/', file_name)
     # the file to upload
     # create the url target of the file
     url <- file.path(dav, file_name)
