@@ -1,5 +1,4 @@
-
-
+library('httr')
 # https://style.tidyverse.org/functions.html#naming
 
 # require(survival)
@@ -34,23 +33,77 @@ pda_broadcast <- function(obj,
   
   if(is.null(file_name)){
     site = ifelse(upload==TRUE, control$mysite, site_i)
-    file_name = paste0(site, '/', site, '_', obj_type)
+    file_name = paste0(site, '_', obj_type)
   }
-  # ff <- paste0(control$cloud, '/', control$outcome, '_', control$model, '_', 
-  #              ifelse(upload==TRUE, control$mysite, site_i), '_', obj_type, '.rds')
-  ff <- paste0(control$mycloud, file_name, '.rds')
+  ff <- paste0('./data/', file_name, '.rds')
   if(upload==TRUE){
     cat('The following summary statistics have been uploaded to the public cloud: \n')
     print(obj)
-    saveRDS(obj, file=ff)
+    pda_put(obj,file_name)
   } else{
-    res = readRDS(ff)
+    res = pda_get(file_name)
     cat('The following summary statistics have been read from the public cloud: \n')
     print(res)
     return(res)
   }
     
 }
+
+#' @useDynLib PDA
+#' @title Function to communicate files (upload/download summary statistics to/from the cloud)
+#' 
+#' @usage pda_put(obj,path,control)
+#' @author Chongliang Luo, Steven Vitale
+#' 
+#' @param obj R object to upload
+#' @param name of file
+#' @param control PDA control
+#'
+#' @return  
+#' @export
+pda_put <- function(obj,name,control){
+    password<-Sys.getenv('PDA_SECRET')
+    username<-Sys.getenv('PDA_USER')
+    dav<-Sys.getenv('PDA_URI')
+    file_name <- paste0(name, '.RDS')
+    file_path <- paste0('data/', file_name)
+    saveRDS(obj,file_path)
+    # the file to upload
+    # create the url target of the file
+    url <- file.path(dav, file_name)
+    # webdav uses a PUT request to send a file to Nextcloud
+    PUT(url, authenticate(username, password, 'digest'), body = upload_file(file_path))
+}
+
+
+#' @useDynLib PDA
+#' @title Function to communicate files (upload/download summary statistics to/from the cloud)
+#' 
+#' @usage pda_get(obj,path)
+#' @author Chongliang Luo, Steven Vitale
+#' 
+#' @param obj R object to upload
+#' @param name of file
+#' @param control PDA control
+#'
+#' @return  
+#' @export
+pda_get <- function(name){
+    password<-Sys.getenv('PDA_SECRET')
+    username<-Sys.getenv('PDA_USER')
+    dav<-Sys.getenv('PDA_URI')
+    file_name <- paste0(name, '.RDS')
+    file_path <- paste0('data/', file_name)
+    # the file to upload
+    # create the url target of the file
+    url <- file.path(dav, file_name)
+    # webdav uses a PUT request to send a file to Nextcloud
+    res<-GET(url, authenticate(username, password, 'digest'),write_disk(file_path, overwrite = TRUE))
+    obj<-readRDS(file_path)
+    return(obj) 
+}
+
+    
 
 
 #' @useDynLib PDA
@@ -607,12 +660,11 @@ pda_synthesize <- function(control = pda_control){
 #' 
 #' @description  Fit Privacy-preserving Distributed Algorithms for linear, logistic, 
 #'                Poisson and Cox PH regression with possible heterogeneous data across sites.
-#' @usage pda(data = mydata, mysite = NULL, mycloud = NULL)
+#' @usage pda(data = mydata, mysite = NULL)
 #' @author Chongliang Luo, Steven Vitale, Jiayi Tong, Rui Duan, Yong Chen
 #' 
 #' @param mydata  Local IPD data in data frame, should include at least one column for the outcome and one column for the covariates 
 #' @param mysite Character, site name as decided by all the sites when initialize the collaboration
-#' @param mycloud Character, dir for the cloud folder 
 #'
 #'          
 #' @references Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018).
@@ -621,23 +673,17 @@ pda_synthesize <- function(control = pda_control){
 #' 
 #' @export
 pda <- function(data = mydata,
-                mysite = NULL,
-                mycloud = NULL){
+                mysite = NULL){
 
-  if(is.null(mycloud)) 
-    stop('please specify the full directory of the public cloud... \n')
-  
-  pda_control = readRDS(paste0(mycloud, 'pda_control.RDS'))
+  pda_control = pda_get('pda_control')
   cat('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/PDA): \n')
   print(pda_control)
   # cat('your local analysis directory = ', mysite, '\n')
-  cat('your public cloud directory = ', mycloud, '\n')
   if(is.null(mysite)) 
     stop(paste0('please specify your site name, one of ', paste(pda_control$all_site, collapse = ',')))
   else 
     cat('your site name = ', mysite, '\n')
   pda_control$mysite = mysite
-  pda_control$mycloud = mycloud
   pda_control$model = pda_control$PDA_model
   
   n = nrow(data)
@@ -696,20 +742,13 @@ pda <- function(data = mydata,
 
 
 #' update the PDA control, used by the master site
-#' @usage pda_control_update <- function(mycloud=NULL, control_update=TRUE)
+#' @usage pda_control_update <- function(control_update=TRUE)
 #' 
-#' @param mycloud  Character, dir for the cloud folder 
 #' @param control_update Logical, update the PDA control?
 #' 
 #' @export
-pda_control_update <- function(mycloud=NULL, 
-                                control_update=TRUE){      
-  if(is.null(mycloud)) 
-    stop('please specify the full directory of the public cloud... \n')
-  
-  pda_control = readRDS(paste0(mycloud, 'pda_control.RDS'))
-  pda_control$mycloud = mycloud
-  
+pda_control_update <- function(control_update=TRUE){
+  pda_control = pda_get('pda_control')
   if(pda_control$step==1){
     init_i <- pda_broadcast(obj_type= 'initialize',
                             upload=FALSE,
@@ -758,7 +797,7 @@ if(control_update==T){
   cat('pda_control has been updated on the cloud, ', mes)
   
   
-  sink(paste0(mycloud, "pda_control.txt"))
+  sink("data/pda_control.txt")
   print(pda_control)
   sink()
 }

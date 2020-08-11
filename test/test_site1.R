@@ -1,10 +1,6 @@
 require(survival)
 require(data.table)
 require(Rcpp)
-# require(ODACO)
-# rm(list=ls())
-
-
 ################################## setup the test ODAL ###################################################
 ## prepare test data  
 data(lung)
@@ -17,13 +13,9 @@ table(lung2$inst)
 lung2$status <- ifelse(lung2$status == 2, 1, 0)
 lung2$sex <- lung2$sex-1
 lung2 <- data.table(lung2)
-# write.csv(lung2, file='../Lung.csv', row.names = F)
- 
-write.csv(lung2[inst=='site1', -'inst'], file='data/site1/Lung_site1.csv', row.names = F)
-write.csv(lung2[inst=='site2', -'inst'], file='data/site2/Lung_site2.csv', row.names = F)
-write.csv(lung2[inst=='site3', -'inst'], file='data/site3/Lung_site3.csv', row.names = F)
-
-
+write.csv(lung2[inst=='site1', -'inst'], file='data/Lung_site1.csv', row.names = F)
+write.csv(lung2[inst=='site2', -'inst'], file='data/Lung_site2.csv', row.names = F)
+write.csv(lung2[inst=='site3', -'inst'], file='data/Lung_site3.csv', row.names = F)
 ## research project setting, decided by all collaborators before analysis 
 pda_control <- list(project_name = 'Lung cancer study',
                     step = 1,      # current step of iteration. updated by the master site  
@@ -38,71 +30,44 @@ pda_control <- list(project_name = 'Lung cancer study',
                     upload_date = as.Date('2020-08-15'),
                     optim_maxit=100,
                     reference = 'https://academic.oup.com/jamia/article-abstract/27/3/376/5670808',
-                    cloud_website = 'webdav')
-
-sink("data/pda_control.txt")
-print(pda_control)
-sink()
-saveRDS(pda_control, 'data/pda_control.RDS')
+                    heterogeneity = FALSE)
 ################################## END: setup the ODAL test  ###################################################
-
-
-
-
-
-
-# rm(list=ls())
 mysite <- 'site1'    # provide your site abbre
-mycloud <- "data/"   # provide your Dropbox PDA cloud folder 
-
-setwd(mycloud)
-list.files()
-
 ## eventually will be loading a package, 
 ## require(PDA)
 ## Rcpp::sourceCpp('../../PDA/src/rcpp_coxph.cpp')
-source('../R/PDA_engine.R')
+source('R/PDA_engine.R')
+pda_put(pda_control,'pda_control',mysite)
 
 # pda_control = readRDS('pda_control.RDS')
+mydata = fread('data/Lung_site1.csv')
+pda(data = mydata, mysite='site1')
 
-
-setwd('../site1') 
-mydata = fread('Lung_site1.csv')
-pda(data = mydata, mysite='site1', mycloud=mycloud)
 # -0.46925660    0.03174699   -1.52156716
-
-
 ## waiting for other sites to initialize
-
-
 ## master site update pda_control by adding beta_init (meta estimate), and step=2
-pda_control_update(mycloud=mycloud)
-# readRDS('pda_control.RDS')
-
+pda_control_update()
 
 ## derivatives
-setwd('../site1')
-mydata = fread('Lung_site1.csv')
-pda(data = mydata, mysite='site1', mycloud=mycloud)
- 
+mydata = fread('data/Lung_site1.csv')
+pda(data = mydata, mysite='site1')
 
 ## waiting for other sites to upload derivatives
 
 
 ## master site update pda_control$step = 3
-pda_control_update(mycloud=mycloud)
+pda_control_update()
 
 
 
 ## surrogate_est
-setwd('../site1')
-mydata = fread('Lung_site1.csv')
-b_surr = pda(data = mydata, mysite='site1', mycloud=mycloud)
+mydata = fread('data/site1/Lung_site1.csv')
+b_surr = pda(data = mydata, mysite='site1')
 
 
  
 ## compare
-lung2 = fread('../Lung.csv')
+lung2 = fread('data/Lung.csv')
 fit.pool <- glm(status ~ age + sex, data = lung2, family = "binomial")
 fit.pool$coef
 rbind(pooled= fit.pool$coef,
@@ -113,11 +78,11 @@ rbind(pooled= fit.pool$coef,
 
 ## (optional) 
 ## master site update pda_control$step = 4 for further synthesize 
-pda_control_update(mycloud=mycloud)
+pda_control_update()
 
 setwd('../site1')
 # mydata = fread('Lung_site3.csv')
-b_surr_syn = pda(data = mydata, mysite='site1', mycloud=mycloud)
+b_surr_syn = pda(data = mydata, mysite='site1')
 
 c(b_surr_syn$btilde)
 
