@@ -1,4 +1,7 @@
 library('httr')
+library(logging)
+basicConfig()
+addHandler(writeToFile, logger="pda", file="tmp/pda.log")
 # https://style.tidyverse.org/functions.html#naming
 
 # require(survival)
@@ -89,8 +92,10 @@ pda_put <- function(obj,name,control){
 #' @return  
 #' @export
 pda_get <- function(name){
+    print("getting file")
+    print(name)
     password<-Sys.getenv('PDA_SECRET')
-    username<-Sys.getenv('PDA_USER')
+    username<-Sys.getenv('PDA_SITE')
     dav<-Sys.getenv('PDA_URI')
     file_name <- paste0(name, '.RDS')
     file_path <- paste0('tmp/', file_name)
