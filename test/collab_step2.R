@@ -1,5 +1,6 @@
 # rm(list=ls())
 require(data.table)
+source('R/PDA_engine.R')
 sitename<-Sys.getenv('PDA_SITE')
 mydata = fread(paste0('data/Lung_',sitename,'.csv'))
 ## surrogate_est
