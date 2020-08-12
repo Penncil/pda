@@ -5,5 +5,5 @@ source('R/PDA_engine.R')
 pda_control_update()
 ## derivatives
 mydata = fread('data/Lung_site1.csv')
-pda(data = mydata, mysite='site1')
+pda(data = mydata)
 ## waiting for other sites to upload derivatives

@@ -18,11 +18,11 @@ pda_control <- list(project_name = 'Lung cancer study',
                     reference = 'https://academic.oup.com/jamia/article-abstract/27/3/376/5670808',
                     heterogeneity = FALSE)
 ################################## END: setup the ODAL test  ###################################################
-pda_put(pda_control,'pda_control',mysite)
+pda_put(pda_control,'pda_control')
 sitename<-Sys.getenv('PDA_SITE')
 mydata = fread(paste0('data/Lung_',sitename,'.csv'))
 #run pda to seed data on server
-pda(data = mydata, mysite='site1')
+pda(data = mydata)
 # -0.46925660    0.03174699   -1.52156716
 ## waiting for other sites to initialize
 
