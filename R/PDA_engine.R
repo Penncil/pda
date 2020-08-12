@@ -1,7 +1,4 @@
 library('httr')
-library(logging)
-basicConfig()
-addHandler(writeToFile, logger="pda", file="tmp/pda.log")
 # https://style.tidyverse.org/functions.html#naming
 
 # require(survival)
