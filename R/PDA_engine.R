@@ -63,7 +63,7 @@ pda_broadcast <- function(obj,
 #' @export
 pda_put <- function(obj,name,control){
     password<-Sys.getenv('PDA_SECRET')
-    username<-Sys.getenv('PDA_USER')
+    username<-Sys.getenv('PDA_SITE')
     dav<-Sys.getenv('PDA_URI')
     file_name <- paste0(name, '.RDS')
     file_path <- paste0('tmp/', file_name)
@@ -673,7 +673,7 @@ pda_synthesize <- function(control = pda_control){
 #' 
 #' @export
 pda <- function(data = mydata,
-                mysite = NULL){
+                mysite = Sys.getenv('PDA_SITE')){
 
   pda_control = pda_get('pda_control')
   cat('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/PDA): \n')
