@@ -1,8 +1,7 @@
 require(data.table)
 require(Rcpp)
 source('R/PDA_engine.R')
-sitename<-Sys.getenv('PDA_SITE')
-mydata = fread(paste0('data/Lung_',sitename,'.csv'))
+mydata = fread(paste0('data/Lung_',Sys.getenv('PDA_SITE'),'.csv'))
 ################################## setup the test ODAL ###################################################
 ## research project setting, decided by all collaborators before analysis 
 pda_control <- list(project_name = 'Lung cancer study',
