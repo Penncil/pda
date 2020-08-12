@@ -1,5 +1,8 @@
 require(data.table)
 require(Rcpp)
+source('R/PDA_engine.R')
+sitename<-Sys.getenv('PDA_SITE')
+mydata = fread(paste0('data/Lung_',sitename,'.csv'))
 ## master site update pda_control$step = 3
 pda_control_update()
 ## surrogate_est

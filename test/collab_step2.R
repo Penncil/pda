@@ -2,9 +2,9 @@
 require(data.table)
 source('R/PDA_engine.R')
 sitename<-Sys.getenv('PDA_SITE')
+mydata = fread(paste0('data/Lung_',sitename,'.csv'))
 #get pda_control data from server
 pda_control<-pda_get('pda_control')
-mydata = fread(paste0('data/Lung_',sitename,'.csv'))
 ## surrogate_est
 b_surr = pda(data = mydata)
 ## compare

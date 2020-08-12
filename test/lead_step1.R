@@ -1,6 +1,8 @@
 require(data.table)
 require(Rcpp)
 source('R/PDA_engine.R')
+sitename<-Sys.getenv('PDA_SITE')
+mydata = fread(paste0('data/Lung_',sitename,'.csv'))
 ################################## setup the test ODAL ###################################################
 ## research project setting, decided by all collaborators before analysis 
 pda_control <- list(project_name = 'Lung cancer study',
@@ -19,8 +21,6 @@ pda_control <- list(project_name = 'Lung cancer study',
                     heterogeneity = FALSE)
 ################################## END: setup the ODAL test  ###################################################
 pda_put(pda_control,'pda_control')
-sitename<-Sys.getenv('PDA_SITE')
-mydata = fread(paste0('data/Lung_',sitename,'.csv'))
 #run pda to seed data on server
 pda(data = mydata)
 # -0.46925660    0.03174699   -1.52156716
