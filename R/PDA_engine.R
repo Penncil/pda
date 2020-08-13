@@ -50,41 +50,39 @@ pda_broadcast <- function(obj,
 }
 
 #' @useDynLib PDA
-#' @title Function to communicate files (upload/download summary statistics to/from the cloud)
+#' @title Function to upload object as RDS
 #' 
-#' @usage pda_put(obj,path,control)
+#' @usage pda_put(obj,name)
 #' @author Chongliang Luo, Steven Vitale
 #' 
 #' @param obj R object to upload
 #' @param name of file
-#' @param control PDA control
 #'
 #' @return  
 #' @export
-pda_put <- function(obj,name,control){
+pda_put <- function(obj,name){
     password<-Sys.getenv('PDA_SECRET')
     username<-Sys.getenv('PDA_SITE')
     dav<-Sys.getenv('PDA_URI')
     file_name <- paste0(name, '.RDS')
+    # the file to upload
     file_path <- paste0('tmp/', file_name)
     saveRDS(obj,file_path)
-    # the file to upload
     # create the url target of the file
     url <- file.path(dav, file_name)
     # webdav uses a PUT request to send a file to Nextcloud
-    PUT(url, authenticate(username, password, 'digest'), body = upload_file(file_path))
+    r<-PUT(url, authenticate(username, password, 'digest'), body = upload_file(file_path))
+    return(r)
 }
 
 
 #' @useDynLib PDA
-#' @title Function to communicate files (upload/download summary statistics to/from the cloud)
+#' @title Function to download RDS and return as object)
 #' 
-#' @usage pda_get(obj,path)
+#' @usage pda_get(name)
 #' @author Chongliang Luo, Steven Vitale
 #' 
-#' @param obj R object to upload
 #' @param name of file
-#' @param control PDA control
 #'
 #' @return  
 #' @export
@@ -95,8 +93,8 @@ pda_get <- function(name){
     username<-Sys.getenv('PDA_SITE')
     dav<-Sys.getenv('PDA_URI')
     file_name <- paste0(name, '.RDS')
+    # the file to create
     file_path <- paste0('tmp/', file_name)
-    # the file to upload
     # create the url target of the file
     url <- file.path(dav, file_name)
     # webdav uses a PUT request to send a file to Nextcloud
