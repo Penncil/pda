@@ -60,17 +60,32 @@ pda_broadcast <- function(obj,
 #' @return  
 #' @export
 pda_put <- function(obj,name){
+    print("putting file")
+    print(name)
+    print(name)
     file_name <- paste0(name, '.json')
     # the file to upload
     file_path <- paste0(tempdir(),'/', file_name)
     obj_Json <- jsonlite::toJSON(obj)
     write(obj_Json, file_path)
-    # create the url target of the file
-    if (Sys.getenv("PDA_URI") != "") {
-        url <- file.path(Sys.getenv("PDA_URI"), file_name)
-        # webdav uses a PUT request to send a file to Nextcloud
-        r<-httr::PUT(url, body = upload_file(file_path), authenticate(Sys.getenv('PDA_SITE'), Sys.getenv('PDA_SECRET'), 'digest'))
-        return(r)
+    # if PDA_DIR exists, copy the file there
+    if (Sys.getenv("PDA_DIR") != "") {
+        file.copy(file_path, paste0(Sys.getenv("PDA_DIR")),"/",file_name)
+    # if PDA_URI exists, upload the file there
+    } else if (Sys.getenv("PDA_URI") != "") {
+        # create the url target of the file
+        if(interactive()) {
+            authorize = menu(c("Yes", "No"), title="Do you want this?")
+        } else {
+            authorize = "1"
+        } 
+        if(authorize=='1') {
+          url <- file.path(Sys.getenv("PDA_URI"), file_name)
+          # webdav uses a PUT request to send a file to Nextcloud
+          r<-httr::PUT(url, body = upload_file(file_path), authenticate(Sys.getenv('PDA_SITE'), Sys.getenv('PDA_SECRET'), 'digest'))
+        } else {
+          print("file not uploaded.")
+        }
     }
 }
 
@@ -92,12 +107,15 @@ pda_get <- function(name){
     # the file to create
     file_path <- paste0(tempdir(),'/', file_name)
     # create the url target of the file
-    if (Sys.getenv("PDA_URI") != "") {
+    # if PDA_DIR exists, get the file from there
+    if (Sys.getenv("PDA_DIR") != "") {
+        file.copy(paste0(Sys.getenv("PDA_DIR"),"/",file_name),file_path)
+    # if PDA_URI exists, download the file from there
+    } else if (Sys.getenv("PDA_URI") != "") {
         url <- file.path(Sys.getenv("PDA_URI"), file_name)
-        # webdav uses a PUT request to send a file to Nextcloud
         res<-httr::GET(url, write_disk(file_path, overwrite = TRUE), authenticate(Sys.getenv('PDA_SITE'), Sys.getenv('PDA_SECRET'), 'digest'))
         obj<-jsonlite::fromJSON(file_path)
-    }
+    } 
 }
 
     
@@ -642,7 +660,7 @@ pda_synthesize <- function(control = pda_control){
   btilde <- solve(wt_sum, btilde_wt_sum)
   Vtilde <- solve(wt_sum) * K
   
-  cat("all surrogate estimates synthesized, no need to boradcast! \n")
+  cat("all surrogate estimates synthesized, no need to broadcast! \n")
   return(list(btilde=btilde, 
               Vtilde=Vtilde))
 }
