@@ -2,26 +2,30 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 rcpp_coxph_logL <- function(beta, time, event, z) {
-    .Call('_ODACO_rcpp_coxph_logL', PACKAGE = 'ODACO', beta, time, event, z)
+    .Call('_pda_rcpp_coxph_logL', PACKAGE = 'pda', beta, time, event, z)
 }
 
 rcpp_coxph_logL_gradient <- function(beta, time, event, z) {
-    .Call('_ODACO_rcpp_coxph_logL_gradient', PACKAGE = 'ODACO', beta, time, event, z)
+    .Call('_pda_rcpp_coxph_logL_gradient', PACKAGE = 'pda', beta, time, event, z)
 }
 
 rcpp_coxph_logL_hessian <- function(beta, time, event, z) {
-    .Call('_ODACO_rcpp_coxph_logL_hessian', PACKAGE = 'ODACO', beta, time, event, z)
+    .Call('_pda_rcpp_coxph_logL_hessian', PACKAGE = 'pda', beta, time, event, z)
 }
 
 rcpp_coxph_logL_efron <- function(beta, time, event, z) {
-    .Call('_ODACO_rcpp_coxph_logL_efron', PACKAGE = 'ODACO', beta, time, event, z)
+    .Call('_pda_rcpp_coxph_logL_efron', PACKAGE = 'pda', beta, time, event, z)
 }
 
 rcpp_coxph_logL_gradient_efron <- function(beta, time, event, z) {
-    .Call('_ODACO_rcpp_coxph_logL_gradient_efron', PACKAGE = 'ODACO', beta, time, event, z)
+    .Call('_pda_rcpp_coxph_logL_gradient_efron', PACKAGE = 'pda', beta, time, event, z)
 }
 
 rcpp_coxph_logL_gradient_efron_dist <- function(beta, ind_machine_, useLocal, dj_cutoff, time, event, z) {
-    .Call('_ODACO_rcpp_coxph_logL_gradient_efron_dist', PACKAGE = 'ODACO', beta, ind_machine_, useLocal, dj_cutoff, time, event, z)
+    .Call('_pda_rcpp_coxph_logL_gradient_efron_dist', PACKAGE = 'pda', beta, ind_machine_, useLocal, dj_cutoff, time, event, z)
+}
+
+rcpp_aggregate <- function(x, indices, simplify = TRUE, cumulative = FALSE, reversely = FALSE) {
+    .Call('_pda_rcpp_aggregate', PACKAGE = 'pda', x, indices, simplify, cumulative, reversely)
 }
 

@@ -8,7 +8,7 @@
 ## write to csv or excel files for better observation on the cloud?
 
 
-#' @useDynLib PDA
+#' @useDynLib pda
 #' @title Function to communicate files (upload/download summary statistics to/from the cloud)
 #' 
 #' @usage pda_broadcast(obj, obj_type=c('initialize', 'summary_stat', 'derivatives', 'surrogate_est'), file_name = NULL, upload=TRUE, site_i, control)
@@ -48,7 +48,7 @@ pda_broadcast <- function(obj,
     
 }
 
-#' @useDynLib PDA
+#' @useDynLib pda
 #' @title Function to upload object as RDS
 #' 
 #' @usage pda_put(obj,name)
@@ -82,7 +82,7 @@ pda_put <- function(obj,name){
         if(authorize=='1') {
           url <- file.path(Sys.getenv("PDA_URI"), file_name)
           # webdav uses a PUT request to send a file to Nextcloud
-          r<-httr::PUT(url, body = upload_file(file_path), authenticate(Sys.getenv('PDA_SITE'), Sys.getenv('PDA_SECRET'), 'digest'))
+          r<-httr::PUT(url, body = httr::upload_file(file_path), httr::authenticate(Sys.getenv('PDA_SITE'), Sys.getenv('PDA_SECRET'), 'digest'))
         } else {
           print("file not uploaded.")
         }
@@ -90,7 +90,7 @@ pda_put <- function(obj,name){
 }
 
 
-#' @useDynLib PDA
+#' @useDynLib pda
 #' @title Function to download RDS and return as object)
 #' 
 #' @usage pda_get(name)
@@ -113,7 +113,7 @@ pda_get <- function(name){
     # if PDA_URI exists, download the file from there
     } else if (Sys.getenv("PDA_URI") != "") {
         url <- file.path(Sys.getenv("PDA_URI"), file_name)
-        res<-httr::GET(url, write_disk(file_path, overwrite = TRUE), authenticate(Sys.getenv('PDA_SITE'), Sys.getenv('PDA_SECRET'), 'digest'))
+        res<-httr::GET(url, httr::write_disk(file_path, overwrite = TRUE), httr::authenticate(Sys.getenv('PDA_SITE'), Sys.getenv('PDA_SECRET'), 'digest'))
         obj<-jsonlite::fromJSON(file_path)
     } 
 }
@@ -121,7 +121,7 @@ pda_get <- function(name){
     
 
 
-#' @useDynLib PDA
+#' @useDynLib pda
 #' @title PDA initialize
 #' 
 #' @usage pda_initialize <- function(mydata, broadcast=TRUE, control=pda_control)
@@ -193,7 +193,7 @@ pda_initialize <- function(mydata,
 }
 
 
-#' @useDynLib PDA
+#' @useDynLib pda
 #' @title PDA derivatives
 #' 
 #' @usage pda_derivatives(bbar, mydata, broadcast=TRUE, derivatives_ODAC_substep='first', control=pda_control)
@@ -432,7 +432,7 @@ pda_derivatives <- function(bbar = NULL,
 }
 
 
-#' @useDynLib PDA
+#' @useDynLib pda
 #' @title PDA surrogate estimation
 #' 
 #' @usage pda_surrogate_est(bbar, mydata, broadcast=TRUE, control=pda_control)
@@ -624,7 +624,7 @@ pda_surrogate_est <- function(bbar = NULL,
 
 
 
-#' @useDynLib PDA
+#' @useDynLib pda
 #' @title PDA synthesize surrogate estimates from all sites, optional
 #' 
 #' @usage pda_synthesize(control=pda_control)
@@ -667,7 +667,7 @@ pda_synthesize <- function(control = pda_control){
 
 
 
-#' @useDynLib PDA
+#' @useDynLib pda
 #' @import stats
 #' @import Rcpp
 #' @import survival 

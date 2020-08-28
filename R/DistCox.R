@@ -1,7 +1,7 @@
 # Rcpp::sourceCpp('engine/src/rcpp_coxph.cpp')
 Rcpp::sourceCpp('../pda/src/rcpp_coxph.cpp')
 
-#' @useDynLib ODACO
+#' @useDynLib pda
 #' @import stats
 #' @import Rcpp
 #' @import survival 

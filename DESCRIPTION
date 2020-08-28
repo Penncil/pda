@@ -1,15 +1,15 @@
 Package: pda
 Type: Package
-Title:  Privacy-preserving Distributed Algorithm
+Title: Privacy-preserving Distributed Algorithm
 Version: 1.0
 Date: 2020-09-01
-Author:  Chongliang Luo, Rui Duan, Yong Chen
+Author: Chongliang Luo, Rui Duan, Yong Chen
 Maintainer: Chongliang Luo <chongliang.luo@pennmedicine.upenn.edu>
-Description: Fit a  Distributed Cox regression that only requires one-shot communication between the local and remote sites, by optimizing Jordan's surrogate log-likelihood (Jordan2018JASA) function.
+Description: a set of tools for communication-efficient and privacy-preserving distributed analyses for binary, continuous, count and time to event outcomes.
               v2.0: Now allow heterogenous baseline hazard among sites
 License: GPL (>= 2)
 Imports: Rcpp (>= 0.12.19), stats, httr, jsonlite
 Suggests: survival
 LinkingTo: Rcpp, RcppArmadillo
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Encoding: UTF-8
