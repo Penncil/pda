@@ -1,5 +1,5 @@
 # Rcpp::sourceCpp('engine/src/rcpp_coxph.cpp')
-Rcpp::sourceCpp('../ODACO/src/rcpp_coxph.cpp')
+Rcpp::sourceCpp('../pda/src/rcpp_coxph.cpp')
 
 #' @useDynLib ODACO
 #' @import stats

@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 // rcpp_coxph_logL
 double rcpp_coxph_logL(const arma::vec& beta, const arma::vec& time, const arma::vec& event, const arma::mat& z);
-RcppExport SEXP _ODACO_rcpp_coxph_logL(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
+RcppExport SEXP _pda_rcpp_coxph_logL(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -22,7 +22,7 @@ END_RCPP
 }
 // rcpp_coxph_logL_gradient
 arma::vec rcpp_coxph_logL_gradient(const arma::vec& beta, const arma::vec& time, const arma::vec& event, const arma::mat& z);
-RcppExport SEXP _ODACO_rcpp_coxph_logL_gradient(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
+RcppExport SEXP _pda_rcpp_coxph_logL_gradient(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -36,7 +36,7 @@ END_RCPP
 }
 // rcpp_coxph_logL_hessian
 arma::vec rcpp_coxph_logL_hessian(const arma::vec& beta, const arma::vec& time, const arma::vec& event, const arma::mat& z);
-RcppExport SEXP _ODACO_rcpp_coxph_logL_hessian(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
+RcppExport SEXP _pda_rcpp_coxph_logL_hessian(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -50,7 +50,7 @@ END_RCPP
 }
 // rcpp_coxph_logL_efron
 double rcpp_coxph_logL_efron(const arma::vec& beta, const arma::vec& time, const arma::vec& event, const arma::mat& z);
-RcppExport SEXP _ODACO_rcpp_coxph_logL_efron(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
+RcppExport SEXP _pda_rcpp_coxph_logL_efron(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -64,7 +64,7 @@ END_RCPP
 }
 // rcpp_coxph_logL_gradient_efron
 arma::vec rcpp_coxph_logL_gradient_efron(const arma::vec& beta, const arma::vec& time, const arma::vec& event, const arma::mat& z);
-RcppExport SEXP _ODACO_rcpp_coxph_logL_gradient_efron(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
+RcppExport SEXP _pda_rcpp_coxph_logL_gradient_efron(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -78,7 +78,7 @@ END_RCPP
 }
 // rcpp_coxph_logL_gradient_efron_dist
 arma::vec rcpp_coxph_logL_gradient_efron_dist(const arma::vec& beta, const arma::vec& ind_machine_, bool& useLocal, const int dj_cutoff, const arma::vec& time, const arma::vec& event, const arma::mat& z);
-RcppExport SEXP _ODACO_rcpp_coxph_logL_gradient_efron_dist(SEXP betaSEXP, SEXP ind_machine_SEXP, SEXP useLocalSEXP, SEXP dj_cutoffSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
+RcppExport SEXP _pda_rcpp_coxph_logL_gradient_efron_dist(SEXP betaSEXP, SEXP ind_machine_SEXP, SEXP useLocalSEXP, SEXP dj_cutoffSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -95,16 +95,16 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_ODACO_rcpp_coxph_logL", (DL_FUNC) &_ODACO_rcpp_coxph_logL, 4},
-    {"_ODACO_rcpp_coxph_logL_gradient", (DL_FUNC) &_ODACO_rcpp_coxph_logL_gradient, 4},
-    {"_ODACO_rcpp_coxph_logL_hessian", (DL_FUNC) &_ODACO_rcpp_coxph_logL_hessian, 4},
-    {"_ODACO_rcpp_coxph_logL_efron", (DL_FUNC) &_ODACO_rcpp_coxph_logL_efron, 4},
-    {"_ODACO_rcpp_coxph_logL_gradient_efron", (DL_FUNC) &_ODACO_rcpp_coxph_logL_gradient_efron, 4},
-    {"_ODACO_rcpp_coxph_logL_gradient_efron_dist", (DL_FUNC) &_ODACO_rcpp_coxph_logL_gradient_efron_dist, 7},
+    {"_pda_rcpp_coxph_logL", (DL_FUNC) &_pda_rcpp_coxph_logL, 4},
+    {"_pda_rcpp_coxph_logL_gradient", (DL_FUNC) &_pda_rcpp_coxph_logL_gradient, 4},
+    {"_pda_rcpp_coxph_logL_hessian", (DL_FUNC) &_pda_rcpp_coxph_logL_hessian, 4},
+    {"_pda_rcpp_coxph_logL_efron", (DL_FUNC) &_pda_rcpp_coxph_logL_efron, 4},
+    {"_pda_rcpp_coxph_logL_gradient_efron", (DL_FUNC) &_pda_rcpp_coxph_logL_gradient_efron, 4},
+    {"_pda_rcpp_coxph_logL_gradient_efron_dist", (DL_FUNC) &_pda_rcpp_coxph_logL_gradient_efron_dist, 7},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_ODACO(DllInfo *dll) {
+RcppExport void R_init_pda(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }
