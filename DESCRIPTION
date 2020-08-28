@@ -8,7 +8,7 @@ Maintainer: Chongliang Luo <chongliang.luo@pennmedicine.upenn.edu>
 Description: Fit a  Distributed Cox regression that only requires one-shot communication between the local and remote sites, by optimizing Jordan's surrogate log-likelihood (Jordan2018JASA) function.
               v2.0: Now allow heterogenous baseline hazard among sites
 License: GPL (>= 2)
-Imports: Rcpp (>= 0.12.19), stats
+Imports: Rcpp (>= 0.12.19), stats, httr, jsonlite
 Suggests: survival
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.1.1
