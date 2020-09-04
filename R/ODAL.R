@@ -1,5 +1,7 @@
 # https://style.tidyverse.org/functions.html#naming
 
+ODAL.steps<-c('initialize','derive','estimate','synthesize')
+ODAL.family<-'binomial'
 # require(survival)
 # require(data.table)
 # Rcpp::sourceCpp('src/rcpp_coxph.cpp')
@@ -53,8 +55,8 @@ ODAL.derive <- function(ipdata,control,config){
     # get b_meta as initial bbar
     bhat <- rep(0, px)
     vbhat <- rep(0, px)     # cov matrix?
-    for(site_i in control$all_site){
-      init_i <- pda_get(paste0(site_i,'_initialize'),config)
+    for(site_i in control$sites){
+      init_i <- pdaGet(paste0(site_i,'_initialize'),config)
       bhat = rbind(bhat, init_i$bhat_i)
       vbhat = rbind(vbhat, init_i$Vhat_i)
     }
@@ -137,8 +139,8 @@ ODAL.estimate <- function(ipdata,control,config) {
       logL_all_D1 <- rep(0, px)
       logL_all_D2 <- matrix(0, px, px)
       N <- 0
-      for(site_i in control$all_site){
-        derivatives_i <- pda_get(paste0(site_i,'_derive'),config)
+      for(site_i in control$sites){
+        derivatives_i <- pdaGet(paste0(site_i,'_derive'),config)
         logL_all_D1 <- logL_all_D1 + derivatives_i$logL_D1*derivatives_i$site_size
         logL_all_D2 <- logL_all_D2 + derivatives_i$logL_D2*derivatives_i$site_size
         N <- N + derivatives_i$site_size
@@ -197,7 +199,7 @@ ODAL.estimate <- function(ipdata,control,config) {
 ODAL.synthesize <- function(ipdata,control,config) {
   
   px <- length(control$variable)
-  K <- length(control$all_site)
+  K <- length(control$sites)
   # if (control$model == "ODAL" | control$model == "ODALR"){
     # btilde_wt_sum <- rep(0, px+1)
     # wt_sum <- rep(0, px+1)     # cov matrix?
@@ -206,8 +208,8 @@ ODAL.synthesize <- function(ipdata,control,config) {
     wt_sum <- rep(0, px)     # cov matrix?
   # }
   
-  for(site_i in control$all_site){
-    surr_i <- pda_get(paste0(site_i,'_estimate'),config)
+  for(site_i in control$sites){
+    surr_i <- pdaGet(paste0(site_i,'_estimate'),config)
     btilde_wt_sum <- btilde_wt_sum + surr_i$Htilde %*% surr_i$btilde
     wt_sum <- wt_sum + surr_i$Htilde
   }
@@ -220,4 +222,3 @@ ODAL.synthesize <- function(ipdata,control,config) {
   return(list(btilde=btilde, 
               Vtilde=Vtilde))
 }
-ODAL.steps<-c('initialize','derive','estimate','synthesize')

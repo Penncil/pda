@@ -6,25 +6,26 @@
 ## broadcast: upload/download shared info to/from the cloud folder
 
 #' @useDynLib pda
-#' @title Function to upload object to cloud
+#' @title Function to upload object to cloud as json
 #' 
-#' @usage pda_put(obj,name)
+#' @usage pdaPut(obj,name,cloud_config)
 #' @author Chongliang Luo, Steven Vitale
-#' 
-#' @param obj R object to upload
+#' @param obj R object to encode as json and uploaded to cloud
 #' @param name of file
+#' @param cloud_config a list of variables for cloud configuration
+
 #'
 #' @return  
-pda_put <- function(obj,name,cloud_config){
+pdaPut <- function(obj,name,cloud_config){
     obj_Json <- jsonlite::toJSON(obj)
     file_name <- paste0(name, '.json')
-    print(paste("Put",file_name,"on public cloud:"))
-    print(obj_Json)
-    #if(interactive()) {
-    #  authorize = menu(c("Yes", "No"), title="Allow upload?")
-    #} else {
+    #print(paste("Put",file_name,"on public cloud:"))
+    #print(obj_Json)
+    if(interactive()) {
+      authorize = menu(c("Yes", "No"), title="Allow upload?")
+    } else {
       authorize = "1"
-    #}
+    }
     if (authorize != 1) {
       print("file not uploaded.")
       return(FALSE)
@@ -32,33 +33,30 @@ pda_put <- function(obj,name,cloud_config){
     # the file to upload
     if (is.character(cloud_config$dir)) {
         file_path <- paste0(cloud_config$dir,'/', file_name)
-        print(paste("writing to",file_path))
     } else {
         file_path <- paste0(tempdir(),'/', file_name)
     }
+    #print(paste0("writing",name,"to",file_path))
     write(obj_Json, file_path)
     if (is.character(cloud_config$uri)) {
         # create the url target of the file
         url <- file.path(cloud_config$uri, file_name)
         # webdav PUT request to send a file to cloud
         r<-httr::PUT(url, body = httr::upload_file(file_path), httr::authenticate(cloud_config$site_id, cloud_config$secret, 'digest'))
-        print(paste("uploading to",url))
+        print(paste("putting:",url))
     }
 }
 
 
 #' @useDynLib pda
-#' @title Function to download json and return as object)
-#' 
-#' @usage pda_get(name)
+#' @title Function to download json and return as object
+#' @usage pdaGet(name)
 #' @author Chongliang Luo, Steven Vitale
-#' 
 #' @param name of file
 #' @return  
-#' @export
-pda_get <- function(name,cloud_config){
+pdaGet <- function(name,cloud_config){
     file_name <- paste0(name, '.json')
-    print(paste("Get",file_name,"from public cloud:"))
+    #print(paste("Get",file_name,"from public cloud:"))
     # the file to upload
     if (is.character(cloud_config$dir)) {
         file_path <- paste0(cloud_config$dir,'/', file_name)
@@ -69,14 +67,19 @@ pda_get <- function(name,cloud_config){
         url <- file.path(cloud_config$uri, file_name)
         #write the file from GET request to file_path
         res<-httr::GET(url, httr::write_disk(file_path, overwrite = TRUE), httr::authenticate(cloud_config$site_id, cloud_config$secret, 'digest'))
-        print(paste("downloading from",url))
+        #print(paste("getting:",url))
     } 
     obj<-jsonlite::fromJSON(file_path)
     return(obj)
 }
 
 
-pda_cloud_config <- function(site_id=NULL){
+#' @useDynLib pda
+#' @title gather cloud settings into one list
+#' @usage getCloudConfig()
+#' @author Chongliang Luo, Steven Vitale
+#' @param name of file
+getCloudConfig <- function(site_id=NULL){
   cloud_config=list()
   pda_user<-Sys.getenv('PDA_USER')
   pda_secret<-Sys.getenv('PDA_SECRET')
@@ -93,10 +96,14 @@ pda_cloud_config <- function(site_id=NULL){
   return(cloud_config);
 }
 
-pda_create <- function(control,site_id=NULL){
-  cloud_config<-pda_cloud_config(site_id)
-print(cloud_config)
-  pda_put(control,'control',cloud_config)
+#' @useDynLib pda
+#' @title Function to download json and return as object
+#' @param control pda control object
+#' @param site_id name of site
+#' @export
+pdaInit <- function(control,site_id=NULL){
+  cloud_config<-getCloudConfig(site_id)
+  pdaPut(control,'control',cloud_config)
 }
 
 #' @useDynLib pda
@@ -119,26 +126,25 @@ print(cloud_config)
 #'  ## Steve can you make an ODAl example here as we tested?
 #' 
 #' @export
-pda <- function(ipdata,site_id=NULL){
-  #get cloud settings
-  config<-pda_cloud_config(site_id)
-  print(config)
-  control = pda_get('control',config)
+pdaStep <- function(ipdata,site_id=NULL){
+  cloud_config<-getCloudConfig(site_id)
+  control = pdaGet('control',cloud_config)
   cat('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): \n')
-  cat('your site = ', config$site_id, '\n')
+  cat('your site = ', cloud_config$site_id, '\n')
   n = nrow(ipdata)
   formula<-as.formula(
     paste(control$outcome,
     paste(control$variables, collapse = " + "),
   sep = ' ~'))
   mf = model.frame(formula, ipdata)
-  if(control$family=='cox'){  
-    ipdata = data.table(time=as.numeric(model.response(mf))[1:n], 
+  family = get(paste0(control$model,'.family'))
+  if(family=='cox'){  
+    ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
                         status=as.numeric(model.response(mf))[-c(1:n)], 
                         model.matrix(formula, mf)[,-1])
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else{
-    ipdata = data.table(status=as.numeric(model.response(mf)), 
+    ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
                         model.matrix(formula, mf))
     control$risk_factor = colnames(ipdata)[-1]
     # # family = 
@@ -151,8 +157,8 @@ pda <- function(ipdata,site_id=NULL){
   }
   if(is.character(control$step)){
     step_function<-paste0(control$model,'.',control$step)
-    step_obj<-get(step_function)(ipdata, control, config)
-    pda_put(step_obj,paste0(config$site_id,'_',control$step),config)
+    step_obj<-get(step_function)(ipdata, control, cloud_config)
+    pdaPut(step_obj,paste0(cloud_config$site_id,'_',control$step),cloud_config)
   } else {
    print('finished')
   }
@@ -160,21 +166,21 @@ pda <- function(ipdata,site_id=NULL){
 
 
 #' update the PDA control, used by the master site
-#' @usage control_update <- function(control_update=TRUE)
+#' @usage pdaSync <- function(config,site_id)
 #' 
 #' @param control_update Logical, update the PDA control?
 #' 
 #' @export
-control_update <- function(config,site_id=NULL){
-  config<-pda_cloud_config(site_id)
-  control = pda_get('control',config)
+pdaSync <- function(cloud_config,site_id=NULL){
+  cloud_config<-getCloudConfig(site_id)
+  control = pdaGet('control',cloud_config)
   if(control$step=="initialize"){
-    init_i <- pda_get(paste0(control$lead_site,'_initialize'),config)
+    init_i <- pdaGet(paste0(control$lead_site,'_initialize'),cloud_config)
     bhat <-init_i$bhat_i 
     vbhat <- init_i$Vhat_i
-    for(site_i in control$all_site){
+    for(site_i in control$sites){
       if(site_i!=control$lead_site){
-        init_i <- pda_get(paste0(site_i,'_initialize'),config)
+        init_i <- pdaGet(paste0(site_i,'_initialize'),cloud_config)
         bhat = rbind(bhat, init_i$bhat_i)
         vbhat = rbind(vbhat, init_i$Vhat_i)
       }
@@ -201,6 +207,6 @@ control_update <- function(config,site_id=NULL){
     control$step = NULL
   }
   cat(mes)
-  pda_put(control,'control',config)
+  pdaPut(control,'control',cloud_config)
   return(control)
 }
