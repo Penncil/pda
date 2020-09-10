@@ -13,8 +13,7 @@
 #' @param obj R object to encode as json and uploaded to cloud
 #' @param name of file
 #' @param cloud_config a list of variables for cloud configuration
-
-#'
+#' @export
 #' @return  
 pdaPut <- function(obj,name,cloud_config){
     obj_Json <- jsonlite::toJSON(obj)
@@ -54,6 +53,7 @@ pdaPut <- function(obj,name,cloud_config){
 #' @author Chongliang Luo, Steven Vitale
 #' @param name of file
 #' @return  
+#' @export
 pdaGet <- function(name,cloud_config){
     file_name <- paste0(name, '.json')
     #print(paste("Get",file_name,"from public cloud:"))
@@ -79,6 +79,7 @@ pdaGet <- function(name,cloud_config){
 #' @usage getCloudConfig()
 #' @author Chongliang Luo, Steven Vitale
 #' @param name of file
+#' @export
 getCloudConfig <- function(site_id=NULL){
   cloud_config=list()
   pda_user<-Sys.getenv('PDA_USER')
