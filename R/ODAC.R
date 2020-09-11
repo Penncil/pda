@@ -160,7 +160,6 @@ ODAC.derive_UWZ <- function(ipdata,control,config){
       W2 <- array(NA, c(dim(W), px))
       for(ii in 1:px) W2[,,ii] <- W[,ii] * W
       logL_D2 <- apply(d * (W2 - U*Z) / U^2, c(2, 3), sum, na.rm=T)  
-      
       derivatives <- list(T_all=T_all, b_meta=sumstat_i$b_meta, U=U, W=W, Z=Z, 
                           site=config$site_id, site_size = nrow(ipdata),
                           logL_D1=logL_D1, logL_D2=logL_D2)
@@ -172,13 +171,12 @@ ODAC.derive_UWZ <- function(ipdata,control,config){
 #' @useDynLib pda
 #' @title PDA surrogate estimation
 #' 
-#' @usage pda_surrogate_est(bbar, ipdata, broadcast=TRUE, control=control)
+#' @usage ODAC.estimate(ipdata, control, config)
 #' @author Chongliang Luo, Steven Vitale
 #' 
-#' @param bbar  initial estimate
 #' @param ipdata local data in data frame
-#' @param broadcast Logical, broadcast to the cloud? 
-#' @param control PDA control
+#' @param control pda control
+#' @param config cloud config
 #' @import data.table
 #' 
 #' @details step-3: construct and solve surrogate logL at the master/lead site
@@ -199,7 +197,7 @@ ODAC.estimate <- function(ipdata,control,config) {
     logL_all_D2 <- matrix(0, px, px)
     N <- 0
     for(site_i in control$sites){
-      derivatives_i <- pdaGet(paste0(site_i,'_derive'),config)
+      derivatives_i <- pdaGet(paste0(site_i,'_derive_UWZ'),config)
       logL_all_D1 <- logL_all_D1 + derivatives_i$logL_D1
       logL_all_D2 <- logL_all_D2 + derivatives_i$logL_D2
       N <- N + derivatives_i$site_size
@@ -265,7 +263,7 @@ ODAC.synthesize <- function(ipdata,control,config) {
   # }
   
   for(site_i in control$sites){
-    surr_i <- pdaGet(paste0(site_i,'_derive'),config)
+    surr_i <- pdaGet(paste0(site_i,'_estimate'),config)
     btilde_wt_sum <- btilde_wt_sum + surr_i$Htilde %*% surr_i$btilde
     wt_sum <- wt_sum + surr_i$Htilde
   }
