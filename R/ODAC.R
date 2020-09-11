@@ -211,13 +211,13 @@ ODAC.estimate <- function(ipdata,control,config) {
     # logL at local site
     if(hasTies){
       # rcpp function is negative logL...
-      logL_local <- function(beta) 0-pda::rcpp_coxph_logL_efron(beta, time = time, event = status, z = X) # / n
-      logL_local_D1 <- function(beta) 0-pda::rcpp_coxph_logL_gradient_efron(beta, time = time, event = status, z = X) # / n
-      logL_local_D2 <- function(beta) 0-matrix(pda::rcpp_coxph_logL_hessian(beta, time = time, event = status, z = X), px, px) # / n
+      logL_local <- function(beta) 0-rcpp_coxph_logL_efron(beta, time = time, event = status, z = X) # / n
+      logL_local_D1 <- function(beta) 0-rcpp_coxph_logL_gradient_efron(beta, time = time, event = status, z = X) # / n
+      logL_local_D2 <- function(beta) 0-matrix(rcpp_coxph_logL_hessian(beta, time = time, event = status, z = X), px, px) # / n
     } else {
-      logL_local <- function(beta) -pda::rcpp_coxph_logL(beta, time = time, event = status, z = X)  # / n
-      logL_local_D1 <- function(beta) -pda::rcpp_coxph_logL_gradient(beta, time = time, event = status, z = X) # / n
-      logL_local_D2 <- function(beta) -matrix(pda::rcpp_coxph_logL_hessian(beta, time = time, event = status, z = X), px, px) # / n
+      logL_local <- function(beta) -rcpp_coxph_logL(beta, time = time, event = status, z = X)  # / n
+      logL_local_D1 <- function(beta) -rcpp_coxph_logL_gradient(beta, time = time, event = status, z = X) # / n
+      logL_local_D2 <- function(beta) -matrix(rcpp_coxph_logL_hessian(beta, time = time, event = status, z = X), px, px) # / n
     }
     
     # surrogate log-L and its gradient
