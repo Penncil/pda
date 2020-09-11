@@ -163,6 +163,7 @@ pdaStep <- function(ipdata,site_id=NULL){
   } else {
    print('finished')
   }
+  control
 }
 
 
@@ -209,5 +210,5 @@ pdaSync <- function(cloud_config,site_id=NULL){
   }
   cat(mes)
   pdaPut(control,'control',cloud_config)
-  return(control)
+  control
 }
