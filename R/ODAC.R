@@ -1,31 +1,18 @@
 # https://style.tidyverse.org/functions.html#naming
 
-# require(survival)
-# require(data.table)
-# Rcpp::sourceCpp('src/rcpp_coxph.cpp')
-## broadcast: upload/download shared info to/from the cloud folder
 ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
 ODAC.family<-'cox'
 
-
-
 #' @useDynLib pda
-#' @title PDA initialize
+#' @title ODAC initialize
 #' 
-#' @usage pda_initialize <- function(ipdata, broadcast=TRUE, control=control)
-#' @author Chongliang Luo, Steven Vitale
-#' @param ipdata local data in data frame
-#' @param control pda control
+#' @usage ODAC.initialize <- function(ipdata, control, config)
+#' @param ipdata individual participant data
+#' @param control pda control data
+#' @param config local site configuration
+#' 
 #' @return  list(T_i = T_i, bhat_i = fit_i$coef, Vhat_i = summary(fit_i)$coef[,2]^2, site=control$mysite, site_size= nrow(ipdata))
 ODAC.initialize <- function(ipdata,control,config){
-  # data sanity check ...
-  
-  # if(!any(names(ipdata)[1:2] == c('time', 'status')))
-  #   error('ipdata columns should be (time, status, covariates)')
-  # if(!any(is.numeric(ipdata)))
-  #   error('ipdata need to be numeric, please create dummy variables if necessary')
-  
-
     T_i <- sort(unique(ipdata$time[ipdata$status==TRUE]))
     fit_i <- survival::coxph(survival::Surv(time, status) ~ ., data=ipdata)
     
@@ -34,7 +21,6 @@ ODAC.initialize <- function(ipdata,control,config){
                  Vhat_i = summary(fit_i)$coef[,2]^2,   # cov matrix? vcov(fit_i)
                  site = config$site_id,
                  site_size = nrow(ipdata))
-  #  pda_put(init, paste_0(config$site_id,'_initialize',config))
   return(init)
 }
 
@@ -43,20 +29,11 @@ ODAC.initialize <- function(ipdata,control,config){
 #' @useDynLib pda
 #' @title Generate pda derivatives
 #' 
-#' @usage ODAC.derive(bbar, ipdata, broadcast=TRUE, derivatives_ODAC_substep='first', control=pda_control)
-#' @author Chongliang Luo, Steven Vitale
+#' @usage ODAC.derive <- function(ipdata, control, config)
+#' @param ipdata individual participant data
+#' @param control pda control data
+#' @param config local site configuration
 #' 
-#' @param bbar  initial estimate
-#' @param ipdata local data in data frame
-#' @param broadcast Logical, broadcast to the cloud? 
-#' @param derivatives_ODAC_substep character, only for Cox regression, 'first' / 'second' indicate which substep of ODAC   
-#' @param control PDA control
-#' @import data.table
-#' 
-#' @details ONly for ODAC: step-2: calculate and broadcast 1st and 2nd order derivative at initial bbar
-#'        for ODAC, this requires 2 substeps: 1st calculate summary stats (U, W, Z), 
-#'        2nd calculate derivatives (logL_D1, logL_D2)
-#'
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 ODAC.derive <- function(ipdata,control,config) {
     px <- ncol(ipdata) - 2
@@ -84,8 +61,6 @@ ODAC.derive <- function(ipdata,control,config) {
       pfdata <- rbind(ipdata, pfdata, use.names=FALSE)
       pfdata <- pfdata[, interval:=cut(pfdata$time, breaks = c(T_all, t_max), labels = 1:nt, right=FALSE)][order(pfdata$interval),]
       pfdata$interval[is.na(pfdata$interval)]<-nt
-      #pfdata$interval <-interval
-      #pfdata<-pfdata[order(pfdata$interval),]
       X <- as.matrix(pfdata[, control$variables, with=F])
       # summary stats: U, W, Z
       eXb <- c(exp(X %*% bbar))
@@ -114,17 +89,12 @@ ODAC.derive <- function(ipdata,control,config) {
 #' @useDynLib pda
 #' @title Generate pda UWZ derivatives
 #' 
-#' @usage pda_derivatives(bbar, ipdata, broadcast=TRUE, derivatives_ODAC_substep='first', control=pda_control)
-#' @author Chongliang Luo, Steven Vitale
+#' @usage ODAC.derive_UWZ <- function(ipdata, control, config)
+#' @param ipdata individual participant data
+#' @param control pda control data
+#' @param config local site configuration
 #' 
-#' @param bbar  initial estimate
-#' @param ipdata local data in data frame
-#' @param broadcast Logical, broadcast to the cloud? 
-#' @param derivatives_ODAC_substep character, only for Cox regression, 'first' / 'second' indicate which substep of ODAC   
-#' @param control PDA control
-#' @import data.table
-#' 
-#' @details ONly for ODAC: step-2: calculate and broadcast 1st and 2nd order derivative at initial bbar
+#' @details Calculate and broadcast 1st and 2nd order derivative at initial bbar
 #'        for ODAC, this requires 2 substeps: 1st calculate summary stats (U, W, Z), 
 #'        2nd calculate derivatives (logL_D1, logL_D2)
 #'
@@ -172,14 +142,12 @@ ODAC.derive_UWZ <- function(ipdata,control,config){
 #' @title PDA surrogate estimation
 #' 
 #' @usage ODAC.estimate(ipdata, control, config)
-#' @author Chongliang Luo, Steven Vitale
-#' 
 #' @param ipdata local data in data frame
 #' @param control pda control
 #' @param config cloud config
 #' @import data.table
 #' 
-#' @details step-3: construct and solve surrogate logL at the master/lead site
+#' @details step-4: construct and solve surrogate logL at the master/lead site
 #'
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
 ODAC.estimate <- function(ipdata,control,config) {
@@ -241,11 +209,10 @@ ODAC.estimate <- function(ipdata,control,config) {
 #' @useDynLib pda
 #' @title PDA synthesize surrogate estimates from all sites, optional
 #' 
-#' @usage pda_synthesize(control=control)
-#' @author Chongliang Luo, Steven Vitale
-#' 
-#' @param control PDA control
-#' @import data.table
+#' @usage ODAC.synthesize(ipdata, control, config)
+#' @param ipdata local data in data frame
+#' @param control pda control
+#' @param config cloud config
 #' 
 #' @details Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
 #'
@@ -254,13 +221,8 @@ ODAC.synthesize <- function(ipdata,control,config) {
   
   px <- length(control$risk_factor)
   K <- length(control$sites)
-  # if (control$model == "ODAL" | control$model == "ODALR"){
-    # btilde_wt_sum <- rep(0, px+1)
-    # wt_sum <- rep(0, px+1)     # cov matrix?
-  # }else{
-    btilde_wt_sum <- rep(0, px)
-    wt_sum <- rep(0, px)     # cov matrix?
-  # }
+  btilde_wt_sum <- rep(0, px)
+  wt_sum <- rep(0, px)     # cov matrix?
   
   for(site_i in control$sites){
     surr_i <- pdaGet(paste0(site_i,'_estimate'),config)
@@ -276,6 +238,3 @@ ODAC.synthesize <- function(ipdata,control,config) {
   return(list(btilde=btilde, 
               Vtilde=Vtilde))
 }
-
-
-

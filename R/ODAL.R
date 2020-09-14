@@ -1,3 +1,5 @@
+# https://style.tidyverse.org/functions.html#naming
+
 ODAL.steps<-c('initialize','derive','estimate','synthesize')
 ODAL.family<-'binomial'
 
@@ -8,6 +10,7 @@ ODAL.family<-'binomial'
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
+#' 
 #' @return init
 ODAL.initialize <- function(ipdata,control,config){
     fit_i <- glm(status ~ 0+., data=ipdata,family = "binomial"(link = "logit"))
@@ -18,11 +21,16 @@ ODAL.initialize <- function(ipdata,control,config){
   return(init)
 }
 
+#' @useDynLib pda
+#' @title ODAL derivatives
+#' 
 #' @usage ODAL.derive <- function(ipdata,control,config)
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
-#' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
+#'
+#' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(mydata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
+#'
 ODAL.derive <- function(ipdata,control,config){
   # data sanity check ...
     px <- ncol(ipdata) - 1  # X includes intercept
@@ -78,11 +86,12 @@ ODAL.derive <- function(ipdata,control,config){
 
 #' @useDynLib pda
 #' @title PDA surrogate estimation
+#' 
 #' @usage ODAL.estimate(ipdata,control,config)
-#' @param bbar  initial estimate
 #' @param ipdata local data in data frame
 #' @param broadcast Logical, broadcast to the cloud? 
 #' @param control PDA control
+#' 
 #' @details step-3: construct and solve surrogate logL at the master/lead site
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
 ODAL.estimate <- function(ipdata,control,config) {
@@ -155,9 +164,9 @@ ODAL.estimate <- function(ipdata,control,config) {
 #' @useDynLib pda
 #' @title PDA synthesize surrogate estimates from all sites, optional
 #' 
-#' @usage ODAL.synthesize(control=control)
-#' @author Chongliang Luo, Steven Vitale
-#' 
+#' @usage ODAL.synthesize(ipdata,control,config)
+#' @param ipdata local data in data frame
+#' @param broadcast Logical, broadcast to the cloud? 
 #' @param control PDA control
 #' 
 #' @details Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
@@ -169,8 +178,6 @@ ODAL.synthesize <- function(ipdata,control,config) {
   K <- length(control$sites)
   btilde_wt_sum <- rep(0, px)
   wt_sum <- rep(0, px)     # cov matrix?
-#  btilde_wt_sum <- rep(0, px+1)
-#  wt_sum <- rep(0, px+1)     # cov matrix?
   
   for(site_i in control$sites){
     surr_i <- pdaGet(paste0(site_i,'_estimate'),config)
