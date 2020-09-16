@@ -5,9 +5,17 @@
 \title{gather cloud settings into one list}
 \usage{
 getCloudConfig()
+
+getCloudConfig()
 }
 \arguments{
-\item{name}{of file}
+\item{site_id}{site identifier}
+
+\item{dir}{shared directory path if using flat files}
+
+\item{uri}{web uri if using web service}
+
+\item{secret}{web token if using web service}
 }
 \description{
 gather cloud settings into one list

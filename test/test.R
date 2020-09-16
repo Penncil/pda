@@ -14,20 +14,22 @@ control <- list(project_name = 'Lung cancer study',
         step = 'initialize',    # current step, updated by lead
         sites = sites,
         heterogeneity = FALSE,
-        model = 'ODAC',
-        outcome = 'Surv(time, status)',
+        #model = 'ODAC',
+        #outcome = 'Surv(time, status)',
+        model = 'ODAL',
+        outcome = 'status',
         variables = c('age', 'sex'),
         optim_maxit=100,
         lead_site = sites[1],
         upload_date = as.character(Sys.time()),
         heterogeneity = FALSE)
 ## RUN BY LEAD ONLY 
-pda(site_id='site1',control=control)
+pda(site_id='site1',control=control,secret='WLjySoaZnSqMNswowg',uri='https://pda.one/006')
 #run pda until step is empty
 while (is.character(control$step)) {
   print(paste("step:",control$step))
   #cycle through sites
   for(i in 1:length(sites)) {
-    control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
+    control<-pda(ipdata=lung_split[[i]],site_id=sites[i],secret='WLjySoaZnSqMNswowg',uri='https://pda.one/006')
   }
 }

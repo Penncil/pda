@@ -1,15 +1,20 @@
 Package: pda
 Type: Package
-Title: Privacy-preserving Distributed Algorithm
+Title: Privacy-Preserving Distributed Algorithm
 Version: 1.0
 Date: 2020-09-01
 Author: Chongliang Luo, Rui Duan, Yong Chen
+Authors@R: c(person("Yong", "Chen", role=c("aut", "cre"),
+                     email ="ychen123@upenn.edu"),
+                     person("Chongliang", "Luo", role="aut", email ="chongliang.luo@pennmedicine.upenn.edu"),
+                     person("Rui", "Duan", role="aut"))
 Maintainer: Chongliang Luo <chongliang.luo@pennmedicine.upenn.edu>
-Description: a set of tools for communication-efficient and privacy-preserving distributed analyses for binary, continuous, count and time to event outcomes.
-              v2.0: Now allow heterogenous baseline hazard among sites
+Description: A set of tools for communication-efficient and privacy-preserving distributed analyses for binary, continuous, count and time to event outcomes. 
+Packaged: 2020-08-31 20:18:18 UTC; svitale
 License: GPL (>= 2)
-Imports: Rcpp (>= 0.12.19), stats, httr, jsonlite
-Suggests: survival
+Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table, survival
 LinkingTo: Rcpp, RcppArmadillo
+URL: https://github.com/Penncil/pda
+BugReports: https://github.com/Penncil/pda/issues
 RoxygenNote: 7.1.0
 Encoding: UTF-8
