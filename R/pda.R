@@ -13,6 +13,7 @@
 #' @param obj R object to encode as json and uploaded to cloud
 #' @param name of file
 #' @param cloud_config a list of variables for cloud configuration
+#' @importFrom utils menu
 #' @return  
 pdaPut <- function(obj,name,cloud_config){
     obj_Json <- jsonlite::toJSON(obj)
@@ -49,22 +50,21 @@ pdaPut <- function(obj,name,cloud_config){
 #' @title Function to list available objects
 #' @usage pdaList(name)
 #' @author Chongliang Luo, Steven Vitale
+#' @importFrom rvest html_nodes
+#' @import httr 
 #' @return  
 pdaList <- function(cloud_config){
-    # the file to upload
     if (is.character(cloud_config$uri)) {
-
+        res<-httr::GET(cloud_config$uri, httr::authenticate(cloud_config$site_id, cloud_config$secret, 'digest'))
+        files<-rvest::html_nodes(httr::content(res), xpath = "//table//td/a") 
+        files<-files[lapply(files,length)>0]
+        files<-regmatches(files, gregexpr("(?<=\")(.*?)(json)(?=\")", files, perl = TRUE))
     } else if (is.character(cloud_config$dir)) {
-        file_path <- paste0(cloud_config$dir)
+        files<-list.files(cloud_config$dir,pattern = "\\.json$") 
     } else {
-        file_path <- tempdir()
+        files<-list.files(tempdir(),pattern = "\\.json$") 
     }
-    files<-list.files(file_path,pattern = "\\.json$") 
     files<-substr(files,1,nchar(files)-5)
-#        url <- file.path(cloud_config$uri, file_name)
-#        #write the file from GET request to file_path
-#        res<-httr::GET(url, httr::write_disk(file_path, overwrite = TRUE), httr::authenticate(cloud_config$site_id, cloud_config$secret, 'digest'))
-        #print(paste("getting:",url))
     return(files)
 }
 
@@ -98,8 +98,12 @@ pdaGet <- function(name,cloud_config){
 #' @useDynLib pda
 #' @title gather cloud settings into one list
 #' @usage getCloudConfig()
+#' @usage getCloudConfig()
 #' @author Chongliang Luo, Steven Vitale
-#' @param name of file
+#' @param site_id site identifier
+#' @param dir shared directory path if using flat files
+#' @param uri web uri if using web service
+#' @param secret web token if using web service
 getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
   cloud_config<-list()
   cloud_config$site_id=site_id
@@ -116,9 +120,6 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 }
 
 #' @useDynLib pda
-#' @import stats
-#' @import Rcpp
-#' @import survival 
 #' @title PDA: Privacy-preserving Distributed Algorithm
 #' 
 #' @description  Fit Privacy-preserving Distributed Algorithms for linear, logistic, 
@@ -133,7 +134,40 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #'          
 #' @references Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018).
 #' @examples
-#'  ## Steve can you make an ODAl example here as we tested?
+#'require(survival)
+#'require(data.table)
+#'require(pda)
+#'data(lung)
+#'#create a number of sites, split the lung data amongst them
+#'sites = c('site1', 'site2', 'site3')
+#'set.seed(42)
+#'lung2<-lung[,2:5]
+#'lung2$sex <- lung2$sex-1
+#'lung2$status <- ifelse(lung2$status == 2, 1, 0)
+#'lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=T))
+#'######################### setup  ODAL #############################
+#'control <- list(project_name = 'Lung cancer study',
+#'        step = 'initialize',    # current step, updated by lead
+#'        sites = sites,
+#'        heterogeneity = FALSE,
+#'        model = 'ODAL',
+#'        outcome = "status",
+#'        variables = c('age', 'sex'),
+#'        optim_maxit=100,
+#'        lead_site = sites[1],
+#'        upload_date = as.character(Sys.time()),
+#'        heterogeneity = FALSE)
+#'## RUN BY LEAD ONLY 
+#'pda(site_id='site1',control=control)
+#'#run pda until step is empty
+#'while (is.character(control$step)) {
+#'  print(paste("step:",control$step))
+#'  #cycle through sites
+#'  for(i in 1:length(sites)) {
+#'    control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
+#'  }
+#'}
+#'
 #' @export
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   cloud_config<-getCloudConfig(site_id,dir,uri,secret)
@@ -175,7 +209,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     #check if lead and sync needed
     if(cloud_config$site_id==control$sites[1]) {
        files<-pdaList(cloud_config) 
-       if(all(paste0(sites,"_",control$step) %in% files)){
+       if(all(paste0(control$sites,"_",control$step) %in% files)){
            control<-pdaSync(cloud_config)
        } 
     }
