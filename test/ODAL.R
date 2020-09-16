@@ -22,14 +22,12 @@ control <- list(project_name = 'Lung cancer study',
         upload_date = as.character(Sys.time()),
         heterogeneity = FALSE)
 ## RUN BY LEAD ONLY 
-pdaInit(control)
+pda(site_id='site1',control=control,dir='/tmp/001')
 #run pda until step is empty
 while (is.character(control$step)) {
   print(paste("step:",control$step))
   #cycle through sites
   for(i in 1:length(sites)) {
-    pdaStep(ipdata=lung_split[[i]],site_id=sites[i])
+    control<-pda(ipdata=lung_split[[i]],site_id=sites[i],dir='/tmp/002')
   }
-  #update control
-  control<-pdaSync()
 }
