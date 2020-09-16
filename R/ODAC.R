@@ -39,52 +39,50 @@ ODAC.derive <- function(ipdata,control,config) {
     px <- ncol(ipdata) - 2
     # decide if doing ODAC derivatives 1st substep (calculate summary stats U, W, Z) 
     # or 2nd substep (calculate derivatives logL_D1, logL_D2)
-      # collect event time pts and meta est from the cloud
-      T_all <- c()
-      bhat_wt_sum <- rep(0, px)
-      wt_sum <- rep(0, px)     # cov matrix?
-      for(site_i in control$sites){
-        init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-        T_all <- c(T_all, init_i$T_i)
-        bhat_wt_sum <- bhat_wt_sum + init_i$bhat_i / init_i$Vhat_i
-        wt_sum <- wt_sum + 1 / init_i$Vhat_i  # cov matrix?
-      }
+    # collect event time pts and meta est from the cloud
+    T_all <- c()
+    bhat_wt_sum <- rep(0, px)
+    wt_sum <- rep(0, px)     # cov matrix?
+    for(site_i in control$sites){
+      init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+      T_all <- c(T_all, init_i$T_i)
+      bhat_wt_sum <- bhat_wt_sum + init_i$bhat_i / init_i$Vhat_i
+      wt_sum <- wt_sum + 1 / init_i$Vhat_i  # cov matrix?
+    }
+
+    T_all <- sort(unique(T_all))
+    nt <- length(T_all)
+    b_meta <- bhat_wt_sum / wt_sum
+    bbar <- b_meta
+    # add fake data points to help calculate the summary stats in risk sets ar each time pts
+    t_max <- max(ipdata$time)+1
+    #generate dataframe in format expected by ODAC
+    pfdata <- cbind(T_all, 0, matrix(0, nt, px))
+    pfdata <- rbind(ipdata, pfdata, use.names=FALSE)
+    pfdata <- pfdata[, interval:=cut(pfdata$time, breaks = c(T_all, t_max), labels = 1:nt, right=FALSE)][order(pfdata$interval),]
+    pfdata$interval[is.na(pfdata$interval)]<-nt
+    X <- as.matrix(pfdata[, control$variables, with=F])
+    # summary stats: U, W, Z
+    eXb <- c(exp(X %*% bbar))
+    X2 <- X[,1]*X
+    for(ix in 2:ncol(X)) X2 <- cbind(X2, X[,ix]*X)
+    UWZ <- eXb * cbind(1, X, X2)
+    # rcpp_aggregate() is a function written in rcpp for calculating column-wise (reverse) cumsum
+    # credit to Dr Wenjie Wang
+    UWZ <- rcpp_aggregate(x = UWZ, indices = pfdata$interval, cumulative = T, reversely = T)
+
+    # since fake X=0, cumulative W and Z will be the same, 
+    # but exp(Xb)=1, so need to remove cumulated ones from each time pts
+    U <- UWZ[,1] - c(nt:1)
+    W <- UWZ[,2:(px+1)]
+    Z <- array(UWZ[,-c(1:(px+1))], c(nt,px,px))
       
-      T_all <- sort(unique(T_all))
-      nt <- length(T_all)
-      b_meta <- bhat_wt_sum / wt_sum
-      bbar <- b_meta
-      # add fake data points to help calculate the summary stats in risk sets ar each time pts
-      t_max <- max(ipdata$time)+1
-      #generate dataframe in format expected by ODAC
-      pfdata <- cbind(T_all, 0, matrix(0, nt, px))
-      pfdata <- rbind(ipdata, pfdata, use.names=FALSE)
-      pfdata <- pfdata[, interval:=cut(pfdata$time, breaks = c(T_all, t_max), labels = 1:nt, right=FALSE)][order(pfdata$interval),]
-      pfdata$interval[is.na(pfdata$interval)]<-nt
-      X <- as.matrix(pfdata[, control$variables, with=F])
-      # summary stats: U, W, Z
-      eXb <- c(exp(X %*% bbar))
-      X2 <- X[,1]*X
-      for(ix in 2:ncol(X)) X2 <- cbind(X2, X[,ix]*X)
-      UWZ <- eXb * cbind(1, X, X2)
-      # rcpp_aggregate() is a function written in rcpp for calculating column-wise (reverse) cumsum
-      # credit to Dr Wenjie Wang
-      UWZ <- rcpp_aggregate(x = UWZ, indices = pfdata$interval, cumulative = T, reversely = T)
-      
-      # since fake X=0, cumulative W and Z will be the same, 
-      # but exp(Xb)=1, so need to remove cumulated ones from each time pts
-      U <- UWZ[,1] - c(nt:1)
-      W <- UWZ[,2:(px+1)]
-      Z <- array(UWZ[,-c(1:(px+1))], c(nt,px,px))
-      
-      # summary_stat
-      derivatives <- list(T_all=T_all, b_meta=b_meta, site=config$site_id, site_size=nrow(ipdata), U=U, W=W, Z=Z)
-    
-  
+    # summary_stat
+    derivatives <- list(T_all=T_all, b_meta=b_meta, site=config$site_id, site_size=nrow(ipdata), U=U, W=W, Z=Z)
+
   # broadcast to the cloud?
   return(derivatives)
 }
-
 
 #' @useDynLib pda
 #' @title Generate pda UWZ derivatives

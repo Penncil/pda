@@ -13,7 +13,6 @@
 #' @param obj R object to encode as json and uploaded to cloud
 #' @param name of file
 #' @param cloud_config a list of variables for cloud configuration
-#' @export
 #' @return  
 pdaPut <- function(obj,name,cloud_config){
     obj_Json <- jsonlite::toJSON(obj)
@@ -46,6 +45,29 @@ pdaPut <- function(obj,name,cloud_config){
     }
 }
 
+#' @useDynLib pda
+#' @title Function to list available objects
+#' @usage pdaList(name)
+#' @author Chongliang Luo, Steven Vitale
+#' @return  
+pdaList <- function(cloud_config){
+    # the file to upload
+    if (is.character(cloud_config$uri)) {
+
+    } else if (is.character(cloud_config$dir)) {
+        file_path <- paste0(cloud_config$dir)
+    } else {
+        file_path <- tempdir()
+    }
+    files<-list.files(file_path,pattern = "\\.json$") 
+    files<-substr(files,1,nchar(files)-5)
+#        url <- file.path(cloud_config$uri, file_name)
+#        #write the file from GET request to file_path
+#        res<-httr::GET(url, httr::write_disk(file_path, overwrite = TRUE), httr::authenticate(cloud_config$site_id, cloud_config$secret, 'digest'))
+        #print(paste("getting:",url))
+    return(files)
+}
+
 
 #' @useDynLib pda
 #' @title Function to download json and return as object
@@ -53,7 +75,6 @@ pdaPut <- function(obj,name,cloud_config){
 #' @author Chongliang Luo, Steven Vitale
 #' @param name of file
 #' @return  
-#' @export
 pdaGet <- function(name,cloud_config){
     file_name <- paste0(name, '.json')
     #print(paste("Get",file_name,"from public cloud:"))
@@ -79,32 +100,19 @@ pdaGet <- function(name,cloud_config){
 #' @usage getCloudConfig()
 #' @author Chongliang Luo, Steven Vitale
 #' @param name of file
-#' @export
-getCloudConfig <- function(site_id=NULL){
-  cloud_config=list()
-  pda_user<-Sys.getenv('PDA_USER')
-  pda_secret<-Sys.getenv('PDA_SECRET')
-  pda_uri<-Sys.getenv('PDA_URI')
-  pda_dir<-Sys.getenv('PDA_DIR')
-  if(!is.null(site_id)) {
-    cloud_config$site_id=site_id
-  } else if(pda_user!='') {
-    cloud_config$site_id=pda_user
+getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
+  cloud_config<-list()
+  cloud_config$site_id=site_id
+  if(!is.null(secret)) {
+      cloud_config$secret = secret
   }
-  if (pda_secret!='') cloud_config$secret = pda_secret
-  if (pda_uri!='') cloud_config$uri = pda_uri
-  if (pda_dir!='') cloud_config$dir = pda_dir
-  return(cloud_config);
-}
-
-#' @useDynLib pda
-#' @title Function to download json and return as object
-#' @param control pda control object
-#' @param site_id name of site
-#' @export
-pdaInit <- function(control,site_id=NULL){
-  cloud_config<-getCloudConfig(site_id)
-  pdaPut(control,'control',cloud_config)
+  if(!is.null(dir)) {
+      cloud_config$dir = dir
+  }
+  if(!is.null(uri)) {
+      cloud_config$uri = uri
+  }
+  cloud_config;
 }
 
 #' @useDynLib pda
@@ -119,16 +127,20 @@ pdaInit <- function(control,site_id=NULL){
 #' @author Chongliang Luo, Steven Vitale, Jiayi Tong, Rui Duan, Yong Chen
 #' 
 #' @param ipdata  Local IPD data in data frame, should include at least one column for the outcome and one column for the covariates 
-#' @param mysite Character, site name as decided by all the sites when initialize the collaboration
+#' @param site_id Character site name
+#' @param control pda control data
 #'
 #'          
 #' @references Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018).
 #' @examples
 #'  ## Steve can you make an ODAl example here as we tested?
-#' 
 #' @export
-pdaStep <- function(ipdata,site_id=NULL){
-  cloud_config<-getCloudConfig(site_id)
+pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
+  cloud_config<-getCloudConfig(site_id,dir,uri,secret)
+  if(!(is.null(control)) &&  cloud_config$site_id==control$sites[1]) {
+           pdaPut(control,'control',cloud_config)
+           return(control)
+  }
   control = pdaGet('control',cloud_config)
   cat('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): \n')
   cat('your site = ', cloud_config$site_id, '\n')
@@ -160,8 +172,13 @@ pdaStep <- function(ipdata,site_id=NULL){
     step_function<-paste0(control$model,'.',control$step)
     step_obj<-get(step_function)(ipdata, control, cloud_config)
     pdaPut(step_obj,paste0(cloud_config$site_id,'_',control$step),cloud_config)
-  } else {
-   print('finished')
+    #check if lead and sync needed
+    if(cloud_config$site_id==control$sites[1]) {
+       files<-pdaList(cloud_config) 
+       if(all(paste0(sites,"_",control$step) %in% files)){
+           control<-pdaSync(cloud_config)
+       } 
+    }
   }
   control
 }
@@ -172,9 +189,7 @@ pdaStep <- function(ipdata,site_id=NULL){
 #' 
 #' @param control_update Logical, update the PDA control?
 #' 
-#' @export
-pdaSync <- function(cloud_config,site_id=NULL){
-  cloud_config<-getCloudConfig(site_id)
+pdaSync <- function(cloud_config){
   control = pdaGet('control',cloud_config)
   if(control$step=="initialize"){
     init_i <- pdaGet(paste0(control$lead_site,'_initialize'),cloud_config)
