@@ -29,7 +29,7 @@ pda(site_id='site1',control=control)
 while (is.character(control$step)) {
   print(paste("step:",control$step))
   #cycle through sites
-  for(i in 1:length(sites)) {
+  for(i in length(sites):1) {
     control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
   }
 }
