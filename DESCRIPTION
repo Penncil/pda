@@ -3,7 +3,6 @@ Type: Package
 Title: Privacy-Preserving Distributed Algorithm
 Version: 1.0
 Date: 2020-09-01
-Author: Chongliang Luo, Rui Duan, Yong Chen
 Authors@R: c(person("Yong", "Chen", role=c("aut", "cre"),
                      email ="ychen123@upenn.edu"),
                      person("Chongliang", "Luo", role="aut", email ="chongliang.luo@pennmedicine.upenn.edu"),

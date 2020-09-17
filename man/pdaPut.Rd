@@ -4,21 +4,18 @@
 \alias{pdaPut}
 \title{Function to upload object to cloud as json}
 \usage{
-pdaPut(obj,name,cloud_config)
+pdaPut(obj,name,config)
 }
 \arguments{
 \item{obj}{R object to encode as json and uploaded to cloud}
 
 \item{name}{of file}
 
-\item{cloud_config}{a list of variables for cloud configuration}
+\item{config}{a list of variables for cloud configuration}
 }
 \value{
-
+NONE
 }
 \description{
 Function to upload object to cloud as json
-}
-\author{
-Chongliang Luo, Steven Vitale
 }

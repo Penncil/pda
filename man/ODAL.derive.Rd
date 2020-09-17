@@ -4,7 +4,7 @@
 \alias{ODAL.derive}
 \title{ODAL derivatives}
 \usage{
-ODAL.derive <- function(ipdata,control,config)
+ODAL.derive(ipdata,control,config)
 }
 \arguments{
 \item{ipdata}{individual participant data}

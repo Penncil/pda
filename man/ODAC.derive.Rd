@@ -4,7 +4,7 @@
 \alias{ODAC.derive}
 \title{Generate pda derivatives}
 \usage{
-ODAC.derive <- function(ipdata, control, config)
+ODAC.derive(ipdata, control, config)
 }
 \arguments{
 \item{ipdata}{individual participant data}

@@ -6,7 +6,7 @@ ODAC.family<-'cox'
 #' @useDynLib pda
 #' @title ODAC initialize
 #' 
-#' @usage ODAC.initialize <- function(ipdata, control, config)
+#' @usage ODAC.initialize(ipdata, control, config)
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
@@ -29,7 +29,7 @@ ODAC.initialize <- function(ipdata,control,config){
 #' @useDynLib pda
 #' @title Generate pda derivatives
 #' 
-#' @usage ODAC.derive <- function(ipdata, control, config)
+#' @usage ODAC.derive(ipdata, control, config)
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
@@ -60,7 +60,7 @@ ODAC.derive <- function(ipdata,control,config) {
     #generate dataframe in format expected by ODAC
     pfdata <- cbind(T_all, 0, matrix(0, nt, px))
     pfdata <- rbind(ipdata, pfdata, use.names=FALSE)
-    pfdata <- pfdata[, interval:=cut(pfdata$time, breaks = c(T_all, t_max), labels = 1:nt, right=FALSE)][order(pfdata$interval),]
+    pfdata <- pfdata[, 'interval':=cut(pfdata$time, breaks = c(T_all, t_max), labels = 1:nt, right=FALSE)][order(pfdata$interval),]
     pfdata$interval[is.na(pfdata$interval)]<-nt
     X <- as.matrix(pfdata[, control$variables, with=F])
     # summary stats: U, W, Z
@@ -88,7 +88,7 @@ ODAC.derive <- function(ipdata,control,config) {
 #' @useDynLib pda
 #' @title Generate pda UWZ derivatives
 #' 
-#' @usage ODAC.derive_UWZ <- function(ipdata, control, config)
+#' @usage ODAC.derive_UWZ(ipdata, control, config)
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
@@ -119,11 +119,11 @@ ODAC.derive_UWZ <- function(ipdata,control,config){
       
       # number of events in ipdata at each event time pts in T_all
       T_all <- sumstat_i$T_all
-      d <- c(table(c(ipdata[status==T,time], T_all)) - 1)
+      d <- c(table(c(ipdata[ipdata$status==T,time], T_all)) - 1)
       
       # 1st and 2nd derivatives
       # X <- as.matrix(ipdata[status==TRUE, control$risk_factor, with=F])
-      X <- as.matrix(ipdata[status==TRUE, control$variables, with=F])
+      X <- as.matrix(ipdata[ipdata$status==TRUE, control$variables, with=F])
       
       logL_D1 <- apply(X, 2, sum) - apply(d * W / U, 2, sum, na.rm=T)
       W2 <- array(NA, c(dim(W), px))

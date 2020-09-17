@@ -4,7 +4,7 @@
 \alias{ODAL.initialize}
 \title{ODAL initialize}
 \usage{
-ODAL.initialize <- function(ipdata,control,config)
+ODAL.initialize(ipdata,control,config)
 }
 \arguments{
 \item{ipdata}{individual participant data}

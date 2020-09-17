@@ -6,7 +6,7 @@ ODAL.family<-'binomial'
 #' @useDynLib pda
 #' @title ODAL initialize
 #' 
-#' @usage ODAL.initialize <- function(ipdata,control,config)
+#' @usage ODAL.initialize(ipdata,control,config)
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
@@ -24,7 +24,7 @@ ODAL.initialize <- function(ipdata,control,config){
 #' @useDynLib pda
 #' @title ODAL derivatives
 #' 
-#' @usage ODAL.derive <- function(ipdata,control,config)
+#' @usage ODAL.derive(ipdata,control,config)
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
@@ -89,8 +89,8 @@ ODAL.derive <- function(ipdata,control,config){
 #' 
 #' @usage ODAL.estimate(ipdata,control,config)
 #' @param ipdata local data in data frame
-#' @param broadcast Logical, broadcast to the cloud? 
 #' @param control PDA control
+#' @param config cloud configuration
 #' 
 #' @details step-3: construct and solve surrogate logL at the master/lead site
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
@@ -166,8 +166,8 @@ ODAL.estimate <- function(ipdata,control,config) {
 #' 
 #' @usage ODAL.synthesize(ipdata,control,config)
 #' @param ipdata local data in data frame
-#' @param broadcast Logical, broadcast to the cloud? 
-#' @param control PDA control
+#' @param control pda control
+#' @param config pda cloud configuration
 #' 
 #' @details Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
 #'

@@ -4,7 +4,7 @@
 \alias{ODAC.derive_UWZ}
 \title{Generate pda UWZ derivatives}
 \usage{
-ODAC.derive_UWZ <- function(ipdata, control, config)
+ODAC.derive_UWZ(ipdata, control, config)
 }
 \arguments{
 \item{ipdata}{individual participant data}

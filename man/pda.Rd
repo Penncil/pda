@@ -4,7 +4,7 @@
 \alias{pda}
 \title{PDA: Privacy-preserving Distributed Algorithm}
 \usage{
-pda(data = ipdata, mysite = NULL)
+pda(ipdata,site_id,control,dir,uri,secret)
 }
 \arguments{
 \item{ipdata}{Local IPD data in data frame, should include at least one column for the outcome and one column for the covariates}
@@ -12,6 +12,15 @@ pda(data = ipdata, mysite = NULL)
 \item{site_id}{Character site name}
 
 \item{control}{pda control data}
+
+\item{dir}{directory for shared flat file cloud}
+
+\item{uri}{Universal Resource Identifier for this run}
+
+\item{secret}{password to authenticate as site_id on uri}
+}
+\value{
+control
 }
 \description{
 Fit Privacy-preserving Distributed Algorithms for linear, logistic, 
@@ -23,12 +32,12 @@ require(data.table)
 require(pda)
 data(lung)
 #create a number of sites, split the lung data amongst them
-sites = c('site1', 'site2', 'site3')
+sites = c('site1', 'site2')
 set.seed(42)
 lung2<-lung[,2:5]
 lung2$sex <- lung2$sex-1
 lung2$status <- ifelse(lung2$status == 2, 1, 0)
-lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=T))
+lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
 ######################### setup  ODAL #############################
 control <- list(project_name = 'Lung cancer study',
        step = 'initialize',    # current step, updated by lead
@@ -47,7 +56,7 @@ pda(site_id='site1',control=control)
 while (is.character(control$step)) {
  print(paste("step:",control$step))
  #cycle through sites
- for(i in 1:length(sites)) {
+ for(i in length(sites):1) {
    control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
  }
 }
@@ -55,7 +64,4 @@ while (is.character(control$step)) {
 }
 \references{
 Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018).
-}
-\author{
-Chongliang Luo, Steven Vitale, Jiayi Tong, Rui Duan, Yong Chen
 }

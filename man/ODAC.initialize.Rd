@@ -4,7 +4,7 @@
 \alias{ODAC.initialize}
 \title{ODAC initialize}
 \usage{
-ODAC.initialize <- function(ipdata, control, config)
+ODAC.initialize(ipdata, control, config)
 }
 \arguments{
 \item{ipdata}{individual participant data}

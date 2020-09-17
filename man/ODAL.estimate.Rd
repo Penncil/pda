@@ -11,7 +11,7 @@ ODAL.estimate(ipdata,control,config)
 
 \item{control}{PDA control}
 
-\item{broadcast}{Logical, broadcast to the cloud?}
+\item{config}{cloud configuration}
 }
 \value{
 list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))

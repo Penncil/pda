@@ -2,7 +2,7 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::plugins(cpp11)]]
 
-#include "rcpp_coxph.hpp"
+#include "rcpp_coxph.h"
 
 // Cox partial (neg) log-likelihood
 // [[Rcpp::export]]

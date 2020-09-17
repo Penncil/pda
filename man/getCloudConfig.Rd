@@ -2,24 +2,22 @@
 % Please edit documentation in R/pda.R
 \name{getCloudConfig}
 \alias{getCloudConfig}
-\title{gather cloud settings into one list}
+\title{gather cloud settings into a list}
 \usage{
-getCloudConfig()
-
-getCloudConfig()
+getCloudConfig(site_id,dir,uri,secret)
 }
 \arguments{
 \item{site_id}{site identifier}
 
-\item{dir}{shared directory path if using flat files}
+\item{dir}{shared directory path if flat files}
 
-\item{uri}{web uri if using web service}
+\item{uri}{web uri if web service}
 
-\item{secret}{web token if using web service}
+\item{secret}{web token if web service}
+}
+\value{
+list of cloud parameters
 }
 \description{
-gather cloud settings into one list
-}
-\author{
-Chongliang Luo, Steven Vitale
+gather cloud settings into a list
 }

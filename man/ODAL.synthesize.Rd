@@ -9,9 +9,9 @@ ODAL.synthesize(ipdata,control,config)
 \arguments{
 \item{ipdata}{local data in data frame}
 
-\item{control}{PDA control}
+\item{control}{pda control}
 
-\item{broadcast}{Logical, broadcast to the cloud?}
+\item{config}{pda cloud configuration}
 }
 \value{
 list(btilde=btilde,  Vtilde=Vtilde)

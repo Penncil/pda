@@ -4,14 +4,14 @@
 \alias{pdaList}
 \title{Function to list available objects}
 \usage{
-pdaList(name)
+pdaList(config)
+}
+\arguments{
+\item{config}{a list of variables for cloud configuration}
 }
 \value{
-
+list of files
 }
 \description{
 Function to list available objects
-}
-\author{
-Chongliang Luo, Steven Vitale
 }

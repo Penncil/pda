@@ -2,13 +2,16 @@
 % Please edit documentation in R/pda.R
 \name{pdaSync}
 \alias{pdaSync}
-\title{update the PDA control, used by the master site}
+\title{pda synchronize}
 \usage{
-pdaSync <- function(config,site_id)
+pdaSync(config)
 }
 \arguments{
-\item{control_update}{Logical, update the PDA control?}
+\item{config}{cloug configuration}
+}
+\value{
+control
 }
 \description{
-update the PDA control, used by the master site
+update pda control if ready (run by lead)
 }

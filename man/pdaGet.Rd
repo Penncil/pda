@@ -4,17 +4,16 @@
 \alias{pdaGet}
 \title{Function to download json and return as object}
 \usage{
-pdaGet(name)
+pdaGet(name,config)
 }
 \arguments{
 \item{name}{of file}
+
+\item{config}{cloud configuration}
 }
 \value{
-
+data from json file
 }
 \description{
 Function to download json and return as object
-}
-\author{
-Chongliang Luo, Steven Vitale
 }

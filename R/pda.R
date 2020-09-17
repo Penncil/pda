@@ -1,13 +1,13 @@
 #' @useDynLib pda
 #' @title Function to upload object to cloud as json
 #' 
-#' @usage pdaPut(obj,name,cloud_config)
+#' @usage pdaPut(obj,name,config)
 #' @param obj R object to encode as json and uploaded to cloud
 #' @param name of file
-#' @param cloud_config a list of variables for cloud configuration
+#' @param config a list of variables for cloud configuration
 #' @importFrom utils menu
-#' @return  
-pdaPut <- function(obj,name,cloud_config){
+#' @return NONE
+pdaPut <- function(obj,name,config){
     obj_Json <- jsonlite::toJSON(obj)
     file_name <- paste0(name, '.json')
     if(interactive()) {
@@ -22,36 +22,36 @@ pdaPut <- function(obj,name,cloud_config){
       return(FALSE)
     }
     # the file to upload
-    if (is.character(cloud_config$dir)) {
-        file_path <- paste0(cloud_config$dir,'/', file_name)
+    if (is.character(config$dir)) {
+        file_path <- paste0(config$dir,'/', file_name)
     } else {
         file_path <- paste0(tempdir(),'/', file_name)
     }
     write(obj_Json, file_path)
-    if (is.character(cloud_config$uri)) {
+    if (is.character(config$uri)) {
         # create the url target of the file
-        url <- file.path(cloud_config$uri, file_name)
+        url <- file.path(config$uri, file_name)
         # webdav PUT request to send a file to cloud
-        r<-httr::PUT(url, body = httr::upload_file(file_path), httr::authenticate(cloud_config$site_id, cloud_config$secret, 'digest'))
+        r<-httr::PUT(url, body = httr::upload_file(file_path), httr::authenticate(config$site_id, config$secret, 'digest'))
         print(paste("putting:",url))
     }
 }
 
 #' @useDynLib pda
 #' @title Function to list available objects
-#' @usage pdaList(cloud_config)
-#' @param cloud_config a list of variables for cloud configuration
+#' @usage pdaList(config)
+#' @param config a list of variables for cloud configuration
 #' @importFrom rvest html_nodes
 #' @import httr 
-#' @return  
-pdaList <- function(cloud_config){
-    if (is.character(cloud_config$uri)) {
-        res<-httr::GET(cloud_config$uri, httr::authenticate(cloud_config$site_id, cloud_config$secret, 'digest'))
+#' @return list of files
+pdaList <- function(config){
+    if (is.character(config$uri)) {
+        res<-httr::GET(config$uri, httr::authenticate(config$site_id, config$secret, 'digest'))
         files<-rvest::html_nodes(httr::content(res), xpath = "//table//td/a") 
         files<-files[lapply(files,length)>0]
         files<-regmatches(files, gregexpr("(?<=\")(.*?)(json)(?=\")", files, perl = TRUE))
-    } else if (is.character(cloud_config$dir)) {
-        files<-list.files(cloud_config$dir,pattern = "\\.json$") 
+    } else if (is.character(config$dir)) {
+        files<-list.files(config$dir,pattern = "\\.json$") 
     } else {
         files<-list.files(tempdir(),pattern = "\\.json$") 
     }
@@ -62,22 +62,23 @@ pdaList <- function(cloud_config){
 
 #' @useDynLib pda
 #' @title Function to download json and return as object
-#' @usage pdaGet(name)
+#' @usage pdaGet(name,config)
 #' @param name of file
-#' @return  
-pdaGet <- function(name,cloud_config){
+#' @param config cloud configuration
+#' @return data from json file
+pdaGet <- function(name,config){
     file_name <- paste0(name, '.json')
     #print(paste("Get",file_name,"from public cloud:"))
     # the file to upload
-    if (is.character(cloud_config$dir)) {
-        file_path <- paste0(cloud_config$dir,'/', file_name)
+    if (is.character(config$dir)) {
+        file_path <- paste0(config$dir,'/', file_name)
     } else {
         file_path <- paste0(tempdir(),'/', file_name)
     }
-    if (is.character(cloud_config$uri)) {
-        url <- file.path(cloud_config$uri, file_name)
+    if (is.character(config$uri)) {
+        url <- file.path(config$uri, file_name)
         #write the file from GET request to file_path
-        res<-httr::GET(url, httr::write_disk(file_path, overwrite = TRUE), httr::authenticate(cloud_config$site_id, cloud_config$secret, 'digest'))
+        res<-httr::GET(url, httr::write_disk(file_path, overwrite = TRUE), httr::authenticate(config$site_id, config$secret, 'digest'))
         #print(paste("getting:",url))
     } 
     obj<-jsonlite::fromJSON(file_path)
@@ -87,24 +88,35 @@ pdaGet <- function(name,cloud_config){
 
 #' @useDynLib pda
 #' @title gather cloud settings into a list
-#' @usage getCloudConfig()
+#' @usage getCloudConfig(site_id,dir,uri,secret)
 #' @param site_id site identifier
 #' @param dir shared directory path if flat files
 #' @param uri web uri if web service
 #' @param secret web token if web service
+#' @return list of cloud parameters
 getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
-  cloud_config<-list()
-  cloud_config$site_id=site_id
+  config<-list()
+  pda_user<-Sys.getenv('PDA_USER')
+  pda_secret<-Sys.getenv('PDA_SECRET')
+  pda_uri<-Sys.getenv('PDA_URI')
+  pda_dir<-Sys.getenv('PDA_DIR')
+  config$site_id=site_id
   if(!is.null(secret)) {
-      cloud_config$secret = secret
+      config$secret = secret
+  } else if (pda_secret!='') {
+      config$secret = pda_secret
   }
   if(!is.null(dir)) {
-      cloud_config$dir = dir
+      config$dir = dir
+  } else if (pda_dir!='') {
+      config$dir = pda_dir
   }
   if(!is.null(uri)) {
-      cloud_config$uri = uri
+      config$uri = uri
+  } else if (pda_uri!='') {
+      config$uri = pda_uri
   }
-  cloud_config;
+  config;
 }
 
 #' @useDynLib pda
@@ -112,13 +124,14 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' 
 #' @description  Fit Privacy-preserving Distributed Algorithms for linear, logistic, 
 #'                Poisson and Cox PH regression with possible heterogeneous data across sites.
-#' @usage pda(data = ipdata, mysite = NULL)
+#' @usage pda(ipdata,site_id,control,dir,uri,secret)
 #' @param ipdata  Local IPD data in data frame, should include at least one column for the outcome and one column for the covariates 
 #' @param site_id Character site name
 #' @param control pda control data
 #' @param dir directory for shared flat file cloud
 #' @param uri Universal Resource Identifier for this run
 #' @param secret password to authenticate as site_id on uri
+#' @import stats
 #'
 #'          
 #' @references Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018).
@@ -128,12 +141,12 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #'require(pda)
 #'data(lung)
 #'#create a number of sites, split the lung data amongst them
-#'sites = c('site1', 'site2', 'site3')
+#'sites = c('site1', 'site2')
 #'set.seed(42)
 #'lung2<-lung[,2:5]
 #'lung2$sex <- lung2$sex-1
 #'lung2$status <- ifelse(lung2$status == 2, 1, 0)
-#'lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=T))
+#'lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
 #'######################### setup  ODAL #############################
 #'control <- list(project_name = 'Lung cancer study',
 #'        step = 'initialize',    # current step, updated by lead
@@ -157,17 +170,18 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #'  }
 #'}
 #'
+#' @return control
 #' @export
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
-  cloud_config<-getCloudConfig(site_id,dir,uri,secret)
+  config<-getCloudConfig(site_id,dir,uri,secret)
   #add a control if one was provided
-  if(!(is.null(control)) &&  cloud_config$site_id==control$sites[1]) {
-           pdaPut(control,'control',cloud_config)
+  if(!(is.null(control)) &&  config$site_id==control$sites[1]) {
+           pdaPut(control,'control',config)
            return(control)
   }
-  control = pdaGet('control',cloud_config)
+  control = pdaGet('control',config)
   cat('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): \n')
-  cat('your site = ', cloud_config$site_id, '\n')
+  cat('your site = ', config$site_id, '\n')
   n = nrow(ipdata)
   formula<-as.formula(
     paste(control$outcome,
@@ -187,40 +201,43 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   }
   if(is.character(control$step)){
     step_function<-paste0(control$model,'.',control$step)
-    step_obj<-get(step_function)(ipdata, control, cloud_config)
-    pdaPut(step_obj,paste0(cloud_config$site_id,'_',control$step),cloud_config)
+    step_obj<-get(step_function)(ipdata, control, config)
+    pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
     #sync needed?
-    if(cloud_config$site_id==control$sites[1]) {
-           control<-pdaSync(cloud_config)
+    if(config$site_id==control$sites[1]) {
+           control<-pdaSync(config)
     }
   }
   control
 }
 
 
-#' update the PDA control, used by the lead site
-#' @usage pdaSync <- function(config,site_id)
+#' @useDynLib pda
+#' @title pda synchronize 
 #' 
-#' @param control_update Logical, update the PDA control?
+#' @description  update pda control if ready (run by lead)
+#' @usage pdaSync(config)
+#' @param config cloug configuration
+#' @return control
 #' 
-pdaSync <- function(cloud_config){
-  control = pdaGet('control',cloud_config)
-  files<-pdaList(cloud_config) 
+pdaSync <- function(config){
+  control = pdaGet('control',config)
+  files<-pdaList(config) 
   if(all(paste0(control$sites,"_",control$step) %in% files)){
     if(control$step=="initialize"){
-      init_i <- pdaGet(paste0(control$lead_site,'_initialize'),cloud_config)
+      init_i <- pdaGet(paste0(control$lead_site,'_initialize'),config)
       bhat <-init_i$bhat_i 
       vbhat <- init_i$Vhat_i
       for(site_i in control$sites){
         if(site_i!=control$lead_site){
-          init_i <- pdaGet(paste0(site_i,'_initialize'),cloud_config)
+          init_i <- pdaGet(paste0(site_i,'_initialize'),config)
           bhat = rbind(bhat, init_i$bhat_i)
           vbhat = rbind(vbhat, init_i$Vhat_i)
         }
       }
       #estimate from meta-analysis
-      bmeta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = T)})/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
-      vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
+      bmeta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
+      vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
       res = list(bmeta = bmeta, vmeta = vmeta)
       cat('meta analysis (inverse variance weighted average) result:')
       #print(res)
@@ -239,7 +256,7 @@ pdaSync <- function(cloud_config){
       control$step = NULL
     }
     cat(mes)
-    pdaPut(control,'control',cloud_config)
+    pdaPut(control,'control',config)
     control
   } 
 }
