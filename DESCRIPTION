@@ -3,17 +3,14 @@ Type: Package
 Title: Privacy-Preserving Distributed Algorithm
 Version: 1.0
 Date: 2020-09-01
-Authors@R: c(person("Yong", "Chen", role=c("aut", "cre"),
+Authors@R: c(person("Yong", "Chen", role="aut",
                      email ="ychen123@upenn.edu"),
-                     person("Chongliang", "Luo", role="aut", email ="chongliang.luo@pennmedicine.upenn.edu"),
+                     person("Chongliang", "Luo", role=c("aut","cre"), email ="chongliang.luo@pennmedicine.upenn.edu"),
                      person("Rui", "Duan", role="aut"))
-Maintainer: Chongliang Luo <chongliang.luo@pennmedicine.upenn.edu>
-Description: A set of tools for communication-efficient and privacy-preserving distributed analyses for binary, continuous, count and time to event outcomes. 
+R CMD buildDescription: A set of tools for communication-efficient and privacy-preserving distributed analyses for binary, continuous, count and time to event outcomes. 
 Packaged: 2020-08-31 20:18:18 UTC; svitale
 License: GPL (>= 2)
 Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table, survival
 LinkingTo: Rcpp, RcppArmadillo
-URL: https://github.com/Penncil/pda
-BugReports: https://github.com/Penncil/pda/issues
 RoxygenNote: 7.1.0
 Encoding: UTF-8
