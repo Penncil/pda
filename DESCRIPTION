@@ -7,7 +7,7 @@ Authors@R: c(person("Yong", "Chen", role="aut",
                      email ="ychen123@upenn.edu"),
                      person("Chongliang", "Luo", role=c("aut","cre"), email ="chongliang.luo@pennmedicine.upenn.edu"),
                      person("Rui", "Duan", role="aut"))
-R CMD buildDescription: A set of tools for communication-efficient and privacy-preserving distributed analyses for binary, continuous, count and time to event outcomes. 
+Description: A set of tools for communication-efficient and privacy-preserving distributed analyses for binary, continuous, count and time to event outcomes. 
 Packaged: 2020-08-31 20:18:18 UTC; svitale
 License: GPL (>= 2)
 Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table, survival
