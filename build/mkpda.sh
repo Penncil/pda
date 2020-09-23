@@ -1,4 +1,4 @@
-#run from build!
+#run from build directory!
 #start from scratch
 mv pda deleteme_pda
 rm -fR pda-cran
