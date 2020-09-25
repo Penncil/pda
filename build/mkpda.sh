@@ -1,6 +1,6 @@
 #run from build directory!
 #start from scratch
-mv pda deleteme_pda
+mv pda deleteme
 rm -fR pda-cran
 #rsync and exclude directories that CRAN doesn't like
 mkdir pda-cran
