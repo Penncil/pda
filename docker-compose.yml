@@ -1,0 +1,13 @@
+version: "3.5"
+services:
+  site:
+    container_name: site
+    build: ./
+    tty: true
+    stdin_open: true
+    volumes:
+      - "../build/:/build"
+    environment:
+      PDA_USER: 'site1'
+      PDA_URI: 'https://pda.one/<changeme>/'
+      PDA_SECRET: '<changeme>'
