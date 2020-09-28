@@ -131,53 +131,60 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' @param dir directory for shared flat file cloud
 #' @param uri Universal Resource Identifier for this run
 #' @param secret password to authenticate as site_id on uri
-#' @import stats
+#' @import stats, survival, rvest, jsonlite, data.table, httr, Rcpp, RcppArmadillo
 #'
 #'          
-#' @references Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018).
+#' @references Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018). https://doi.org/10.1080/01621459.2018.1429274
+#'             Rui Duan, et al. "Learning from electronic health records across multiple sites: A communication-efficient and privacy-preserving distributed algorithm". Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocz199
+#'             Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
 #' @examples
 #'require(survival)
 #'require(data.table)
 #'require(pda)
 #'data(lung)
 #'#create a number of sites, split the lung data amongst them
-#'sites = c('site1', 'site2')
-#'set.seed(42)
-#'lung2<-lung[,2:5]
-#'lung2$sex <- lung2$sex-1
-#'lung2$status <- ifelse(lung2$status == 2, 1, 0)
-#'lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
-#'######################### setup  ODAL #############################
-#'control <- list(project_name = 'Lung cancer study',
-#'        step = 'initialize',    # current step, updated by lead
-#'        sites = sites,
-#'        heterogeneity = FALSE,
-#'        model = 'ODAL',
-#'        outcome = "status",
-#'        variables = c('age', 'sex'),
-#'        optim_maxit=100,
-#'        lead_site = sites[1],
-#'        upload_date = as.character(Sys.time()),
-#'        heterogeneity = FALSE)
-#'## RUN BY LEAD ONLY 
-#'pda(site_id='site1',control=control)
-#'#run pda until step is empty
-#'while (is.character(control$step)) {
-#'  print(paste("step:",control$step))
-#'  #cycle through sites
-#'  for(i in length(sites):1) {
-#'    control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
-#'  }
-#'}
+#' sites = c('site1', 'site2', 'site3')
+#' set.seed(42)
+#' lung2<-lung[,2:5]
+#' lung2$sex <- lung2$sex-1
+#' lung2$status <- ifelse(lung2$status == 2, 1, 0)
+#' lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
+#' 
+#' control <- list(project_name = 'Lung cancer study',
+#'                 step = 'initialize',    #' current step, updated by lead
+#'                 sites = sites,
+#'                 heterogeneity = FALSE,
+#'                 model = 'ODAL',
+#'                 outcome = "status",
+#'                 variables = c('age', 'sex'),
+#'                 optim_maxit=100,
+#'                 lead_site = sites[1],
+#'                 upload_date = as.character(Sys.time()) )
+#' 
+#' #RUN BY LEAD ONLY , check results at https://pda.one/003   # , PDA_DIR='/Users/chl18019/Dropbox/PDA-git'
+#' Sys.setenv(PDA_USER='site1', PDA_SECRET='WLjySoaZnSqMNswowg', PDA_URI='https://pda.one/003')
+#' pda(site_id='site1',control=control)
+#' 
+#' # config<-getCloudConfig(site_id='site1' )
+#' 
+#' #run pda until step is empty
+#' while (is.character(control$step)) {
+#'   print(paste("step:",control$step))
+#'   #cycle through sites
+#'   for(i in length(sites):1) {      # , PDA_DIR='/Users/chl18019/Dropbox/PDA-git'
+#'     Sys.setenv(PDA_USER=paste0('site',i), PDA_SECRET='WLjySoaZnSqMNswowg', PDA_URI='https://pda.one/003')
+#'     control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
+#'   }
+#' }
 #'
 #' @return control
 #' @export
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
-  config<-getCloudConfig(site_id,dir,uri,secret)
+                config<-getCloudConfig(site_id,dir,uri,secret)
   #add a control if one was provided
-  if(!(is.null(control)) &&  config$site_id==control$sites[1]) {
-           pdaPut(control,'control',config)
-           return(control)
+  if(!(is.null(control)) &&  config$site_id==control$lead_site) { # control$sites[1]
+           pdaPut(obj=control,name='control',config=config)
+           return(control)    # ?
   }
   control = pdaGet('control',config)
   cat('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): \n')
@@ -188,6 +195,15 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     paste(control$variables, collapse = " + "),
   sep = ' ~'))
   mf = model.frame(formula, ipdata)
+  
+  if(control$model=='ODAL'){
+    ODAL.steps<-c('initialize','derive','estimate','synthesize')
+    ODAL.family<-'binomial'
+  }else if(control$model=='ODAC'){
+    ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
+    ODAC.family<-'cox'
+  }
+  
   family = get(paste0(control$model,'.family'))
   if(family=='cox'){  
     ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
@@ -217,10 +233,12 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
 #' 
 #' @description  update pda control if ready (run by lead)
 #' @usage pdaSync(config)
-#' @param config cloug configuration
+#' @param config cloud configuration
 #' @return control
-#' 
-pdaSync <- function(config){
+#'   
+## maybe avoid this step to give lead site more freedom to manually adjust the procedure 
+# for example, exclude sites that are not valid after initialization, manually specify a init value
+pdaSync <- function(config){  
   control = pdaGet('control',config)
   files<-pdaList(config) 
   if(all(paste0(control$sites,"_",control$step) %in% files)){

@@ -2,13 +2,25 @@ Package: pda
 Type: Package
 Title: Privacy-Preserving Distributed Algorithm
 Version: 1.0
-Date: 2020-09-01
-Authors@R: c(person("Yong", "Chen", role="aut",
-                     email ="ychen123@upenn.edu"),
-                     person("Chongliang", "Luo", role=c("aut","cre"), email ="chongliang.luo@pennmedicine.upenn.edu"),
-                     person("Rui", "Duan", role="aut"))
-Description: A set of tools for communication-efficient and privacy-preserving distributed analyses for binary, continuous, count and time to event outcomes. 
-Packaged: 2020-08-31 20:18:18 UTC; svitale
+Date: 2020-09-28
+Authors@R: c(person("Chongliang", "Luo", role=c("aut","cre"), email ="luocl3009@gmail.com"),
+                person("Rui", "Duan", role="aut"),
+                     person("Jiayi", "Tong", role="aut"),
+                     person("Steven", "Vitale", role="aut"),
+                     person("Yong", "Chen", role="aut", email ="ychen123@upenn.edu"))
+Description: A set of algorithms for conducting statistical regression analyses using multi-site data, 
+  for example the electronic healthcare record (EHR) data. The regression analyses can be 
+  linear regression for continunous outcome, logistic regression for binary outcome, 
+  Cox PH regression for time-to event outcome or Poisson regression for count outcome. 
+  The PDA algorithm runs on a lead site and only requires some summary statistics rather than
+  the individual patient-level data (IPD) from the other sites, in one or few iterations.   
+  The distributed algorithm is expected to obtain similar result as if all the IPD are available.
+  Currently logistic regression and Cox regression are implemented and the summary statistics are
+  communicated on https://pda.one/ via webdav. 
+URL: https://github.com/Penncil/pda, https://penncil2019pda.wixsite.com/mysite
+BugReports: https://github.com/Penncil/pda/issues  
+Packaged: 2020-09-28 20:18:18 UTC; cluo
+Maintainer: Chongliang Luo <luocl3009@gmail.com>
 License: GPL (>= 2)
 Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table, survival
 LinkingTo: Rcpp, RcppArmadillo

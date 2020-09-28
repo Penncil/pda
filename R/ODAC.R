@@ -10,7 +10,10 @@ ODAC.family<-'cox'
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
+#' @NoRd
 #' 
+#' @references  Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". 
+#'               Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
 #' @return  list(T_i = T_i, bhat_i = fit_i$coef, Vhat_i = summary(fit_i)$coef[,2]^2, site=control$mysite, site_size= nrow(ipdata))
 ODAC.initialize <- function(ipdata,control,config){
     T_i <- sort(unique(ipdata$time[ipdata$status==TRUE]))
@@ -18,7 +21,7 @@ ODAC.initialize <- function(ipdata,control,config){
     
     init <- list(T_i = T_i,
                  bhat_i = fit_i$coef,
-                 Vhat_i = summary(fit_i)$coef[,2]^2,   # cov matrix? vcov(fit_i)
+                 Vhat_i = summary(fit_i)$coef[,2]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
                  site = config$site_id,
                  site_size = nrow(ipdata))
   return(init)
@@ -33,7 +36,8 @@ ODAC.initialize <- function(ipdata,control,config){
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
-#' @import Rcpp
+#' @NoRd
+#' @import Rcpp, RcppArmadillo
 #' 
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 ODAC.derive <- function(ipdata,control,config) {
@@ -85,6 +89,7 @@ ODAC.derive <- function(ipdata,control,config) {
   return(derivatives)
 }
 
+
 #' @useDynLib pda
 #' @title Generate pda UWZ derivatives
 #' 
@@ -92,11 +97,13 @@ ODAC.derive <- function(ipdata,control,config) {
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
+#' @NoRd
 #' 
 #' @details Calculate and broadcast 1st and 2nd order derivative at initial bbar
 #'        for ODAC, this requires 2 substeps: 1st calculate summary stats (U, W, Z), 
 #'        2nd calculate derivatives (logL_D1, logL_D2)
 #'
+#' @import Rcpp, RcppArmadillo
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 ODAC.derive_UWZ <- function(ipdata,control,config){
     px <- ncol(ipdata) - 2
@@ -145,9 +152,10 @@ ODAC.derive_UWZ <- function(ipdata,control,config){
 #' @param control pda control
 #' @param config cloud config
 #' @import data.table
+#' @NoRd
 #' 
 #' @details step-4: construct and solve surrogate logL at the master/lead site
-#'
+#' @import Rcpp, RcppArmadillo
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
 ODAC.estimate <- function(ipdata,control,config) {
   # data sanity check ...
@@ -212,9 +220,10 @@ ODAC.estimate <- function(ipdata,control,config) {
 #' @param ipdata local data in data frame
 #' @param control pda control
 #' @param config cloud config
+#' @NoRd
 #' 
 #' @details Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
-#'
+#' @import Rcpp, RcppArmadillo
 #' @return  list(btilde=btilde,  Vtilde=Vtilde)
 ODAC.synthesize <- function(ipdata,control,config) {
   
