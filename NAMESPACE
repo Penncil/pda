@@ -2,6 +2,7 @@
 
 export(pda)
 import(Rcpp)
+import(RcppArmadillo)
 import(data.table)
 import(httr)
 import(jsonlite)

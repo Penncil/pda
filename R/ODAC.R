@@ -35,7 +35,7 @@ ODAC.initialize <- function(ipdata,control,config){
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
-#' @import Rcpp 
+#' @import Rcpp RcppArmadillo
 #' 
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 ODAC.derive <- function(ipdata,control,config) {
@@ -100,7 +100,7 @@ ODAC.derive <- function(ipdata,control,config) {
 #'        for ODAC, this requires 2 substeps: 1st calculate summary stats (U, W, Z), 
 #'        2nd calculate derivatives (logL_D1, logL_D2)
 #'
-#' @import Rcpp 
+#' @import Rcpp RcppArmadillo
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 ODAC.derive_UWZ <- function(ipdata,control,config){
     px <- ncol(ipdata) - 2
@@ -151,7 +151,7 @@ ODAC.derive_UWZ <- function(ipdata,control,config){
 #' @import data.table
 #' 
 #' @details step-4: construct and solve surrogate logL at the master/lead site
-#' @import Rcpp 
+#' @import Rcpp RcppArmadillo
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
 ODAC.estimate <- function(ipdata,control,config) {
   # data sanity check ...
@@ -218,7 +218,7 @@ ODAC.estimate <- function(ipdata,control,config) {
 #' @param config cloud config
 #' 
 #' @details Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
-#' @import Rcpp 
+#' @import Rcpp RcppArmadillo
 #' @return  list(btilde=btilde,  Vtilde=Vtilde)
 ODAC.synthesize <- function(ipdata,control,config) {
   
