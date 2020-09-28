@@ -7,7 +7,7 @@
 pdaSync(config)
 }
 \arguments{
-\item{config}{cloug configuration}
+\item{config}{cloud configuration}
 }
 \value{
 control

@@ -19,3 +19,7 @@ list(T_i = T_i, bhat_i = fit_i$coef, Vhat_i = summary(fit_i)$coef[,2]^2, site=co
 \description{
 ODAC initialize
 }
+\references{
+Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". 
+              Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
+}

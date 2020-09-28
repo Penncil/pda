@@ -32,36 +32,43 @@ require(data.table)
 require(pda)
 data(lung)
 #create a number of sites, split the lung data amongst them
-sites = c('site1', 'site2')
+sites = c('site1', 'site2', 'site3')
 set.seed(42)
 lung2<-lung[,2:5]
 lung2$sex <- lung2$sex-1
 lung2$status <- ifelse(lung2$status == 2, 1, 0)
 lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
-######################### setup  ODAL #############################
+
 control <- list(project_name = 'Lung cancer study',
-       step = 'initialize',    # current step, updated by lead
-       sites = sites,
-       heterogeneity = FALSE,
-       model = 'ODAL',
-       outcome = "status",
-       variables = c('age', 'sex'),
-       optim_maxit=100,
-       lead_site = sites[1],
-       upload_date = as.character(Sys.time()),
-       heterogeneity = FALSE)
-## RUN BY LEAD ONLY 
+                step = 'initialize',    #' current step, updated by lead
+                sites = sites,
+                heterogeneity = FALSE,
+                model = 'ODAL',
+                outcome = "status",
+                variables = c('age', 'sex'),
+                optim_maxit=100,
+                lead_site = sites[1],
+                upload_date = as.character(Sys.time()) )
+
+#RUN BY LEAD ONLY , check results at https://pda.one/003   # , PDA_DIR='/Users/chl18019/Dropbox/PDA-git'
+Sys.setenv(PDA_USER='site1', PDA_SECRET='WLjySoaZnSqMNswowg', PDA_URI='https://pda.one/003')
 pda(site_id='site1',control=control)
+
+# config<-getCloudConfig(site_id='site1' )
+
 #run pda until step is empty
 while (is.character(control$step)) {
- print(paste("step:",control$step))
- #cycle through sites
- for(i in length(sites):1) {
-   control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
- }
+  print(paste("step:",control$step))
+  #cycle through sites
+  for(i in length(sites):1) {      # , PDA_DIR='/Users/chl18019/Dropbox/PDA-git'
+    Sys.setenv(PDA_USER=paste0('site',i), PDA_SECRET='WLjySoaZnSqMNswowg', PDA_URI='https://pda.one/003')
+    control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
+  }
 }
 
 }
 \references{
-Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018).
+Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018). https://doi.org/10.1080/01621459.2018.1429274
+            Rui Duan, et al. "Learning from electronic health records across multiple sites: A communication-efficient and privacy-preserving distributed algorithm". Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocz199
+            Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
 }

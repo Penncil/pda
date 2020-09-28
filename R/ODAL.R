@@ -11,7 +11,6 @@ ODAL.family<-'binomial'
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
-#' @NoRd
 #' 
 #' @references Rui Duan, et al. "Learning from electronic health records across multiple sites: A communication-efficient and privacy-preserving distributed algorithm". 
 #'                Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocz199
@@ -32,7 +31,6 @@ ODAL.initialize <- function(ipdata,control,config){
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
-#' @NoRd
 #'
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(mydata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 #'
@@ -96,7 +94,6 @@ ODAL.derive <- function(ipdata,control,config){
 #' @param ipdata local data in data frame
 #' @param control PDA control
 #' @param config cloud configuration
-#' @NoRd
 #' 
 #' @details step-3: construct and solve surrogate logL at the master/lead site
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
@@ -174,7 +171,6 @@ ODAL.estimate <- function(ipdata,control,config) {
 #' @param ipdata local data in data frame
 #' @param control pda control
 #' @param config pda cloud configuration
-#' @NoRd
 #' 
 #' @details Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
 #'

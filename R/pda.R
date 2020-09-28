@@ -131,7 +131,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' @param dir directory for shared flat file cloud
 #' @param uri Universal Resource Identifier for this run
 #' @param secret password to authenticate as site_id on uri
-#' @import stats, survival, rvest, jsonlite, data.table, httr, Rcpp, RcppArmadillo
+#' @import stats survival rvest jsonlite data.table httr Rcpp 
 #'
 #'          
 #' @references Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018). https://doi.org/10.1080/01621459.2018.1429274
