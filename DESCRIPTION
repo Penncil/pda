@@ -11,7 +11,17 @@ Description: A collection of privacy-preserving distributed algorithms for condu
 Packaged: 2020-09-28 20:18:18 UTC; cluo
 Maintainer: Chongliang Luo <luocl3009@gmail.com>
 License: GPL (>= 2)
-Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table, survival
-LinkingTo: Rcpp, RcppArmadillo
+Imports: 
+  Rcpp (>= 0.12.19), 
+  RcppArmadillo,
+  stats, 
+  httr, 
+  rvest, 
+  jsonlite, 
+  data.table, 
+  survival
+LinkingTo: 
+  Rcpp, 
+  RcppArmadillo
 RoxygenNote: 7.1.1
 Encoding: UTF-8

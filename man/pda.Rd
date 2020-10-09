@@ -31,13 +31,14 @@ require(survival)
 require(data.table)
 require(pda)
 data(lung)
-#create a number of sites, split the lung data amongst them
+
+# Create a number of sites, split the lung data amongst them
 sites = c('site1', 'site2', 'site3')
 set.seed(42)
-lung2<-lung[,2:5]
-lung2$sex <- lung2$sex-1
+lung2 <- lung[,2:5]
+lung2$sex <- lung2$sex - 1
 lung2$status <- ifelse(lung2$status == 2, 1, 0)
-lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
+lung_split <- split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
 
 control <- list(project_name = 'Lung cancer study',
                 step = 'initialize',    #' current step, updated by lead
@@ -46,22 +47,27 @@ control <- list(project_name = 'Lung cancer study',
                 model = 'ODAL',
                 outcome = "status",
                 variables = c('age', 'sex'),
-                optim_maxit=100,
+                optim_maxit = 100,
                 lead_site = sites[1],
                 upload_date = as.character(Sys.time()) )
 
-#RUN BY LEAD ONLY , check results at https://pda.one/003   # , PDA_DIR='/Users/chl18019/Dropbox/PDA-git'
-Sys.setenv(PDA_USER='site1', PDA_SECRET='WLjySoaZnSqMNswowg', PDA_URI='https://pda.one/003')
-pda(site_id='site1',control=control)
+# RUN BY LEAD ONLY , check results at https://pda.one/003   
+# PDA_DIR = '/Users/chl18019/Dropbox/PDA-git'
+Sys.setenv(PDA_USER = 'site1', 
+           PDA_SECRET = 'WLjySoaZnSqMNswowg', 
+           PDA_URI = 'https://pda.one/003')
+pda(site_id = 'site1', control = control)
 
-# config<-getCloudConfig(site_id='site1' )
+# config <- getCloudConfig(site_id='site1' )
 
-#run pda until step is empty
+# Run pda until step is empty
 while (is.character(control$step)) {
-  print(paste("step:",control$step))
-  #cycle through sites
+  print(paste("step:", control$step))
+  # Cycle through sites
   for(i in length(sites):1) {      # , PDA_DIR='/Users/chl18019/Dropbox/PDA-git'
-    Sys.setenv(PDA_USER=paste0('site',i), PDA_SECRET='WLjySoaZnSqMNswowg', PDA_URI='https://pda.one/003')
+    Sys.setenv(PDA_USER = paste0('site',i), 
+               PDA_SECRET = 'WLjySoaZnSqMNswowg', 
+               PDA_URI = 'https://pda.one/003')
     control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
   }
 }

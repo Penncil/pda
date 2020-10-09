@@ -1,0 +1,8 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+Dockerfile
+README.rst
+binary
+docker-compose.yml
+docs
+test
