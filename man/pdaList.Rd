@@ -10,8 +10,11 @@ pdaList(config)
 \item{config}{a list of variables for cloud configuration}
 }
 \value{
-list of files
+A list of (json) files on the cloud
 }
 \description{
 Function to list available objects
+}
+\seealso{
+\code{pda}
 }

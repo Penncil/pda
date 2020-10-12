@@ -15,6 +15,7 @@ ODAL.family<-'binomial'
 #' @references Rui Duan, et al. "Learning from electronic health records across multiple sites: A communication-efficient and privacy-preserving distributed algorithm". 
 #'                Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocz199
 #' @return init
+#' @keywords internal
 ODAL.initialize <- function(ipdata,control,config){
     fit_i <- glm(status ~ 0+., data=ipdata,family = "binomial"(link = "logit"))  
     init <- list(site = config$site_id,
@@ -33,7 +34,7 @@ ODAL.initialize <- function(ipdata,control,config){
 #' @param config local site configuration
 #'
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(mydata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
-#'
+#' @keywords internal
 ODAL.derive <- function(ipdata,control,config){
   # data sanity check ...
     px <- ncol(ipdata) - 1  # X includes intercept
@@ -97,6 +98,7 @@ ODAL.derive <- function(ipdata,control,config){
 #' 
 #' @details step-3: construct and solve surrogate logL at the master/lead site
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
+#' @keywords internal
 ODAL.estimate <- function(ipdata,control,config) {
   # data sanity check ...
     status <- ipdata$status
@@ -175,6 +177,7 @@ ODAL.estimate <- function(ipdata,control,config) {
 #' @details Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
 #'
 #' @return  list(btilde=btilde,  Vtilde=Vtilde)
+#' @keywords internal
 ODAL.synthesize <- function(ipdata,control,config) {
   px <- length(control$risk_factor)
   K <- length(control$sites)
@@ -191,7 +194,7 @@ ODAL.synthesize <- function(ipdata,control,config) {
   btilde <- solve(wt_sum, btilde_wt_sum)
   Vtilde <- solve(wt_sum) * K
   
-  cat("all surrogate estimates surr_i$Htildesynthesized, no need to broadcast! \n")
+  cat("all surrogate estimates synthesized, no need to broadcast! \n")
   return(list(btilde=btilde, 
               Vtilde=Vtilde))
 }

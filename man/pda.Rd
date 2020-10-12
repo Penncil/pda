@@ -21,6 +21,8 @@ pda(ipdata,site_id,control,dir,uri,secret)
 }
 \value{
 control
+
+control
 }
 \description{
 Fit Privacy-preserving Distributed Algorithms for linear, logistic, 
@@ -39,9 +41,18 @@ lung2 <- lung[,2:5]
 lung2$sex <- lung2$sex - 1
 lung2$status <- ifelse(lung2$status == 2, 1, 0)
 lung_split <- split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
+## fit logistic reg using pooled data
+fit.pool <- glm(status ~ age + sex, family = 'binomial', data = lung2)
 
+## In the example below we aim to use PDA ODAL to obtain a surrogate estimator that is 
+## close to the pooled estimate. Accounts (site1, site2, site3) and password 
+## (WLjySoaZnSqMNswowg) are given to the 3 example sites at the server https://pda.one. 
+## Each site can access via web browser to check the communication of the summary stats.
+
+# ############################  STEP 1: initialize  ###############################
+## lead site1: please review and enter "1" to allow putting the control file to the server
 control <- list(project_name = 'Lung cancer study',
-                step = 'initialize',    #' current step, updated by lead
+                step = 'initialize',     
                 sites = sites,
                 heterogeneity = FALSE,
                 model = 'ODAL',
@@ -50,31 +61,110 @@ control <- list(project_name = 'Lung cancer study',
                 optim_maxit = 100,
                 lead_site = sites[1],
                 upload_date = as.character(Sys.time()) )
+Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+pda(site_id = 'site1', control = control)  
+# now the group would see control.json	at https://pda.one
 
-# RUN BY LEAD ONLY , check results at https://pda.one/003   
-# PDA_DIR = '/Users/chl18019/Dropbox/PDA-git'
-Sys.setenv(PDA_USER = 'site1', 
-           PDA_SECRET = 'WLjySoaZnSqMNswowg', 
-           PDA_URI = 'https://pda.one/003')
+# remote site3: please review and enter "1" to allow putting your local estimate to the server  
+i <- 3
+Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+# now the group would see site3_initialize.json	at https://pda.one
+
+## remote site2: please review and enter "1" to allow putting your local estimate to the server
+i <- 2
+Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+# now the group would see site2_initialize.json	at https://pda.one
+
+## lead site1: please review and enter "1" to allow putting your local estimate to the server
+i <- 1
+Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i]) 
+# now the group would see site1_initialize.json	at https://pda.one
+# control.json is also automatically updated  
+
+## if lead site1 initialized before other sites, 
+## lead site1: uncomment to synchoronize the control before STEP 2
+# Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+# pda(site_id = 'site1', control = control)
+# config <- getCloudConfig(site_id = 'site1')
+# pdaSync(config)
+
+# ############################  STEP 2: derivative  ###############################
+## remote site3: please review and enter "1" to allow putting your derivatives to the server   
+i <- 3
+Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+# now the group would see site3_derive.json	at https://pda.one
+
+## remote site2: please review and enter "1" to allow putting your derivatives to the server    
+i <- 2
+Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+# now the group would see site2_derive.json	at https://pda.one
+
+## lead site1: please review and enter "1" to allow putting your derivatives to the server      
+i <- 1
+Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+# now the group would see site1_derive.json	at https://pda.one
+
+# ############################  STEP 3: estimate  ###############################
+## lead site1: 
+## please review and enter "1" to allow putting the surrogate estimate to the server     
+i <- 1
+Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+# now the group would see site1_estimate.json	at https://pda.one
+## compare the surrogate estimate with the pooled estimate
+config <- getCloudConfig(site_id = 'site1')
+fit.odal <- pdaGet(name = 'site1_estimate', config = config)
+cbind(b.pool=fit.pool$coef, 
+      b.odal=fit.odal$btilde, 
+      sd.pool=summary(fit.pool)$coef[,2], 
+      sd.odal=sqrt(diag(solve(fit.odal$Htilde)/nrow(lung2))))
+## the PDA ODAL is now completed! 
+## All the sites can still run their surrogate estimates and broadcast them. 
+
+## remote site2: (optional)  
+i <- 2
+Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+
+## remote site3: (optional)
+i <- 3
+Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i]) 
+
+
+## If all the sites broadcast their surrogate estimates, 
+## a final synthesize step can further improve the estimate.
+## lead site1: uncomment to synchoronize the control before STEP 4
+Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
 pda(site_id = 'site1', control = control)
+config <- getCloudConfig(site_id = 'site1')
+pdaSync(config)
 
-# config <- getCloudConfig(site_id='site1' )
-
-# Run pda until step is empty
-while (is.character(control$step)) {
-  print(paste("step:", control$step))
-  # Cycle through sites
-  for(i in length(sites):1) {      # , PDA_DIR='/Users/chl18019/Dropbox/PDA-git'
-    Sys.setenv(PDA_USER = paste0('site',i), 
-               PDA_SECRET = 'WLjySoaZnSqMNswowg', 
-               PDA_URI = 'https://pda.one/003')
-    control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
-  }
-}
+# ########################  STEP 4: synthesize (optional)  ######################## 
+## lead site1:     
+i <- 1
+Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
 
 }
 \references{
-Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018). https://doi.org/10.1080/01621459.2018.1429274
-            Rui Duan, et al. "Learning from electronic health records across multiple sites: A communication-efficient and privacy-preserving distributed algorithm". Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocz199
-            Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
+Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distributed Statistical Inference, \cr
+ \emph{Journal of the American Statistical Association}, 114:526, 668-681 \cr 
+ \url{https://doi.org/10.1080/01621459.2018.1429274}.\cr 
+(ODAL) Rui Duan, et al. (2020) Learning from electronic health records across multiple sites: \cr 
+ A communication-efficient and privacy-preserving distributed algorithm. \cr 
+ \emph{Journal of the American Medical Informatics Association}, 27.3:376–385,
+ \cr \url{https://doi.org/10.1093/jamia/ocz199}.\cr 
+(ODAC) Rui Duan, et al. (2020) Learning from local to global: An efficient distributed algorithm for modeling time-to-event data. \cr
+  \emph{Journal of the American Medical Informatics Association}, 27.7:1028–1036, \cr 
+   \url{https://doi.org/10.1093/jamia/ocaa044}.
+}
+\seealso{
+\code{pdaPut}, \code{pdaList}, \code{pdaGet}, \code{getCloudConfig} and \code{pdaSync}.
 }

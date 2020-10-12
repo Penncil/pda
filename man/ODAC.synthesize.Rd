@@ -22,3 +22,4 @@ PDA synthesize surrogate estimates from all sites, optional
 \details{
 Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
 }
+\keyword{internal}

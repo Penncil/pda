@@ -23,3 +23,4 @@ ODAC initialize
 Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". 
               Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
 }
+\keyword{internal}

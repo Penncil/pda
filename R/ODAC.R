@@ -14,6 +14,7 @@ ODAC.family<-'cox'
 #' @references  Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". 
 #'               Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
 #' @return  list(T_i = T_i, bhat_i = fit_i$coef, Vhat_i = summary(fit_i)$coef[,2]^2, site=control$mysite, site_size= nrow(ipdata))
+#' @keywords internal
 ODAC.initialize <- function(ipdata,control,config){
     T_i <- sort(unique(ipdata$time[ipdata$status==TRUE]))
     fit_i <- survival::coxph(survival::Surv(time, status) ~ ., data=ipdata)
@@ -38,6 +39,7 @@ ODAC.initialize <- function(ipdata,control,config){
 #' @import Rcpp RcppArmadillo
 #' 
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
+#' @keywords internal
 ODAC.derive <- function(ipdata,control,config) {
     px <- ncol(ipdata) - 2
     # decide if doing ODAC derivatives 1st substep (calculate summary stats U, W, Z) 
@@ -102,6 +104,7 @@ ODAC.derive <- function(ipdata,control,config) {
 #'
 #' @import Rcpp RcppArmadillo
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
+#' @keywords internal
 ODAC.derive_UWZ <- function(ipdata,control,config){
     px <- ncol(ipdata) - 2
     # decide if doing ODAC derivatives 1st substep (calculate summary stats U, W, Z) 
@@ -153,6 +156,7 @@ ODAC.derive_UWZ <- function(ipdata,control,config){
 #' @details step-4: construct and solve surrogate logL at the master/lead site
 #' @import Rcpp RcppArmadillo
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
+#' @keywords internal
 ODAC.estimate <- function(ipdata,control,config) {
   # data sanity check ...
     time <- ipdata$time
@@ -220,6 +224,7 @@ ODAC.estimate <- function(ipdata,control,config) {
 #' @details Optional step-4: synthesize all the surrogate est btilde_i from each site, if step-3 from all sites is broadcasted
 #' @import Rcpp RcppArmadillo
 #' @return  list(btilde=btilde,  Vtilde=Vtilde)
+#' @keywords internal
 ODAC.synthesize <- function(ipdata,control,config) {
   
   px <- length(control$risk_factor)

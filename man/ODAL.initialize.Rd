@@ -23,3 +23,4 @@ ODAL initialize
 Rui Duan, et al. "Learning from electronic health records across multiple sites: A communication-efficient and privacy-preserving distributed algorithm". 
                Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocz199
 }
+\keyword{internal}

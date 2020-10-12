@@ -12,8 +12,11 @@ pdaGet(name,config)
 \item{config}{cloud configuration}
 }
 \value{
-data from json file
+A list of data objects from the json file on the cloud
 }
 \description{
 Function to download json and return as object
+}
+\seealso{
+\code{pda}
 }

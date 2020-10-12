@@ -16,8 +16,11 @@ getCloudConfig(site_id,dir,uri,secret)
 \item{secret}{web token if web service}
 }
 \value{
-list of cloud parameters
+A list of cloud parameters: site_id, secret and uri
 }
 \description{
 gather cloud settings into a list
+}
+\seealso{
+\code{pda}
 }

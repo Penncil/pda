@@ -7,6 +7,8 @@
 #' @param config a list of variables for cloud configuration
 #' @importFrom utils menu
 #' @return NONE
+#' @seealso \code{pda}
+#' @export
 pdaPut <- function(obj,name,config){
     obj_Json <- jsonlite::toJSON(obj)
     file_name <- paste0(name, '.json')
@@ -43,7 +45,9 @@ pdaPut <- function(obj,name,config){
 #' @param config a list of variables for cloud configuration
 #' @importFrom rvest html_nodes
 #' @import httr 
-#' @return list of files
+#' @return A list of (json) files on the cloud
+#' @seealso \code{pda}
+#' @export
 pdaList <- function(config){
     if (is.character(config$uri)) {
         res<-httr::GET(config$uri, httr::authenticate(config$site_id, config$secret, 'digest'))
@@ -65,7 +69,9 @@ pdaList <- function(config){
 #' @usage pdaGet(name,config)
 #' @param name of file
 #' @param config cloud configuration
-#' @return data from json file
+#' @return A list of data objects from the json file on the cloud
+#' @seealso \code{pda}
+#' @export
 pdaGet <- function(name,config){
     file_name <- paste0(name, '.json')
     #print(paste("Get",file_name,"from public cloud:"))
@@ -93,7 +99,9 @@ pdaGet <- function(name,config){
 #' @param dir shared directory path if flat files
 #' @param uri web uri if web service
 #' @param secret web token if web service
-#' @return list of cloud parameters
+#' @return A list of cloud parameters: site_id, secret and uri
+#' @seealso \code{pda}
+#' @export
 getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
   config<-list()
   pda_user<-Sys.getenv('PDA_USER')
@@ -119,6 +127,8 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
   config;
 }
 
+
+
 #' @useDynLib pda
 #' @title PDA: Privacy-preserving Distributed Algorithm
 #' 
@@ -131,12 +141,21 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' @param dir directory for shared flat file cloud
 #' @param uri Universal Resource Identifier for this run
 #' @param secret password to authenticate as site_id on uri
+#' @return control
+#' @seealso \code{pdaPut}, \code{pdaList}, \code{pdaGet}, \code{getCloudConfig} and \code{pdaSync}.
 #' @import stats survival rvest jsonlite data.table httr Rcpp RcppArmadillo
-#'
 #'          
-#' @references Jordan, Michael I., Jason D. Lee, and Yun Yang. "Communication-efficient distributed statistical inference." JASA (2018). https://doi.org/10.1080/01621459.2018.1429274
-#'             Rui Duan, et al. "Learning from electronic health records across multiple sites: A communication-efficient and privacy-preserving distributed algorithm". Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocz199
-#'             Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
+#' @references
+#' Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distributed Statistical Inference, \cr
+#'  \emph{Journal of the American Statistical Association}, 114:526, 668-681 \cr 
+#'  \url{https://doi.org/10.1080/01621459.2018.1429274}.\cr 
+#' (ODAL) Rui Duan, et al. (2020) Learning from electronic health records across multiple sites: \cr 
+#'  A communication-efficient and privacy-preserving distributed algorithm. \cr 
+#'  \emph{Journal of the American Medical Informatics Association}, 27.3:376–385,
+#'  \cr \url{https://doi.org/10.1093/jamia/ocz199}.\cr 
+#' (ODAC) Rui Duan, et al. (2020) Learning from local to global: An efficient distributed algorithm for modeling time-to-event data. \cr
+#'   \emph{Journal of the American Medical Informatics Association}, 27.7:1028–1036, \cr 
+#'    \url{https://doi.org/10.1093/jamia/ocaa044}.
 #' @examples
 #' require(survival)
 #' require(data.table)
@@ -150,9 +169,18 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' lung2$sex <- lung2$sex - 1
 #' lung2$status <- ifelse(lung2$status == 2, 1, 0)
 #' lung_split <- split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
+#' ## fit logistic reg using pooled data
+#' fit.pool <- glm(status ~ age + sex, family = 'binomial', data = lung2)
 #' 
+#' ## In the example below we aim to use PDA ODAL to obtain a surrogate estimator that is 
+#' ## close to the pooled estimate. Accounts (site1, site2, site3) and password 
+#' ## (WLjySoaZnSqMNswowg) are given to the 3 example sites at the server https://pda.one. 
+#' ## Each site can access via web browser to check the communication of the summary stats.
+#' 
+#' # ############################  STEP 1: initialize  ###############################
+#' ## lead site1: please review and enter "1" to allow putting the control file to the server
 #' control <- list(project_name = 'Lung cancer study',
-#'                 step = 'initialize',    #' current step, updated by lead
+#'                 step = 'initialize',     
 #'                 sites = sites,
 #'                 heterogeneity = FALSE,
 #'                 model = 'ODAL',
@@ -161,27 +189,96 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #'                 optim_maxit = 100,
 #'                 lead_site = sites[1],
 #'                 upload_date = as.character(Sys.time()) )
+#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' pda(site_id = 'site1', control = control)  
+#' # now the group would see control.json	at https://pda.one
 #' 
-#' # RUN BY LEAD ONLY , check results at https://pda.one/003   
-#' # PDA_DIR = '/Users/chl18019/Dropbox/PDA-git'
-#' Sys.setenv(PDA_USER = 'site1', 
-#'            PDA_SECRET = 'WLjySoaZnSqMNswowg', 
-#'            PDA_URI = 'https://pda.one/003')
+#' # remote site3: please review and enter "1" to allow putting your local estimate to the server  
+#' i <- 3
+#' Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+#' # now the group would see site3_initialize.json	at https://pda.one
+#' 
+#' ## remote site2: please review and enter "1" to allow putting your local estimate to the server
+#' i <- 2
+#' Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+#' # now the group would see site2_initialize.json	at https://pda.one
+#' 
+#' ## lead site1: please review and enter "1" to allow putting your local estimate to the server
+#' i <- 1
+#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i]) 
+#' # now the group would see site1_initialize.json	at https://pda.one
+#' # control.json is also automatically updated  
+#' 
+#' ## if lead site1 initialized before other sites, 
+#' ## lead site1: uncomment to synchoronize the control before STEP 2
+#' # Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' # pda(site_id = 'site1', control = control)
+#' # config <- getCloudConfig(site_id = 'site1')
+#' # pdaSync(config)
+#' 
+#' # ############################  STEP 2: derivative  ###############################
+#' ## remote site3: please review and enter "1" to allow putting your derivatives to the server   
+#' i <- 3
+#' Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+#' # now the group would see site3_derive.json	at https://pda.one
+#' 
+#' ## remote site2: please review and enter "1" to allow putting your derivatives to the server    
+#' i <- 2
+#' Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+#' # now the group would see site2_derive.json	at https://pda.one
+#' 
+#' ## lead site1: please review and enter "1" to allow putting your derivatives to the server      
+#' i <- 1
+#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+#' # now the group would see site1_derive.json	at https://pda.one
+#' 
+#' # ############################  STEP 3: estimate  ###############################
+#' ## lead site1: 
+#' ## please review and enter "1" to allow putting the surrogate estimate to the server     
+#' i <- 1
+#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+#' # now the group would see site1_estimate.json	at https://pda.one
+#' ## compare the surrogate estimate with the pooled estimate
+#' config <- getCloudConfig(site_id = 'site1')
+#' fit.odal <- pdaGet(name = 'site1_estimate', config = config)
+#' cbind(b.pool=fit.pool$coef, 
+#'       b.odal=fit.odal$btilde, 
+#'       sd.pool=summary(fit.pool)$coef[,2], 
+#'       sd.odal=sqrt(diag(solve(fit.odal$Htilde)/nrow(lung2))))
+#' ## the PDA ODAL is now completed! 
+#' ## All the sites can still run their surrogate estimates and broadcast them. 
+#' 
+#' ## remote site2: (optional)  
+#' i <- 2
+#' Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+#' 
+#' ## remote site3: (optional)
+#' i <- 3
+#' Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i]) 
+#' 
+#' 
+#' ## If all the sites broadcast their surrogate estimates, 
+#' ## a final synthesize step can further improve the estimate.
+#' ## lead site1: uncomment to synchoronize the control before STEP 4
+#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
 #' pda(site_id = 'site1', control = control)
+#' config <- getCloudConfig(site_id = 'site1')
+#' pdaSync(config)
 #' 
-#' # config <- getCloudConfig(site_id='site1' )
-#' 
-#' # Run pda until step is empty
-#' while (is.character(control$step)) {
-#'   print(paste("step:", control$step))
-#'   # Cycle through sites
-#'   for(i in length(sites):1) {      # , PDA_DIR='/Users/chl18019/Dropbox/PDA-git'
-#'     Sys.setenv(PDA_USER = paste0('site',i), 
-#'                PDA_SECRET = 'WLjySoaZnSqMNswowg', 
-#'                PDA_URI = 'https://pda.one/003')
-#'     control<-pda(ipdata=lung_split[[i]],site_id=sites[i])
-#'   }
-#' }
+#' # ########################  STEP 4: synthesize (optional)  ######################## 
+#' ## lead site1:     
+#' i <- 1
+#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
 #'
 #' @return control
 #' @export
@@ -224,9 +321,12 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   if(is.character(control$step)){
     step_function<-paste0(control$model,'.',control$step)
     step_obj<-get(step_function)(ipdata, control, config)
+    if(control$step=='estimate'){
+      print("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
+    }
     pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
     #sync needed?
-    if(config$site_id==control$sites[1]) {
+    if(config$site_id==control$lead_site) {
            control<-pdaSync(config)
     }
   }
@@ -235,17 +335,24 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
 
 
 #' @useDynLib pda
-#' @title pda synchronize 
+#' @title pda control synchronize 
 #' 
 #' @description  update pda control if ready (run by lead)
 #' @usage pdaSync(config)
 #' @param config cloud configuration
 #' @return control
-#'   
-## maybe avoid this step to give lead site more freedom to manually adjust the procedure 
-# for example, exclude sites that are not valid after initialization, manually specify a init value
+#' @seealso \code{pda}
+#' @export  
 pdaSync <- function(config){  
   control = pdaGet('control',config)
+  if(control$model=='ODAL'){
+    ODAL.steps<-c('initialize','derive','estimate','synthesize')
+    ODAL.family<-'binomial'
+  }else if(control$model=='ODAC'){
+    ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
+    ODAC.family<-'cox'
+  }
+  
   files<-pdaList(config) 
   if(all(paste0(control$sites,"_",control$step) %in% files)){
     if(control$step=="initialize"){

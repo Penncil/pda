@@ -22,3 +22,4 @@ PDA surrogate estimation
 \details{
 step-4: construct and solve surrogate logL at the master/lead site
 }
+\keyword{internal}

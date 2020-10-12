@@ -2,7 +2,7 @@
 % Please edit documentation in R/pda.R
 \name{pdaSync}
 \alias{pdaSync}
-\title{pda synchronize}
+\title{pda control synchronize}
 \usage{
 pdaSync(config)
 }
@@ -14,4 +14,7 @@ control
 }
 \description{
 update pda control if ready (run by lead)
+}
+\seealso{
+\code{pda}
 }
