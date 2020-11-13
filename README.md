@@ -16,6 +16,7 @@ PDA: Privacy-preserving Distributed Algorithms
 ## Package Requirements
 - A database with clear and consistent variable names
 - On Windows: download and install [RTools](http://cran.r-project.org/bin/windows/Rtools/) 
+- For ODAC (One-shot distributed algorithm for Cox regression), make sure you have cpp compiler as ODAC requires [Rcpp](https://cran.r-project.org/web/packages/Rcpp/vignettes/Rcpp-FAQ.pdf).
 
 
 ## Instructions for Installing and Running pda Package
@@ -43,17 +44,21 @@ devtools::install_github("penncil/pda")
 library(pda)
 ```
 
-### How to run pda package
+### How to run pda examples
 
-Below are two ways to run the pda example. ## In the example below we aim to use PDA ODAL to obtain a surrogate estimator that is close to the pooled estimate. 
+Below are two ways to run the pda examples. 
 
-#### *Run example with demo(pda)*
+In the toy example below we aim to analyze the association of lung status with age and sex using logistic regression, data(lung) from 'survival', we randomly assign to 3 sites: 'site1', 'site2', 'site3'. We demonstrate using PDA ODAL can obtain a surrogate estimator that is close to the pooled estimate. We run the example in local directory. In actual collaboration, account/password for pda server will be assigned to the sites at the server https://pda.one. Each site can access via web browser to check the communication of the summary stats.
+
+You can either 
+
+#### *Run example with demo()*
 
 ```r
-demo(pda)
+demo(ODAL_lung_cancer)
 ``` 
-
-#### *Run example with code*
+or
+####  *Run example with code*
 
 Step 0: load related R packages and prepare sample data
 
@@ -61,145 +66,114 @@ Step 0: load related R packages and prepare sample data
 # load packages
 require(survival)
 require(data.table)
+require(pda)
 
 # sample data, lung, from "survival" package
 data(lung)
 
-# create a number of sites, split the lung data amongst them
+# create 3 sites, split the lung data amongst them
 sites = c('site1', 'site2', 'site3')
 set.seed(42)
-lung2<-lung[,2:5]
+lung2 <- lung[,c('time', 'status', 'age', 'sex')]
 lung2$sex <- lung2$sex-1
 lung2$status <- ifelse(lung2$status == 2, 1, 0)
 lung_split<-split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
+
+## fit logistic reg using pooled data
+fit.pool <- glm(status ~ age + sex, family = 'binomial', data = lung2)
+
 ``` 
 Step 1: Initialization
 
 ```r
-## fit logistic reg using pooled data
-fit.pool <- glm(status ~ age + sex, family = 'binomial', data = lung2)
-
-
 # ############################  STEP 1: initialize  ###############################
 ## lead site1: please review and enter "1" to allow putting the control file to the server
 control <- list(project_name = 'Lung cancer study',
-                step = 'initialize',     
+                step = 'initialize',
                 sites = sites,
                 heterogeneity = FALSE,
                 model = 'ODAL',
+                family = 'binomial',
                 outcome = "status",
                 variables = c('age', 'sex'),
                 optim_maxit = 100,
-                lead_site = sites[1],
+                lead_site = 'site1',
                 upload_date = as.character(Sys.time()) )
-# A cloud server will be used in a real collaborative project. The user name (i.e., PDA_USER) and the password (i.e., PDA_SECRET) will be assigned to the working sites by the lead site. The site with assigned username and code can upload the results to the cloud server. 
-# Sys.setenv(PDA_USER = 'username', PDA_SECRET = 'password', PDA_URI = 'https://pda.one')
-pda(site_id = 'site1', control = control)
-# now the group would see control.json	at https://pda.one
 
-## remote site2: please review and enter "1" to allow putting your local estimate to the server
-i <- 2
-# Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-# now the group would see site2_initialize.json	at https://pda.one
-
-# remote site3: please review and enter "1" to allow putting your local estimate to the server
-i <- 3
-# Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-# now the group would see site3_initialize.json	at https://pda.one
-
-
-## lead site1: please review and enter "1" to allow putting your local estimate to the server
-i <- 1
-# Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-# now the group would see site1_initialize.json	at https://pda.one
-# control.json is also automatically updated
-
-## if lead site1 initialized before other sites,
-## lead site1: uncomment to synchoronize the control before STEP 2
-# Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+## run the example in local directory:
+## assume lead site1: enter "1" to allow transferring the control file
+pda(site_id = 'site1', control = control, dir = getwd())
+## in actual collaboration, account/password for pda server will be assigned, thus:
+# pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')
+## you can also set your environment variables, and no need to specify them in pda:
+# Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'abc123', PDA_URI = 'https://pda.one')
 # pda(site_id = 'site1', control = control)
-# config <- getCloudConfig(site_id = 'site1')
-# pdaSync(config)
-```
 
-Step 2: Derivative calculation
+##' assume remote site3: enter "1" to allow tranferring your local estimate
+pda(site_id = 'site3', ipdata = lung_split[[3]], dir=getwd())
 
-```r
-# ############################  STEP 2: derivative  ###############################
-## remote site3: please review and enter "1" to allow putting your derivatives to the server
-i <- 3
-# Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-# now the group would see site3_derive.json	at https://pda.one
+##' assume remote site2: enter "1" to allow tranferring your local estimate
+pda(site_id = 'site2', ipdata = lung_split[[2]], dir=getwd())
 
-## remote site2: please review and enter "1" to allow putting your derivatives to the server
-i <- 2
-# Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-# now the group would see site2_derive.json	at https://pda.one
 
-## lead site1: please review and enter "1" to allow putting your derivatives to the server
-i <- 1
-# Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-# now the group would see site1_derive.json	at https://pda.one
-```
+##' assume lead site1: enter "1" to allow tranferring your local estimate
+##' control.json is also automatically updated
+pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
 
-Step 3: Estimation
+##' if lead site1 initialized before other sites,
+##' lead site1: uncomment to sync the control before STEP 2
+#' pda(site_id = 'site1', control = control)
+#' config <- getCloudConfig(site_id = 'site1')
+#' pdaSync(config)
+``` 
+Step 2: Calculate derivatives at each site
 
 ```r
-# ############################  STEP 3: estimate  ###############################
-## lead site1:
-## please review and enter "1" to allow putting the surrogate estimate to the server
-i <- 1
-# Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-# now the group would see site1_estimate.json	at https://pda.one
-## compare the surrogate estimate with the pooled estimate
-config <- getCloudConfig(site_id = 'site1')
+#' ############################'  STEP 2: derivative  ###############################
+##' assume remote site3: enter "1" to allow tranferring your derivatives
+pda(site_id = 'site3', ipdata = lung_split[[3]], dir=getwd())
+
+##' assume remote site2: enter "1" to allow tranferring your derivatives
+pda(site_id = 'site2', ipdata = lung_split[[2]], dir=getwd())
+
+##' assume lead site1: enter "1" to allow tranferring your derivatives
+pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+``` 
+Step 3: Surrogate estimate
+
+```r
+#' ############################'  STEP 3: estimate  ###############################
+##' assume lead site1: enter "1" to allow tranferring the surrogate estimate
+pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+
+##' the PDA ODAL is now completed!
+##' All the sites can still run their own surrogate estimates and broadcast them.
+
+``` 
+Compare with the pooled and meta estimators
+
+```r
+##' compare the surrogate estimate with the pooled estimate
+config <- getCloudConfig(site_id = 'site1', dir=getwd())
 fit.odal <- pdaGet(name = 'site1_estimate', config = config)
+control <- pdaGet(name = 'control', config)
 cbind(b.pool=fit.pool$coef,
-      b.odal=fit.odal$btilde,
-      sd.pool=summary(fit.pool)$coef[,2],
-      sd.odal=sqrt(diag(solve(fit.odal$Htilde)/nrow(lung2))))
-## the PDA ODAL is now completed!
-## All the sites can still run their surrogate estimates and broadcast them.
+	   b.meta=control$beta_init,
+      b.odal=fit.odal$btilde )
 
-## remote site2: (optional)
-i <- 2
-# Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-
-## remote site3: (optional)
-i <- 3
-# Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-
-
-## If all the sites broadcast their surrogate estimates,
-## a final synthesize step can further improve the estimate.
-## lead site1: uncomment to synchoronize the control before STEP 4
-# Sys.setenv(PDA_USER = 'susernameite1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-pda(site_id = 'site1', control = control)
-config <- getCloudConfig(site_id = 'site1')
-pdaSync(config)
 ```
 
-
-Step 4: Synthesis (optional)
+For other examples, please see 
 
 ```r
-# ########################  STEP 4: synthesize (optional)  ########################
-## lead site1:
-i <- 1
-# Sys.setenv(PDA_USER = 'username', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
+demo(ODAC_lung_cancer)
 ```
-
-
+for Cox regression, and 
+ 
+```r
+demo(ODAP_CrabSatellites)
+```
+for hurdle regression.
 
 ## References
 1. Duan, R., Boland, M.R., Moore, J.H. and Chen, Y., (2019). [ODAL: a one-shot distributed algorithm to perform logistic regressions on electronic health records data from multiple clinical sites.](https://psb.stanford.edu/psb-online/proceedings/psb19/duan.pdf) *Pacific Symposium on Biocomputing* 2019 (pp. 30-41).
