@@ -9,9 +9,7 @@ Authors@R: c(person("Chongliang", "Luo", role=c("aut","cre"), email ="luocl3009@
                 person("Yong", "Chen", role="aut", email ="ychen123@upenn.edu"))
 Description: A collection of privacy-preserving distributed algorithms for conducting multi-site data analyses. The regression analyses can be linear regression for continuous outcome, logistic regression for binary outcome, Cox proportional hazard regression for time-to event outcome, or Poisson regression for count outcome. The PDA algorithm runs on a lead site and only requires summary statistics from collaborating sites, with one or few iterations. For more information, please visit our software websites: <https://github.com/Penncil/pda>, and <https://penncil2019pda.wixsite.com/mysite>.
 Maintainer: Chongliang Luo <luocl3009@gmail.com>
-License: Apache License 2.0
-Additional_repositories:
-  http://R-Forge.R-project.org
+License: Apache License 2.0 
 Imports: 
   Rcpp (>= 0.12.19), 
   RcppArmadillo,
@@ -20,8 +18,7 @@ Imports:
   rvest, 
   jsonlite, 
   data.table, 
-  survival,
-  countreg
+  survival
 LinkingTo: 
   Rcpp, 
   RcppArmadillo

@@ -327,17 +327,18 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='ODAP'){
     if(family=='hurdle'){        # count and zero parts for hurdle
-      X_count = data.table::data.table(offset=model.offset(mf), model.matrix(formula, mf))
+      X_count = data.table::data.table(model.matrix(formula, mf))
       # also make design X_zero
       formula <- as.formula(paste(control$outcome, paste(control$variables_hurdle_zero, collapse = "+"), sep = '~'))
       mf <- model.frame(formula, ipdata)
       X_zero = data.table::data.table(model.matrix(formula, mf))
-      ipdata <- list(ipdata=ipdata, X_count=X_count, X_zero=X_zero)  
+      ipdata <- list(ipdata=ipdata, X_count=X_count, X_zero=X_zero, 
+                     offset = ifelse(is.character(control$offset), ipdata[,control$offset], 0))  
       control$risk_factor = c('Intercept', control$variables_hurdle_count, 'Intercept', control$variables_hurdle_zero)   
       # colnames(ipdata)[-c(1:2)]
     }else{
-      ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
-                                      offset=model.offset(mf),
+      ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
+                                      offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
                                       model.matrix(formula, mf))
       control$risk_factor = colnames(ipdata)[-c(1:2)]
     }

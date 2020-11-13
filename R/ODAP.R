@@ -32,6 +32,30 @@ ODAP.steps <- c('initialize','derive','estimate','synthesize')
 #     each component of hurdle model.
 
 
+## write my own ztpoisson and hurdle to avoid import: countreg, as countreg is not on CRAN...
+my.ztpoisson.loglik <- function(betas, X, Y, offset){
+  design = as.matrix(X)
+  betas <- as.matrix(betas)
+  lp <- offset+c(design%*%betas)
+  lambda <- exp(lp)
+  sum((Y*lp - lambda - log(1-exp(-lambda)))*I(Y>0)) / length(Y[Y>0])   
+}
+
+my.ztpoisson.fit <- function(X, Y, offset){
+  fn <- function(betas) - my.ztpoisson.loglik(betas, X, Y, offset)
+  res <- optim(rep(0, ncol(X)), fn, hessian=T)
+  return(list(b=res$par, b.var=diag(solve(res$hessian))/nrow(X)))
+}
+
+my.hurdle.fit <- function(X_count, X_zero, Y, offset){
+  res.count <- my.ztpoisson.fit(X_count[Y>0,], Y[Y>0], offset[Y>0])
+  Y1 <- ifelse(Y==0, 0, 1)
+  res.zero <- glm(Y1 ~ X_zero, family='binomial')
+  return(list(b.count=res.count$b, 
+              b.count.var=res.count$b.var,
+              b.zero=res.zero$coef, 
+              b.zero.var=diag(vcov(res.zero))))
+}
 
 #' @useDynLib pda
 #' @title ODAP initialize
@@ -63,11 +87,12 @@ ODAP.initialize <- function(ipdata, control, config){
   
   if (family == "ztpoisson") {
     # library(countreg)
-    fit_i <- zerotrunc(outcome ~ 0+. -offset, data = ipdata, dist = "poisson", offset = offset)
+    # fit_i <- zerotrunc(outcome ~ 0+. -offset, data = ipdata, dist = "poisson", offset = offset)
+    fit_i <- my.ztpoisson.fit(ipdata[,-c(1,2)], ipdata$outcome, ipdata$offset)
     init <- list(site = config$site_id,
                  site_size = nrow(ipdata),
-                 bhat_i = fit_i$coefficients,
-                 Vhat_i = diag(vcov(fit_i)), 
+                 bhat_i = fit_i$b,          # fit_i$coefficients,
+                 Vhat_i = fit_i$b.var,          # diag(vcov(fit_i)), 
                  phihat_i = 1) 
   }
   
@@ -82,12 +107,16 @@ ODAP.initialize <- function(ipdata, control, config){
   
   if (family == "ztquasipoisson") {
     # library(countreg)
-    fit_i <- zerotrunc(outcome ~ 0+. -offset, data = ipdata, dist = "poisson", offset = offset)
-    phihat_i <- sum(residuals(fit_i, type = "pearson")^2)/df.residual(fit_i)
+    # fit_i <- zerotrunc(outcome ~ 0+. -offset, data = ipdata, dist = "poisson", offset = offset)
+    # phihat_i <- sum(residuals(fit_i, type = "pearson")^2)/df.residual(fit_i)
+    fit_i <- my.ztpoisson.fit(ipdata[,-c(1,2)], ipdata$outcome, ipdata$offset)
+    lambda <- exp(c(as.matrix(ipdata[,-c(1,2)]) %*% fit_i$b))
+    resid <- ipdata$outcome - lambda / (1-exp(-lambda))
+    phihat_i <- sum(resid^2) / (nrow(ipdata)-(ncol(ipdata)-2))  # dispersion 
     init <- list(site = config$site_id,
                  site_size = nrow(ipdata),
-                 bhat_i = fit_i$coefficients,
-                 Vhat_i = diag(vcov(fit_i)*phihat_i)) 
+                 bhat_i = fit_i$b,                  # fit_i$coefficients,
+                 Vhat_i = fit_i$b.var*phihat_i)     # diag(vcov(fit_i)
   }
   
   if (family == "hurdle") {
@@ -96,18 +125,20 @@ ODAP.initialize <- function(ipdata, control, config){
     # X_count <- as.matrix(subset(ipdata, select = colnames(ipdata) %in% control_hurdle$variables_hurdle_count))
     # X_zero <- as.matrix(subset(ipdata, select = colnames(ipdata) %in% control_hurdle$variables_hurdle_zero))
     # fit_i <- hurdle(outcome ~ X_count + offset(log(ipdata$time)) | X_zero, dist = "poisson", zero.dist = "binomial")
-    fml <- as.formula(paste0(control$outcome, '~', paste0(control$variables_hurdle_count, collapse='+'), 
-                             ifelse(is.character(control$offset), paste0('+offset(', control$offset, ')|'), '|'),
-                             paste0(control$variables_hurdle_zero, collapse='+') ))
-    fit_i <-  countreg::hurdle(fml, data=ipdata$ipdata, dist = "poisson", zero.dist = "binomial")
+    # fml <- as.formula(paste0(control$outcome, '~', paste0(control$variables_hurdle_count, collapse='+'), 
+    #                          ifelse(is.character(control$offset), paste0('+offset(', control$offset, ')|'), '|'),
+    #                          paste0(control$variables_hurdle_zero, collapse='+') ))
+    # fit_i <-  countreg::hurdle(fml, data=ipdata$ipdata, dist = "poisson", zero.dist = "binomial")
+    fit_i <- my.hurdle.fit(ipdata$X_count, ipdata$X_zero, ipdata$ipdata$outcome, ipdata$ipdata$offset)
     px_count <- length(control$variables_hurdle_count) + 1
     px_zero <- length(control$variables_hurdle_zero) + 1
     init <- list(site = config$site_id,
                  site_size = nrow(ipdata$ipdata),
-                 bhat_zero_i = fit_i$coefficients$zero,
-                 bhat_count_i = fit_i$coefficients$count,
-                 Vhat_zero_i = diag(vcov(fit_i))[-c(1:px_count)],
-                 Vhat_count_i = diag(vcov(fit_i))[1:px_count]) 
+                 bhat_zero_i = fit_i$b.zero,      # coefficients$zero,
+                 bhat_count_i = fit_i$b.count,    # coefficients$count,
+                 Vhat_zero_i = fit_i$b.zero.var,  # diag(vcov(fit_i))[-c(1:px_count)],
+                 Vhat_count_i = fit_i$b.count.var # diag(vcov(fit_i))[1:px_count]
+                 ) 
   }
   
   return(init)
