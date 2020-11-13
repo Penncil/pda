@@ -1,5 +1,5 @@
 # Copyright 2020 Penn Computing Inference Learning (PennCIL) lab
-#
+#       https://penncil.med.upenn.edu/team/
 # This file is part of pda
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,14 +33,18 @@ pdaPut <- function(obj,name,config){
     obj_Json <- jsonlite::toJSON(obj)
     file_name <- paste0(name, '.json')
     if(interactive()) {
-      print(paste("Put",file_name,"on public cloud:"))
+      if(!is.null(config$uri)){
+        print(paste("Put",file_name,"on public cloud:"))
+      }else{
+        print(paste("Put",file_name,"on local directory", config$dir, ':'))
+      }
       print(obj_Json)
-      authorize = menu(c("Yes", "No"), title="Allow upload?")
+      authorize = menu(c("Yes", "No"), title="Allow transfer?")
     } else {
       authorize = "1"
     }
     if (authorize != 1) {
-      print("file not uploaded.")
+      print("file not transferred. You can specify file transfer setting in pda().")
       return(FALSE)
     }
     # the file to upload
@@ -134,15 +138,22 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
   } else if (pda_secret!='') {
       config$secret = pda_secret
   }
-  if(!is.null(dir)) {
-      config$dir = dir
-  } else if (pda_dir!='') {
-      config$dir = pda_dir
-  }
+
   if(!is.null(uri)) {
       config$uri = uri
   } else if (pda_uri!='') {
       config$uri = pda_uri
+  } else{
+    print('no cloud uri found! ')
+  }
+  
+  if(!is.null(dir)) {
+    config$dir = dir
+  } else if (pda_dir!='') {
+    config$dir = pda_dir
+  }else{
+    cat('no public or local directory supplied, use local temporary:', tempdir())
+    config$dir = tempdir()
   }
   config;
 }
@@ -182,128 +193,97 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' require(pda)
 #' data(lung)
 #' 
-#' # Create a number of sites, split the lung data amongst them
+#' ## In the toy example below we aim to analyze the association of lung status with 
+#' ## age and sex using logistic regression, data(lung) from 'survival', we randomly 
+#' ## assign to 3 sites: 'site1', 'site2', 'site3'. we demonstrate using PDA ODAL can 
+#' ## obtain a surrogate estimator that is close to the pooled estimate. We run the 
+#' ## example in local directory. In actual collaboration, account/password for pda server 
+#' ## will be assigned to the sites at the server https://pda.one.
+#' ## Each site can access via web browser to check the communication of the summary stats.
+#' 
+#' ## for more examples, see demo(ODAC_lung_cancer) and demo(ODAP_CrabSatellites)
+#' 
+#' # Create 3 sites, split the lung data amongst them
 #' sites = c('site1', 'site2', 'site3')
 #' set.seed(42)
-#' lung2 <- lung[,2:5]
+#' lung2 <- lung[,c('time', 'status', 'age', 'sex')]
 #' lung2$sex <- lung2$sex - 1
 #' lung2$status <- ifelse(lung2$status == 2, 1, 0)
 #' lung_split <- split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
 #' ## fit logistic reg using pooled data
 #' fit.pool <- glm(status ~ age + sex, family = 'binomial', data = lung2)
 #' 
-#' ## In the example below we aim to use PDA ODAL to obtain a surrogate estimator that is 
-#' ## close to the pooled estimate. Accounts (site1, site2, site3) and password 
-#' ## (WLjySoaZnSqMNswowg) are given to the 3 example sites at the server https://pda.one. 
-#' ## Each site can access via web browser to check the communication of the summary stats.
 #' 
 #' # ############################  STEP 1: initialize  ###############################
-#' ## lead site1: please review and enter "1" to allow putting the control file to the server
 #' control <- list(project_name = 'Lung cancer study',
-#'                 step = 'initialize',     
+#'                 step = 'initialize',
 #'                 sites = sites,
 #'                 heterogeneity = FALSE,
 #'                 model = 'ODAL',
+#'                 family = 'binomial',
 #'                 outcome = "status",
 #'                 variables = c('age', 'sex'),
 #'                 optim_maxit = 100,
-#'                 lead_site = sites[1],
+#'                 lead_site = 'site1',
 #'                 upload_date = as.character(Sys.time()) )
-#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' pda(site_id = 'site1', control = control)  
-#' # now the group would see control.json	at https://pda.one
 #' 
-#' # remote site3: please review and enter "1" to allow putting your local estimate to the server  
-#' i <- 3
-#' Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-#' # now the group would see site3_initialize.json	at https://pda.one
 #' 
-#' ## remote site2: please review and enter "1" to allow putting your local estimate to the server
-#' i <- 2
-#' Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-#' # now the group would see site2_initialize.json	at https://pda.one
-#' 
-#' ## lead site1: please review and enter "1" to allow putting your local estimate to the server
-#' i <- 1
-#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i]) 
-#' # now the group would see site1_initialize.json	at https://pda.one
-#' # control.json is also automatically updated  
-#' 
-#' ## if lead site1 initialized before other sites, 
-#' ## lead site1: uncomment to synchoronize the control before STEP 2
-#' # Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
+#' ## run the example in local directory:
+#' ## assume lead site1: enter "1" to allow transferring the control file  
+#' pda(site_id = 'site1', control = control, dir = getwd())
+#' ## in actual collaboration, account/password for pda server will be assigned, thus:
+#' # pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')
+#' ## you can also set your environment variables, and no need to specify them in pda:
+#' # Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'abc123', PDA_URI = 'https://pda.one')
 #' # pda(site_id = 'site1', control = control)
-#' # config <- getCloudConfig(site_id = 'site1')
-#' # pdaSync(config)
 #' 
-#' # ############################  STEP 2: derivative  ###############################
-#' ## remote site3: please review and enter "1" to allow putting your derivatives to the server   
-#' i <- 3
-#' Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-#' # now the group would see site3_derive.json	at https://pda.one
+#' ##' assume remote site3: enter "1" to allow tranferring your local estimate 
+#' pda(site_id = 'site3', ipdata = lung_split[[3]], dir=getwd())
 #' 
-#' ## remote site2: please review and enter "1" to allow putting your derivatives to the server    
-#' i <- 2
-#' Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-#' # now the group would see site2_derive.json	at https://pda.one
+#' ##' assume remote site2: enter "1" to allow tranferring your local estimate  
+#' pda(site_id = 'site2', ipdata = lung_split[[2]], dir=getwd())
 #' 
-#' ## lead site1: please review and enter "1" to allow putting your derivatives to the server      
-#' i <- 1
-#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-#' # now the group would see site1_derive.json	at https://pda.one
 #' 
-#' # ############################  STEP 3: estimate  ###############################
-#' ## lead site1: 
-#' ## please review and enter "1" to allow putting the surrogate estimate to the server     
-#' i <- 1
-#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-#' # now the group would see site1_estimate.json	at https://pda.one
-#' ## compare the surrogate estimate with the pooled estimate
-#' config <- getCloudConfig(site_id = 'site1')
+#' ##' assume lead site1: enter "1" to allow tranferring your local estimate  
+#' ##' control.json is also automatically updated
+#' pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+#' 
+#' ##' if lead site1 initialized before other sites,
+#' ##' lead site1: uncomment to sync the control before STEP 2
+#' #' pda(site_id = 'site1', control = control)
+#' #' config <- getCloudConfig(site_id = 'site1')
+#' #' pdaSync(config)
+#' 
+#' #' ############################'  STEP 2: derivative  ############################ 
+#' ##' assume remote site3: enter "1" to allow tranferring your derivatives  
+#' pda(site_id = 'site3', ipdata = lung_split[[3]], dir=getwd())
+#' 
+#' ##' assume remote site2: enter "1" to allow tranferring your derivatives  
+#' pda(site_id = 'site2', ipdata = lung_split[[2]], dir=getwd())
+#' 
+#' ##' assume lead site1: enter "1" to allow tranferring your derivatives  
+#' pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+#' 
+#' 
+#' #' ############################'  STEP 3: estimate  ############################ 
+#' ##' assume lead site1: enter "1" to allow tranferring the surrogate estimate  
+#' pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+#' 
+#' ##' the PDA ODAL is now completed!
+#' ##' All the sites can still run their own surrogate estimates and broadcast them.
+#' 
+#' ##' compare the surrogate estimate with the pooled estimate
+#' config <- getCloudConfig(site_id = 'site1', dir=getwd())
 #' fit.odal <- pdaGet(name = 'site1_estimate', config = config)
-#' cbind(b.pool=fit.pool$coef, 
-#'       b.odal=fit.odal$btilde, 
-#'       sd.pool=summary(fit.pool)$coef[,2], 
+#' cbind(b.pool=fit.pool$coef,
+#'       b.odal=fit.odal$btilde,
+#'       sd.pool=summary(fit.pool)$coef[,2],
 #'       sd.odal=sqrt(diag(solve(fit.odal$Htilde)/nrow(lung2))))
-#' ## the PDA ODAL is now completed! 
-#' ## All the sites can still run their surrogate estimates and broadcast them. 
 #' 
-#' ## remote site2: (optional)  
-#' i <- 2
-#' Sys.setenv(PDA_USER = 'site2', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-#' 
-#' ## remote site3: (optional)
-#' i <- 3
-#' Sys.setenv(PDA_USER = 'site3', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i]) 
-#' 
-#' 
-#' ## If all the sites broadcast their surrogate estimates, 
-#' ## a final synthesize step can further improve the estimate.
-#' ## lead site1: uncomment to synchoronize the control before STEP 4
-#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' pda(site_id = 'site1', control = control)
-#' config <- getCloudConfig(site_id = 'site1')
-#' pdaSync(config)
-#' 
-#' # ########################  STEP 4: synthesize (optional)  ######################## 
-#' ## lead site1:     
-#' i <- 1
-#' Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'WLjySoaZnSqMNswowg', PDA_URI = 'https://pda.one')
-#' control <- pda(ipdata = lung_split[[i]], site_id = sites[i])
-#'
 #' @return control
 #' @export
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
-                config<-getCloudConfig(site_id,dir,uri,secret)
+  config <- getCloudConfig(site_id,dir,uri,secret)
   #add a control if one was provided
   if(!(is.null(control)) &&  config$site_id==control$lead_site) { # control$sites[1]
            pdaPut(obj=control,name='control',config=config)
@@ -312,35 +292,60 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   control = pdaGet('control',config)
   cat('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): \n')
   cat('your site = ', config$site_id, '\n')
-  n = nrow(ipdata)
-  formula<-as.formula(
-    paste(control$outcome,
-    paste(control$variables, collapse = " + "),
-  sep = ' ~'))
-  mf = model.frame(formula, ipdata)
-  
+ 
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
     ODAL.family<-'binomial'
+  }else if(control$model=='ODAP'){
+    ODAP.steps<-c('initialize','derive','estimate','synthesize')
+    # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson, hurdle) in control
+    ODAP.family<-control$family  
   }else if(control$model=='ODAC'){
     ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
     ODAC.family<-'cox'
   }
-  
+
   family = get(paste0(control$model,'.family'))
-  if(family=='cox'){  
+  n = nrow(ipdata)
+  if(family=='hurdle'){           # count and zero parts for hurdle, Xcount first
+    variables <- control$variables_hurdle_count
+  }else{
+    variables <- control$variables
+  }
+  formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
+  mf <- model.frame(formula, ipdata)
+  
+  # create ipdata via model.matrix to make dummy variables for categorical covariates...
+  if(control$model=='ODAC'){  
     ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
                         status=as.numeric(model.response(mf))[-c(1:n)], 
                         model.matrix(formula, mf)[,-1])
     control$risk_factor = colnames(ipdata)[-c(1:2)]
-  }else{
+  }else if(control$model=='ODAL'){
     ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
-                        model.matrix(formula, mf))
+                                    model.matrix(formula, mf))
     control$risk_factor = colnames(ipdata)[-1]
+  }else if(control$model=='ODAP'){
+    if(family=='hurdle'){        # count and zero parts for hurdle
+      X_count = data.table::data.table(offset=model.offset(mf), model.matrix(formula, mf))
+      # also make design X_zero
+      formula <- as.formula(paste(control$outcome, paste(control$variables_hurdle_zero, collapse = "+"), sep = '~'))
+      mf <- model.frame(formula, ipdata)
+      X_zero = data.table::data.table(model.matrix(formula, mf))
+      ipdata <- list(ipdata=ipdata, X_count=X_count, X_zero=X_zero)  
+      control$risk_factor = c('Intercept', control$variables_hurdle_count, 'Intercept', control$variables_hurdle_zero)   
+      # colnames(ipdata)[-c(1:2)]
+    }else{
+      ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
+                                      offset=model.offset(mf),
+                                      model.matrix(formula, mf))
+      control$risk_factor = colnames(ipdata)[-c(1:2)]
+    }
   }
+  
   if(is.character(control$step)){
-    step_function<-paste0(control$model,'.',control$step)
-    step_obj<-get(step_function)(ipdata, control, config)
+    step_function <- paste0(control$model,'.',control$step)
+    step_obj <- get(step_function)(ipdata, control, config)
     if(control$step=='estimate'){
       print("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
     }
@@ -368,6 +373,10 @@ pdaSync <- function(config){
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
     ODAL.family<-'binomial'
+  }else if(control$model=='ODAP'){
+    ODAP.steps<-c('initialize','derive','estimate','synthesize')
+    # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson, hurdle) in control
+    ODAP.family<-control$family  
   }else if(control$model=='ODAC'){
     ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
     ODAC.family<-'cox'
@@ -377,22 +386,49 @@ pdaSync <- function(config){
   if(all(paste0(control$sites,"_",control$step) %in% files)){
     if(control$step=="initialize"){
       init_i <- pdaGet(paste0(control$lead_site,'_initialize'),config)
-      bhat <-init_i$bhat_i 
-      vbhat <- init_i$Vhat_i
-      for(site_i in control$sites){
-        if(site_i!=control$lead_site){
-          init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-          bhat = rbind(bhat, init_i$bhat_i)
-          vbhat = rbind(vbhat, init_i$Vhat_i)
+      if(control$family=='hurdle'){
+        bhat_zero <-init_i$bhat_zero_i
+        vbhat_zero <- init_i$Vhat_zero_i
+        bhat_count <-init_i$bhat_count_i
+        vbhat_count <- init_i$Vhat_count_i
+        for(site_i in control$sites){
+          if(site_i!=control$lead_site){
+            init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+            bhat_zero = rbind(bhat_zero, init_i$bhat_zero_i)
+            vbhat_zero = rbind(vbhat_zero, init_i$Vhat_zero_i)
+            bhat_count = rbind(bhat_count, init_i$bhat_count_i)
+            vbhat_count = rbind(vbhat_count, init_i$Vhat_count_i)
+          }
         }
+        #estimate from meta-analysis
+        bmeta_zero = apply(bhat_zero/vbhat_zero,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat_zero,2,function(x){sum(x, na.rm = TRUE)})
+        vmeta_zero = 1/apply(1/vbhat_zero,2,function(x){sum(x, na.rm = TRUE)})
+        bmeta_count = apply(bhat_count/vbhat_count,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat_count,2,function(x){sum(x, na.rm = TRUE)})
+        vmeta_count = 1/apply(1/vbhat_count,2,function(x){sum(x, na.rm = TRUE)})
+        res = list(bmeta_zero = bmeta_zero, vmeta_zero = vmeta_zero, 
+                   bmeta_count = bmeta_count, vmeta_count = vmeta_count)
+        cat('meta analysis (inverse variance weighted average) result:')
+        #print(res)
+        control$beta_zero_init = bmeta_zero
+        control$beta_count_init = bmeta_count
+      }else{
+        bhat <-init_i$bhat_i 
+        vbhat <- init_i$Vhat_i
+        for(site_i in control$sites){
+          if(site_i!=control$lead_site){
+            init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+            bhat = rbind(bhat, init_i$bhat_i)
+            vbhat = rbind(vbhat, init_i$Vhat_i)
+          }
+        }
+        #estimate from meta-analysis
+        bmeta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
+        vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
+        res = list(bmeta = bmeta, vmeta = vmeta)
+        cat('meta analysis (inverse variance weighted average) result:')
+        #print(res)
+        control$beta_init = bmeta
       }
-      #estimate from meta-analysis
-      bmeta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
-      vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
-      res = list(bmeta = bmeta, vmeta = vmeta)
-      cat('meta analysis (inverse variance weighted average) result:')
-      #print(res)
-      control$beta_init = bmeta
       mes <- 'beta_init added, step=2 (derivatives)! \n'
     }
     steps = get(paste0(control$model,'.steps'))

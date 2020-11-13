@@ -1,5 +1,5 @@
 # Copyright (2020) Chongliang Luo, Rui Duan, Jiayi Tong and Yong Chen
-# 
+#       https://penncil.med.upenn.edu/team/
 # This file is part of pda
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,8 +19,8 @@
 # https://ohdsi.github.io/Hades/codeStyle.html#OHDSI_code_style_for_R
 
 # set in pda() ?
-ODAL.steps<-c('initialize','derive','estimate','synthesize')
-ODAL.family<-'binomial'
+ODAL.steps <- c('initialize','derive','estimate','synthesize')
+ODAL.family <- 'binomial'
 
 #' @useDynLib pda
 #' @title ODAL initialize
@@ -51,7 +51,7 @@ ODAL.initialize <- function(ipdata,control,config){
 #' @param control pda control data
 #' @param config local site configuration
 #'
-#' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(mydata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
+#' @return  list(site=config$site_id, site_size = nrow(ipdata), logL_D1=logL_D1, logL_D2=logL_D2)
 #' @keywords internal
 ODAL.derive <- function(ipdata,control,config){
   # data sanity check ...

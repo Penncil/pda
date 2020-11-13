@@ -1,0 +1,3 @@
+ODAL_lung_cancer   One-shot distributed algorithm for logistic regression example of lung cancer data
+ODAC_lung_cancer   One-shot distributed algorithm for Cox regression example of lung cancer data 
+ODAP_CrabSatellites One-shot distributed algorithm for Poisson (hurdle) regression example of CrabSatellites data 

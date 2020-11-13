@@ -2,6 +2,7 @@
 ^\.Rproj\.user$
 Dockerfile
 README.rst
+README.md
 binary
 docker-compose.yml
 docs

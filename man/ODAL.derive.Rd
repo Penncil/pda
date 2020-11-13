@@ -14,7 +14,7 @@ ODAL.derive(ipdata,control,config)
 \item{config}{local site configuration}
 }
 \value{
-list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(mydata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
+list(site=config$site_id, site_size = nrow(ipdata), logL_D1=logL_D1, logL_D2=logL_D2)
 }
 \description{
 ODAL derivatives
