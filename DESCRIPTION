@@ -12,7 +12,6 @@ Maintainer: Chongliang Luo <luocl3009@gmail.com>
 License: Apache License 2.0 
 Imports: 
   Rcpp (>= 0.12.19), 
-  RcppArmadillo,
   stats, 
   httr, 
   rvest, 

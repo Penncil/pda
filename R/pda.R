@@ -174,7 +174,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' @param secret password to authenticate as site_id on uri
 #' @return control
 #' @seealso \code{pdaPut}, \code{pdaList}, \code{pdaGet}, \code{getCloudConfig} and \code{pdaSync}.
-#' @import stats survival rvest jsonlite data.table httr Rcpp RcppArmadillo
+#' @import stats survival rvest jsonlite data.table httr Rcpp  
 #'          
 #' @references
 #' Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distributed Statistical Inference, \cr
