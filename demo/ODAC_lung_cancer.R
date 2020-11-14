@@ -37,8 +37,10 @@ control <- list(project_name = 'Lung cancer study',
 
 
 ## run the example in local directory:
+## specify your working directory, default is the tempdir
+mydir <- tempdir()
 ## assume lead site1: enter "1" to allow transferring the control file
-pda(site_id = 'site1', control = control, dir = getwd())
+pda(site_id = 'site1', control = control, dir = mydir)
 ## in actual collaboration, account/password for pda server will be assigned, thus:
 # pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')
 ## you can also set your environment variables, and no need to specify them in pda:
@@ -47,86 +49,86 @@ pda(site_id = 'site1', control = control, dir = getwd())
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site3: enter "1" to allow tranferring your local estimate
-pda(site_id = 'site3', ipdata = lung_split[[3]], dir=getwd())
+pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site2: enter "1" to allow tranferring your local estimate
-pda(site_id = 'site2', ipdata = lung_split[[2]], dir=getwd())
+pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume lead site1: enter "1" to allow tranferring your local estimate
 ## control.json is also automatically updated
-pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
 
 ## if lead site1 initialized before other sites,
 ## lead site1: uncomment to sync the control before STEP 2
 # pda(site_id = 'site1', control = control)
-# config <- getCloudConfig(site_id = 'site1', dir=getwd())
+# config <- getCloudConfig(site_id = 'site1', dir=mydir)
 # pdaSync(config)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 # ###################   STEP 2: summary stats at each time point  #################
 ## assume remote site3: enter "1" to allow tranferring your derivatives
-pda(site_id = 'site3', ipdata = lung_split[[3]], dir=getwd())
+pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site2: enter "1" to allow tranferring your derivatives
-pda(site_id = 'site2', ipdata = lung_split[[2]], dir=getwd())
+pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume lead site1: enter "1" to allow tranferring your derivatives
-pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
 
 
 S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 3: derivative  ###############################
 ## assume remote site3: enter "1" to allow tranferring your derivatives
-pda(site_id = 'site3', ipdata = lung_split[[3]], dir=getwd())
+pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site2: enter "1" to allow tranferring your derivatives
-pda(site_id = 'site2', ipdata = lung_split[[2]], dir=getwd())
+pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume lead site1: enter "1" to allow tranferring your derivatives
-pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
 
 
 S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 4: estimate  ###############################
 ## assume lead site1: enter "1" to allow tranferring the surrogate estimate
-pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
 
-## the PDA ODAL is now completed!
+## the PDA ODAC is now completed!
 ## All the sites can still run their own surrogate estimates and broadcast them.
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## compare the surrogate estimate with the pooled estimate
-config <- getCloudConfig(site_id = 'site1', dir=getwd())
-fit.odal <- pdaGet(name = 'site1_estimate', config = config)
+config <- getCloudConfig(site_id = 'site1', dir=mydir)
+fit.pda <- pdaGet(name = 'site1_estimate', config = config)
 control <- pdaGet('control', config)
 cbind(b.pool=fit.pool$coef,
       b.meta =control$beta_init,
-      b.odal=fit.odal$btilde )
+      b.pda=fit.pda$btilde )
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site2: (optional)
-pda(site_id = 'site2', ipdata = lung_split[[2]], dir=getwd())
+pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site3: (optional)
-pda(site_id = 'site3', ipdata = lung_split[[3]], dir=getwd())
+pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
 
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## If all the sites broadcast their surrogate estimates,
 ## a final synthesize step can further improve the estimate.
 ## assume lead site1: uncomment to synchoronize the control before STEP 4
-pda(site_id = 'site1', control = control)
-config <- getCloudConfig(site_id = 'site1', dir = getwd())
+pda(site_id = 'site1', control = control, dir = mydir)
+config <- getCloudConfig(site_id = 'site1', dir = mydir)
 pdaSync(config)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 # ########################  STEP 5: synthesize (optional)  ########################
 ## assume lead site1:
-pda(site_id = 'site1', ipdata = lung_split[[1]], dir=getwd())
+pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)

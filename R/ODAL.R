@@ -1,4 +1,4 @@
-# Copyright (2020) Chongliang Luo, Rui Duan, Jiayi Tong and Yong Chen
+# Copyright 2020 Penn Computing Inference Learning (PennCIL) lab
 #       https://penncil.med.upenn.edu/team/
 # This file is part of pda
 # 

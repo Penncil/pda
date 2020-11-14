@@ -1,4 +1,4 @@
-# Copyright (2020) Chongliang Luo, Rui Duan, Jiayi Tong and Yong Chen
+# Copyright 2020 Penn Computing Inference Learning (PennCIL) lab
 #       https://penncil.med.upenn.edu/team/
 # This file is part of pda
 # 
@@ -49,8 +49,7 @@ my.ztpoisson.fit <- function(X, Y, offset){
 
 my.hurdle.fit <- function(X_count, X_zero, Y, offset){
   res.count <- my.ztpoisson.fit(X_count[Y>0,], Y[Y>0], offset[Y>0])
-  Y1 <- ifelse(Y==0, 0, 1)
-  res.zero <- glm(Y1 ~ X_zero, family='binomial')
+  res.zero <- glm(y~0+., data=cbind(y=ifelse(Y==0, 0, 1),X_zero), family='binomial')
   return(list(b.count=res.count$b, 
               b.count.var=res.count$b.var,
               b.zero=res.zero$coef, 
@@ -129,7 +128,7 @@ ODAP.initialize <- function(ipdata, control, config){
     #                          ifelse(is.character(control$offset), paste0('+offset(', control$offset, ')|'), '|'),
     #                          paste0(control$variables_hurdle_zero, collapse='+') ))
     # fit_i <-  countreg::hurdle(fml, data=ipdata$ipdata, dist = "poisson", zero.dist = "binomial")
-    fit_i <- my.hurdle.fit(ipdata$X_count, ipdata$X_zero, ipdata$ipdata$outcome, ipdata$ipdata$offset)
+    fit_i <- my.hurdle.fit(ipdata$X_count, ipdata$X_zero, ipdata$ipdata[,control$outcome], ipdata$offset)
     px_count <- length(control$variables_hurdle_count) + 1
     px_zero <- length(control$variables_hurdle_zero) + 1
     init <- list(site = config$site_id,
