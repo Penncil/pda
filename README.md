@@ -26,11 +26,9 @@ Below are the instructions for installing and then running the package.
 ### How to install the pda package
 There are several ways in which one could install the `pda` package. 
 
-1. [Q: do we need to setup the environment for C++ first?]
+1. In RStudio, create a new project: File -> New Project... -> New Directory -> New Project. 
 
-2. In RStudio, create a new project: File -> New Project... -> New Directory -> New Project. 
-
-3. Execute the following R code: 
+2. Execute the following R code: 
 
 ```r
 # Install the latest version of PDA in R:
@@ -184,6 +182,3 @@ for hurdle regression.
 6. Tong, J., Chen, Z., Duan, R., Lo-Ciganic, W.H., Lyu, T., Tao, C., Merkel, P.A., Kranzler, H.R., Bian, J. and Chen, Y., 2020. [Identifying Clinical Risk Factors for Opioid Use Disorder using a Distributed Algorithm to Combine Real-World Data from a Large Clinical Data Research Network](https://www.medrxiv.org/content/10.1101/2020.08.16.20167577v1). *medRxiv*.
 
 
-## FAQ
-#### *What do I need to do to run the package?*
-#### *How to solve the errors about c++ in Rstudio?*
