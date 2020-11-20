@@ -260,7 +260,7 @@ ODAC.synthesize <- function(ipdata,control,config) {
   btilde <- solve(wt_sum, btilde_wt_sum)
   Vtilde <- solve(wt_sum) * K
   
-  cat("all surrogate estimates synthesized, no need to broadcast! \n")
+  message("all surrogate estimates synthesized, no need to broadcast! ")
   return(list(btilde=btilde, 
               Vtilde=Vtilde))
 }

@@ -38,7 +38,7 @@ control <- list(project_name = 'Lung cancer study',
 
 ## run the example in local directory:
 ## specify your working directory, default is the tempdir
-mydir <- tempdir()
+mydir <- getwd()   # tempdir()
 ## assume lead site1: enter "1" to allow transferring the control file
 pda(site_id = 'site1', control = control, dir = mydir)
 ## in actual collaboration, account/password for pda server will be assigned, thus:
@@ -111,24 +111,24 @@ cbind(b.pool=fit.pool$coef,
       b.meta =control$beta_init,
       b.pda=fit.pda$btilde )
 
-S=readline(prompt="Type  <Return>   to continue : ")
-## assume remote site2: (optional)
-pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
-
-S=readline(prompt="Type  <Return>   to continue : ")
-## assume remote site3: (optional)
-pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
-
-
-S=readline(prompt="Type  <Return>   to continue : ")
-## If all the sites broadcast their surrogate estimates,
-## a final synthesize step can further improve the estimate.
-## assume lead site1: uncomment to synchoronize the control before STEP 4
-pda(site_id = 'site1', control = control, dir = mydir)
-config <- getCloudConfig(site_id = 'site1', dir = mydir)
-pdaSync(config)
-
-S=readline(prompt="Type  <Return>   to continue : ")
-# ########################  STEP 5: synthesize (optional)  ########################
-## assume lead site1:
-pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
+# S=readline(prompt="Type  <Return>   to continue : ")
+# ## assume remote site2: (optional)
+# pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
+# 
+# S=readline(prompt="Type  <Return>   to continue : ")
+# ## assume remote site3: (optional)
+# pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
+# 
+# 
+# S=readline(prompt="Type  <Return>   to continue : ")
+# ## If all the sites broadcast their surrogate estimates,
+# ## a final synthesize step can further improve the estimate.
+# ## assume lead site1: uncomment to synchoronize the control before STEP 4
+# pda(site_id = 'site1', control = control, dir = mydir)
+# config <- getCloudConfig(site_id = 'site1', dir = mydir)
+# pdaSync(config)
+# 
+# S=readline(prompt="Type  <Return>   to continue : ")
+# # ########################  STEP 5: synthesize (optional)  ########################
+# ## assume lead site1:
+# pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)

@@ -42,7 +42,7 @@ control <- list(project_name = 'CrabSatellites study',
 
 ## run the example in local directory:
 ## specify your working directory, default is the tempdir
-mydir <- tempdir()
+mydir <- getwd()   #  tempdir()
 ## assume lead site1: enter "1" to allow transferring the control file  
 pda(site_id = 'site1', control = control, dir = mydir)
 ## in actual collaboration, account/password for pda server will be assigned, thus:
@@ -81,7 +81,7 @@ S=readline(prompt="Type  <Return>   to continue : ")
 ## assume lead site1: enter "1" to allow tranferring the surrogate estimate  
 pda(site_id = 'site1', ipdata = dd_split[[1]], dir=mydir)
 
-## the PDA ODAL is now completed!
+## the PDA ODAP is now completed!
 ## All the sites can still run their own surrogate estimates and broadcast them.
 
 S=readline(prompt="Type  <Return>   to continue : ")
@@ -96,20 +96,20 @@ cbind(b.count.pool=fit.pool$coef$count,
       b.zero.meta=control$beta_zero_init,
       b.zero.odap=fit.odap$btilde_zero )
 
-S=readline(prompt="Type  <Return>   to continue : ")
-## assume remote site2: (optional)
-pda(site_id = 'site2', ipdata = dd_split[[2]], dir=mydir)
-
- 
-S=readline(prompt="Type  <Return>   to continue : ")
-## If all the sites broadcast their surrogate estimates,
-## a final synthesize step can further improve the estimate.
-## assume lead site1: uncomment to synchoronize the control before STEP 4
-pda(site_id = 'site1', control = control, dir = mydir)
-config <- getCloudConfig(site_id = 'site1', dir = mydir)
-pdaSync(config)
-
-S=readline(prompt="Type  <Return>   to continue : ")
-# ########################  STEP 4: synthesize (optional)  ########################
-## assume lead site1:
-pda(site_id = 'site1', ipdata = dd_split[[1]], dir=mydir)
+# S=readline(prompt="Type  <Return>   to continue : ")
+# ## assume remote site2: (optional)
+# pda(site_id = 'site2', ipdata = dd_split[[2]], dir=mydir)
+# 
+#  
+# S=readline(prompt="Type  <Return>   to continue : ")
+# ## If all the sites broadcast their surrogate estimates,
+# ## a final synthesize step can further improve the estimate.
+# ## assume lead site1: uncomment to synchoronize the control before STEP 4
+# pda(site_id = 'site1', control = control, dir = mydir)
+# config <- getCloudConfig(site_id = 'site1', dir = mydir)
+# pdaSync(config)
+# 
+# S=readline(prompt="Type  <Return>   to continue : ")
+# # ########################  STEP 4: synthesize (optional)  ########################
+# ## assume lead site1:
+# pda(site_id = 'site1', ipdata = dd_split[[1]], dir=mydir)

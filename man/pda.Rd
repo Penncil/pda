@@ -42,7 +42,7 @@ data(lung)
 ## will be assigned to the sites at the server https://pda.one.
 ## Each site can access via web browser to check the communication of the summary stats.
 
-## for more examples, see demo(ODAC_lung_cancer) and demo(ODAP_CrabSatellites)
+## for more examples, see demo(ODAC) and demo(ODAP)
 
 # Create 3 sites, split the lung data amongst them
 sites = c('site1', 'site2', 'site3')
@@ -75,10 +75,10 @@ mydir <- tempdir()
 ## assume lead site1: enter "1" to allow transferring the control file  
 pda(site_id = 'site1', control = control, dir = mydir)
 ## in actual collaboration, account/password for pda server will be assigned, thus:
-# pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')
+\dontrun{pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')}
 ## you can also set your environment variables, and no need to specify them in pda:
-# Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'abc123', PDA_URI = 'https://pda.one')
-# pda(site_id = 'site1', control = control)
+\dontrun{Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'abc123', PDA_URI = 'https://pda.one')}
+\dontrun{pda(site_id = 'site1', control = control)}
 
 ##' assume remote site3: enter "1" to allow tranferring your local estimate 
 pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
@@ -86,16 +86,15 @@ pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
 ##' assume remote site2: enter "1" to allow tranferring your local estimate  
 pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
 
-
 ##' assume lead site1: enter "1" to allow tranferring your local estimate  
 ##' control.json is also automatically updated
 pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
 
 ##' if lead site1 initialized before other sites,
 ##' lead site1: uncomment to sync the control before STEP 2
-#' pda(site_id = 'site1', control = control)
-#' config <- getCloudConfig(site_id = 'site1')
-#' pdaSync(config)
+\dontrun{pda(site_id = 'site1', control = control)}
+\dontrun{config <- getCloudConfig(site_id = 'site1')}
+\dontrun{pdaSync(config)}
 
 #' ############################'  STEP 2: derivative  ############################ 
 ##' assume remote site3: enter "1" to allow tranferring your derivatives  
@@ -123,7 +122,7 @@ cbind(b.pool=fit.pool$coef,
       sd.pool=summary(fit.pool)$coef[,2],
       sd.odal=sqrt(diag(solve(fit.odal$Htilde)/nrow(lung2))))
       
-## see demo(ODAL_lung_cancer) for more optional steps
+## see demo(ODAL) for more optional steps
 
 }
 \references{

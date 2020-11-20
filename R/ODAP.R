@@ -704,7 +704,7 @@ ODAP.synthesize <- function(ipdata, control, config) {
     Vtilde_zero <- solve(wt_sum_zero) * K
     Vtilde_count <- solve(wt_sum_count) * K
     
-    cat("all surrogate estimates synthesized, no need to broadcast! \n")
+    message("all surrogate estimates synthesized, no need to broadcast! ")
     return(list(btilde_zero = btilde_zero,
                 btilde_count = btilde_count,
                 Vtilde_zero = Vtilde_zero,
@@ -725,7 +725,7 @@ ODAP.synthesize <- function(ipdata, control, config) {
     btilde <- solve(wt_sum, btilde_wt_sum)
     Vtilde <- solve(wt_sum) * K
     
-    cat("all surrogate estimates synthesized, no need to broadcast! \n")
+    message("all surrogate estimates synthesized, no need to broadcast! ")
     return(list(btilde = btilde,
                 Vtilde = Vtilde))
   }

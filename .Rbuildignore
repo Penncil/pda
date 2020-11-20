@@ -3,7 +3,6 @@
 Dockerfile
 README.rst
 README.md
-^.*\.png$
 binary
 docker-compose.yml
 docs

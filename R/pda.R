@@ -34,17 +34,17 @@ pdaPut <- function(obj,name,config){
     file_name <- paste0(name, '.json')
     if(interactive()) {
       if(!is.null(config$uri)){
-        print(paste("Put",file_name,"on public cloud:"))
+        message(paste("Put",file_name,"on public cloud:"))
       }else{
-        print(paste("Put",file_name,"on local directory", config$dir, ':'))
+        message(paste("Put",file_name,"on local directory", config$dir, ':'))
       }
-      print(obj_Json)
+      message(obj_Json)
       authorize = menu(c("Yes", "No"), title="Allow transfer?")
     } else {
       authorize = "1"
     }
     if (authorize != 1) {
-      print("file not transferred. You can specify file transfer setting in pda().")
+      warning("file not transferred. You can specify file transfer setting in pda().")
       return(FALSE)
     }
     # the file to upload
@@ -59,7 +59,7 @@ pdaPut <- function(obj,name,config){
         url <- file.path(config$uri, file_name)
         # webdav PUT request to send a file to cloud
         r<-httr::PUT(url, body = httr::upload_file(file_path), httr::authenticate(config$site_id, config$secret, 'digest'))
-        print(paste("putting:",url))
+        message(paste("putting:",url))
     }
 }
 
@@ -144,7 +144,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
   } else if (pda_uri!='') {
       config$uri = pda_uri
   } else{
-    print('no cloud uri found! ')
+    message('no cloud uri found! ')
   }
   
   if(!is.null(dir)) {
@@ -152,7 +152,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
   } else if (pda_dir!='') {
     config$dir = pda_dir
   }else{
-    cat('no public or local directory supplied, use local temporary:', tempdir())
+    message('no public or local directory supplied, use local temporary:', tempdir())
     config$dir = tempdir()
   }
   config;
@@ -201,7 +201,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' ## will be assigned to the sites at the server https://pda.one.
 #' ## Each site can access via web browser to check the communication of the summary stats.
 #' 
-#' ## for more examples, see demo(ODAC_lung_cancer) and demo(ODAP_CrabSatellites)
+#' ## for more examples, see demo(ODAC) and demo(ODAP)
 #' 
 #' # Create 3 sites, split the lung data amongst them
 #' sites = c('site1', 'site2', 'site3')
@@ -234,10 +234,10 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' ## assume lead site1: enter "1" to allow transferring the control file  
 #' pda(site_id = 'site1', control = control, dir = mydir)
 #' ## in actual collaboration, account/password for pda server will be assigned, thus:
-#' # pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')
+#' \dontrun{pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')}
 #' ## you can also set your environment variables, and no need to specify them in pda:
-#' # Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'abc123', PDA_URI = 'https://pda.one')
-#' # pda(site_id = 'site1', control = control)
+#' \dontrun{Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'abc123', PDA_URI = 'https://pda.one')}
+#' \dontrun{pda(site_id = 'site1', control = control)}
 #' 
 #' ##' assume remote site3: enter "1" to allow tranferring your local estimate 
 #' pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
@@ -245,16 +245,15 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' ##' assume remote site2: enter "1" to allow tranferring your local estimate  
 #' pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
 #' 
-#' 
 #' ##' assume lead site1: enter "1" to allow tranferring your local estimate  
 #' ##' control.json is also automatically updated
 #' pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
 #' 
 #' ##' if lead site1 initialized before other sites,
 #' ##' lead site1: uncomment to sync the control before STEP 2
-#' #' pda(site_id = 'site1', control = control)
-#' #' config <- getCloudConfig(site_id = 'site1')
-#' #' pdaSync(config)
+#' \dontrun{pda(site_id = 'site1', control = control)}
+#' \dontrun{config <- getCloudConfig(site_id = 'site1')}
+#' \dontrun{pdaSync(config)}
 #' 
 #' #' ############################'  STEP 2: derivative  ############################ 
 #' ##' assume remote site3: enter "1" to allow tranferring your derivatives  
@@ -282,7 +281,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #'       sd.pool=summary(fit.pool)$coef[,2],
 #'       sd.odal=sqrt(diag(solve(fit.odal$Htilde)/nrow(lung2))))
 #'       
-#' ## see demo(ODAL_lung_cancer) for more optional steps
+#' ## see demo(ODAL) for more optional steps
 #' 
 #' @return control
 #' @export
@@ -294,8 +293,8 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
            return(control)    # ?
   }
   control = pdaGet('control',config)
-  cat('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): \n')
-  cat('your site = ', config$site_id, '\n')
+  message('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): ')
+  message('your site = ', config$site_id)  # , '\n'
  
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
@@ -356,7 +355,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     step_function <- paste0(control$model,'.',control$step)
     step_obj <- get(step_function)(ipdata, control, config)
     if(control$step=='estimate'){
-      print("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
+      message("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
     }
     pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
     #sync needed?
@@ -364,7 +363,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
            control<-pdaSync(config)
     }
   }
-  control
+  invisible(control)
 }
 
 
@@ -416,7 +415,7 @@ pdaSync <- function(config){
         vmeta_count = 1/apply(1/vbhat_count,2,function(x){sum(x, na.rm = TRUE)})
         res = list(bmeta_zero = bmeta_zero, vmeta_zero = vmeta_zero, 
                    bmeta_count = bmeta_count, vmeta_count = vmeta_count)
-        cat('meta analysis (inverse variance weighted average) result:')
+        message('meta analysis (inverse variance weighted average) result:')
         #print(res)
         control$beta_zero_init = bmeta_zero
         control$beta_count_init = bmeta_count
@@ -434,7 +433,7 @@ pdaSync <- function(config){
         bmeta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
         vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
         res = list(bmeta = bmeta, vmeta = vmeta)
-        cat('meta analysis (inverse variance weighted average) result:')
+        message('meta analysis (inverse variance weighted average) result:')
         #print(res)
         control$beta_init = bmeta
       }
@@ -451,7 +450,7 @@ pdaSync <- function(config){
       mes <- paste0('finished! \n')
       control$step = NULL
     }
-    cat(mes)
+    message(mes)
     pdaPut(control,'control',config)
     control
   } 
