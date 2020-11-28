@@ -173,12 +173,6 @@ demo(ODAP_CrabSatellites)
 ```
 for hurdle regression.
 
-## References
-1. Duan, R., Boland, M.R., Moore, J.H. and Chen, Y., (2019). [ODAL: a one-shot distributed algorithm to perform logistic regressions on electronic health records data from multiple clinical sites.](https://psb.stanford.edu/psb-online/proceedings/psb19/duan.pdf) *Pacific Symposium on Biocomputing* 2019 (pp. 30-41).
-2. Duan, R., Boland, M., Liu, Z., Liu, Y., Chang, H., Xu., H, Chu, H., Schmid, C., Forrest, C., Holmes, J., Schuemie, M.J., Berlin, J.A., Moore, J.H. and Chen,Y., (2019). [Learning from electronic health records across multiple sites: a computationally and statistically efficient distributed algorithm.](https://pubmed.ncbi.nlm.nih.gov/31816040/) *Journal of the American Medical Informatics Association* 27(3), pp.376-385.
-3. Duan, R., Luo, C., Schuemie, M.J., Tong, J., Liang, J., Boland, M.R., Bian, J., Xu, H., Berlin, J.A., Moore, J.H., Mahoney, K.B. and Chen, Y., (2020). [Learning from local to global - an efficient distributed algorithm for modeling time to event data.](https://doi.org/10.1093/jamia/ocaa044) *Journal of the American Medical Informatics Association* 27(7), pp.1028–1036
-4. Tong, J., Duan, R., Li, R., Scheuemie, M.J., Moore, J.H. and Chen, Y., 2020, January. [Robust-ODAL: Learning from heterogeneous health systems without sharing patient-level data.](https://www.worldscientific.com/doi/abs/10.1142/9789811215636_0061) *In Pacific Symposium on Biocomputing. Pacific Symposium on Biocomputing* (Vol. 25, p. 695). NIH Public Access.
-5. Duan, R., Chen, Z., Tong, J., Luo, C., Lyu, T., Tao, C., Maraganore, D., Bian, J. and Chen, Y., 2020. [Leverage Real-world Longitudinal Data in Large Clinical Research Networks for Alzheimer's Disease and Related Dementia (ADRD)](https://www.medrxiv.org/content/10.1101/2020.08.03.20167619v1). *medRxiv*.
-6. Tong, J., Chen, Z., Duan, R., Lo-Ciganic, W.H., Lyu, T., Tao, C., Merkel, P.A., Kranzler, H.R., Bian, J. and Chen, Y., 2020. [Identifying Clinical Risk Factors for Opioid Use Disorder using a Distributed Algorithm to Combine Real-World Data from a Large Clinical Data Research Network](https://www.medrxiv.org/content/10.1101/2020.08.16.20167577v1). *medRxiv*.
+
 
 
