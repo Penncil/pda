@@ -53,7 +53,7 @@ You can either
 #### *Run example with demo()*
 
 ```r
-demo(ODAL_lung_cancer)
+demo(ODAL)
 ``` 
 or
 ####  *Run example with code*
@@ -164,12 +164,12 @@ cbind(b.pool=fit.pool$coef,
 For other examples, please see 
 
 ```r
-demo(ODAC_lung_cancer)
+demo(ODAC)
 ```
 for Cox regression, and 
  
 ```r
-demo(ODAP_CrabSatellites)
+demo(ODAP)
 ```
 for hurdle regression.
 
