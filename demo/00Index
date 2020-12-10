@@ -1,3 +1,3 @@
 ODAL   One-shot distributed algorithm for logistic regression example of lung cancer data
 ODAC   One-shot distributed algorithm for Cox regression example of lung cancer data 
-ODAP   One-shot distributed algorithm for Poisson (hurdle) regression example of CrabSatellites data 
+ODAH   One-shot distributed algorithm for hurdle regression example of CrabSatellites data 

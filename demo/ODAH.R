@@ -4,7 +4,7 @@ require(pda)
  
 ## In the toy example below we aim to analyze the association of CrabSatellites with width and weight using hurdle regression,
 ## data(CrabSatellites) from 'countreg', we randomly assign to 2 sites: 'site1', 'site2' 
-## we demonstrate using PDA ODAP hurdle, can obtain a surrogate estimator that is close to the pooled estimate. 
+## we demonstrate using PDA ODAH, can obtain a surrogate estimator that is close to the pooled estimate. 
 ## We run the example in local directory. In actual collaboration, account/password for pda server 
 ## will be assigned to the sites at the server https://pda.one.
 ## Each site can access via web browser to check the communication of the summary stats.
@@ -29,7 +29,7 @@ control <- list(project_name = 'CrabSatellites study',
                 step = 'initialize',
                 sites = sites,
                 heterogeneity = FALSE,
-                model = 'ODAP',
+                model = 'ODAH',
                 family = 'hurdle',
                 outcome = "satellites",
                 variables_hurdle_count = c("width", "weight"),
@@ -81,20 +81,20 @@ S=readline(prompt="Type  <Return>   to continue : ")
 ## assume lead site1: enter "1" to allow tranferring the surrogate estimate  
 pda(site_id = 'site1', ipdata = dd_split[[1]], dir=mydir)
 
-## the PDA ODAP is now completed!
+## the PDA ODAH is now completed!
 ## All the sites can still run their own surrogate estimates and broadcast them.
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## compare the surrogate estimate with the pooled estimate
 config <- getCloudConfig(site_id = 'site1', dir=mydir)
-fit.odap <- pdaGet(name = 'site1_estimate', config = config)
+fit.odah <- pdaGet(name = 'site1_estimate', config = config)
 control <- pdaGet(name = 'control', config = config)
 cbind(b.count.pool=fit.pool$coef$count,
       b.count.meta=control$beta_count_init,
-      b.count.odap=fit.odap$btilde_count,
+      b.count.odah=fit.odah$btilde_count,
       b.zero.pool=fit.pool$coef$zero,
       b.zero.meta=control$beta_zero_init,
-      b.zero.odap=fit.odap$btilde_zero )
+      b.zero.odah=fit.odah$btilde_zero )
 
 # S=readline(prompt="Type  <Return>   to continue : ")
 # ## assume remote site2: (optional)

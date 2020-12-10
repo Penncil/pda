@@ -14,12 +14,7 @@ ODAP.derive(ipdata,control,config)
 \item{config}{local site configuration}
 }
 \value{
-derivatives list(site = config$site_id, site_size = nrow(ipdata), logL_D1 = logL_D1, logL_D2 = logL_D2) 
-                     or 
-                     list(site = config$site_id, site_size = nrow(ipdata), 
-                          logL_D1_zero = logL_D1_zero, logL_D1_count = logL_D1_count,
-                          logL_D2_zero = logL_D2_zero, logL_D2_count = logL_D2_count)
-                     when family='hurdle'.
+derivatives list(site = config$site_id, site_size = nrow(ipdata), logL_D1 = logL_D1, logL_D2 = logL_D2)
 }
 \description{
 ODAP derivatives

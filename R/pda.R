@@ -301,8 +301,16 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     ODAL.family<-'binomial'
   }else if(control$model=='ODAP'){
     ODAP.steps<-c('initialize','derive','estimate','synthesize')
-    # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson, hurdle) in control
+    # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson) in control
     ODAP.family<-control$family  
+  }else if(control$model=='ODAH'){
+    ODAH.steps<-c('initialize','derive','estimate','synthesize')
+    #   family = 'hurdle' in control
+    ODAH.family<-control$family 
+    if(ODAH.family!='hurdle'){
+      warning("currently only support family='hurdle'" )
+      ODAH.family<-'hurdle'
+    }
   }else if(control$model=='ODAC'){
     ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
     ODAC.family<-'cox'
@@ -328,8 +336,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
                                     model.matrix(formula, mf))
     control$risk_factor = colnames(ipdata)[-1]
-  }else if(control$model=='ODAP'){
-    if(family=='hurdle'){        # count and zero parts for hurdle
+  }else if(control$model=='ODAH'){  # count and zero parts for hurdle
       X_count = data.table::data.table(model.matrix(formula, mf))
       # also make design X_zero
       formula <- as.formula(paste(control$outcome, paste(control$variables_hurdle_zero, collapse = "+"), sep = '~'))
@@ -342,13 +349,13 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
       }
       ipdata <- list(ipdata=ipdata, X_count=X_count, X_zero=X_zero, offset=offset)  
       control$risk_factor = c('Intercept', control$variables_hurdle_count, 'Intercept', control$variables_hurdle_zero)   
-      # colnames(ipdata)[-c(1:2)]
-    }else{
+  }else if(control$model=='ODAP'){
+ 
       ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
                                       offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
                                       model.matrix(formula, mf))
       control$risk_factor = colnames(ipdata)[-c(1:2)]
-    }
+    
   }
   
   if(is.character(control$step)){
@@ -383,8 +390,12 @@ pdaSync <- function(config){
     ODAL.family<-'binomial'
   }else if(control$model=='ODAP'){
     ODAP.steps<-c('initialize','derive','estimate','synthesize')
-    # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson, hurdle) in control
+    # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson) in control
     ODAP.family<-control$family  
+  }else if(control$model=='ODAH'){
+    ODAH.steps<-c('initialize','derive','estimate','synthesize')
+    # for ODAH family = 'hurdle' in control
+    ODAH.family<-'hurdle' # control$family  
   }else if(control$model=='ODAC'){
     ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
     ODAC.family<-'cox'
@@ -394,7 +405,8 @@ pdaSync <- function(config){
   if(all(paste0(control$sites,"_",control$step) %in% files)){
     if(control$step=="initialize"){
       init_i <- pdaGet(paste0(control$lead_site,'_initialize'),config)
-      if(control$family=='hurdle'){
+      # if(control$family=='hurdle'){
+      if(control$model=='ODAH'){
         bhat_zero <-init_i$bhat_zero_i
         vbhat_zero <- init_i$Vhat_zero_i
         bhat_count <-init_i$bhat_count_i
