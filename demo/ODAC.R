@@ -10,13 +10,8 @@ data(lung)
 ## will be assigned to the sites at the server https://pda.one.
 ## Each site can access via web browser to check the communication of the summary stats.
 
-# Create 3 sites, split the lung data amongst them
-sites = c('site1', 'site2', 'site3')
-set.seed(42)
-lung2 <- lung[,c('time', 'status', 'age', 'sex')]
-lung2$sex <- lung2$sex - 1
-lung2$status <- ifelse(lung2$status == 2, 1, 0)
-lung_split <- split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
+data(lung2)
+lung_split <- split(lung2, lung2$site)
 ## fit logistic reg using pooled data
 fit.pool <- coxph(Surv(time, status) ~ age + sex, data = lung2)
 

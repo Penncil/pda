@@ -1,4 +1,4 @@
-# Copyright 2020 Penn Computing Inference Learning (PennCIL) lab
+# Copyright 2021 Penn Computing Inference Learning (PennCIL) lab
 #       https://penncil.med.upenn.edu/team/
 # This file is part of pda
 # 
@@ -180,13 +180,21 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distributed Statistical Inference, \cr
 #'  \emph{Journal of the American Statistical Association}, 114:526, 668-681 \cr 
 #'  \url{https://doi.org/10.1080/01621459.2018.1429274}.\cr 
+#' (DLM) Yixin Chen, et al. (2006) Regression cubes with lossless compression and aggregation. 
+#'    IEEE Transactions on Knowledge and Data Engineering, 18(12), pp.1585-1599. \cr
+#' (DLMM) Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
+#'    medRxiv, \url{https://doi.org/10.1101/2020.11.16.20230730}. \cr
 #' (ODAL) Rui Duan, et al. (2020) Learning from electronic health records across multiple sites: \cr 
 #'  A communication-efficient and privacy-preserving distributed algorithm. \cr 
 #'  \emph{Journal of the American Medical Informatics Association}, 27.3:376–385,
 #'  \cr \url{https://doi.org/10.1093/jamia/ocz199}.\cr 
 #' (ODAC) Rui Duan, et al. (2020) Learning from local to global: An efficient distributed algorithm for modeling time-to-event data. \cr
 #'   \emph{Journal of the American Medical Informatics Association}, 27.7:1028–1036, \cr 
-#'    \url{https://doi.org/10.1093/jamia/ocaa044}.
+#'    \url{https://doi.org/10.1093/jamia/ocaa044}. \cr
+#' (ODAP) Mackenzie J. Edmondson, et al. (2021) An Efficient and Accurate Distributed Learning Algorithm for Modeling Multi-Site Zero-Inflated Count Outcomes. 
+#'    medRxiv, pp.2020-12. \cr
+#'    \url{https://www.medrxiv.org/content/10.1101/2020.12.17.20248194v2}. \cr
+
 #' @examples
 #' require(survival)
 #' require(data.table)
@@ -294,7 +302,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   }
   control = pdaGet('control',config)
   message('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): ')
-  message('your site = ', config$site_id)  # , '\n'
+  message('your site = ', config$site_id)  
  
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
@@ -311,9 +319,29 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
       warning("currently only support family='hurdle'" )
       ODAH.family<-'hurdle'
     }
-  }else if(control$model=='ODAC'){
-    ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
-    ODAC.family<-'cox'
+  }else if(control$model=='ODAC'){ 
+    if(control$heterogeneity==F){     # ODAC
+      ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
+    }else{                            # ODACH with heterogeneous baseline hazards across sites 
+      ODAC.steps<-c('initialize','derive', 'estimate','synthesize')
+    }
+      ODAC.family<-'cox'
+  }else if(control$model=='DLM'){
+    DLM.steps<-c('initialize', 'estimate')
+    DLM.family<-'gaussian'
+    if(control$heterogeneity==T){
+      if(is.null(control$heterogeneity_effect)){
+        stop('You specified control$heterogeneity = T, please also specify control$heterogeneity_effect as either "fixed" or "random"! ')
+      } else if(control$heterogeneity_effect!='fixed' & control$heterogeneity_effect!='random'){
+        stop('You specified control$heterogeneity = T, please also specify control$heterogeneity_effect as either "fixed" or "random"! ')
+      } 
+      if(length(setdiff(control$variables_heterogeneity, c(control$variables, "Intercept")))!=0)
+        stop('You specified control$heterogeneity = T, please also specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
+      if(is.null(control$variables_heterogeneity)){
+        message('You specified control$heterogeneity = T, but no control$variables_heterogeneity, use "Intercept" as default!')
+        control$variables_heterogeneity <- 'Intercept'      
+      }
+    }
   }
 
   family = get(paste0(control$model,'.family'))
@@ -327,6 +355,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   mf <- model.frame(formula, ipdata)
   
   # create ipdata via model.matrix to make dummy variables for categorical covariates...
+  # the resulted ipdata format will be used in later functions, i.e. ODAX etc
   if(control$model=='ODAC'){  
     ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
                         status=as.numeric(model.response(mf))[-c(1:n)], 
@@ -356,13 +385,23 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
                                       model.matrix(formula, mf))
       control$risk_factor = colnames(ipdata)[-c(1:2)]
     
+  }else if(control$model=='DLM'){
+    ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
+                                    model.matrix(formula, mf))
+    control$risk_factor = colnames(ipdata)[-1] 
+    control$risk_factor_heterogeneity = control$risk_factor[grepl(paste0(control$variables_heterogeneity, collapse='|'), control$risk_factor)]
   }
-  
+
+    
   if(is.character(control$step)){
     step_function <- paste0(control$model,'.',control$step)
     step_obj <- get(step_function)(ipdata, control, config)
     if(control$step=='estimate'){
-      message("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
+      if(control$model=='DLM'){
+        message("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
+      }else{
+        message("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
+      }
     }
     pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
     #sync needed?
@@ -399,14 +438,18 @@ pdaSync <- function(config){
   }else if(control$model=='ODAC'){
     ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
     ODAC.family<-'cox'
+  }else if(control$model=='DLM'){
+    DLM.steps<-c('initialize','estimate')
+    DLM.family<-'gaussian'
   }
   
   files<-pdaList(config) 
   if(all(paste0(control$sites,"_",control$step) %in% files)){
     if(control$step=="initialize"){
       init_i <- pdaGet(paste0(control$lead_site,'_initialize'),config)
-      # if(control$family=='hurdle'){
-      if(control$model=='ODAH'){
+      if(control$model=='DLM'){
+        # DLM does not need derivative, thus estimate after initialize...
+      }else if(control$model=='ODAH'){
         bhat_zero <-init_i$bhat_zero_i
         vbhat_zero <- init_i$Vhat_zero_i
         bhat_count <-init_i$bhat_count_i

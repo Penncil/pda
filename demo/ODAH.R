@@ -8,17 +8,12 @@ require(pda)
 ## We run the example in local directory. In actual collaboration, account/password for pda server 
 ## will be assigned to the sites at the server https://pda.one.
 ## Each site can access via web browser to check the communication of the summary stats.
-
+ 
+data(cs)
+dd_split <- split(cs, cs$site)
 
 # install.packages("countreg", repos="http://R-Forge.R-project.org")
 require(countreg)
-# Create 2 sites, split the  data amongst them
-sites = c('site1', 'site2')
-set.seed(42)
-data("CrabSatellites", package = "countreg")
-cs <- CrabSatellites[, c("satellites", "width", "weight")]
-dd_split <- split(cs, sample(1:length(sites), nrow(cs), replace=TRUE))
-
 ## fit logistic reg using pooled data
 fit.pool <- hurdle(satellites ~ width+weight, data = cs)
 
