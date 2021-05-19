@@ -323,7 +323,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     if(control$heterogeneity==F){     # ODAC
       ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
     }else{                            # ODACH with heterogeneous baseline hazards across sites 
-      ODAC.steps<-c('initialize','derive', 'estimate','synthesize')
+      ODAC.steps<-c('initialize','derive_UWZ', 'estimate','synthesize')
     }
       ODAC.family<-'cox'
   }else if(control$model=='DLM'){
@@ -436,7 +436,12 @@ pdaSync <- function(config){
     # for ODAH family = 'hurdle' in control
     ODAH.family<-'hurdle' # control$family  
   }else if(control$model=='ODAC'){
-    ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
+    if(control$heterogeneity==F){     # ODAC
+      ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
+    }else{                            # ODACH with heterogeneous baseline hazards across sites 
+      ODAC.steps<-c('initialize','derive_UWZ', 'estimate','synthesize')
+    }
+    # ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
     ODAC.family<-'cox'
   }else if(control$model=='DLM'){
     DLM.steps<-c('initialize','estimate')
