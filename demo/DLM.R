@@ -40,8 +40,7 @@ control <- list(project_name = 'Length of stay study',
 mydir <- getwd()  # tempdir()
 ## assume lead site1: enter "1" to allow transferring the control file 
 pda(site_id = 'site1', control = control, dir = mydir)
-# plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p0.png"), axes=FALSE)
-
+ 
 
 ## in actual collaboration, account/password for pda server will be assigned, thus:
 # pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')
@@ -52,26 +51,22 @@ pda(site_id = 'site1', control = control, dir = mydir)
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site3: enter "1" to allow tranferring your local estimate 
 pda(site_id = 'site3', ipdata = LOS_split[[3]], dir=mydir)
-# plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p12.png"), axes=FALSE)
-
+ 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site2: enter "1" to allow tranferring your local estimate  
 pda(site_id = 'site2', ipdata = LOS_split[[2]], dir=mydir)
-# plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p11.png"), axes=FALSE)
-
+ 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume lead site1: enter "1" to allow tranferring your local estimate  
 ## control.json is also automatically updated
 pda(site_id = 'site1', ipdata = LOS_split[[1]], dir=mydir)
-# plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p13.png"), axes=FALSE)
  
 
 S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 2: estimate  ###############################
 ## assume lead site1: enter "1" to allow tranferring the surrogate estimate  
 pda(site_id = 'site1', ipdata = LOS_split[[1]], dir=mydir)
-# plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p31.png"), axes=FALSE)
-
+ 
 ## the PDA DLM is now completed!
 
 S=readline(prompt="Type  <Return>   to continue : ")
@@ -111,9 +106,9 @@ fit.pool <- lm(los~age+sex+lab+site, data=LOS)
 # config <- getCloudConfig(site_id = 'site1', dir=mydir)
 fit.dlm <- pdaGet(name = 'site1_estimate', config = config)
 cbind(b.pool=fit.pool$coef,
-      b.dlm=c(fit.dlm$bhat, fit.dlm$uhat),      # ?
+      b.dlm=c(fit.dlm$bhat, fit.dlm$uhat),       
       sd.pool=summary(fit.pool)$coef[,2],  
-      sd.dlm=c(fit.dlm$sebhat, fit.dlm$seuhat)) # ?
+      sd.dlm=c(fit.dlm$sebhat, fit.dlm$seuhat))  
 
 
 
@@ -137,18 +132,18 @@ pda(site_id = 'site1', control = control, dir = mydir)
 pda(site_id = 'site1', ipdata = LOS_split[[1]], dir=mydir)
 
 ## fit LM using pooled data, assuming fixed site effect
-fit.pool <- lme4::lmer(los~age+sex+lab+(1|site), data=LOS)
+fit.pool <- lme4::lmer(los~age+sex+lab+(1|site), REML = F, data=LOS)
 fit.dlm <- pdaGet(name = 'site1_estimate', config = config)
 # fixed effects
-cbind(b.pool=summary(fit.pool)$coef,
-      b.dlm= fit.dlm$bhat,      # ?
-      sd.pool=summary(fit.pool)$coef[,2],  
-      sd.dlm= fit.dlm$sebhat) # ?
+cbind(b.pool = summary(fit.pool)$coef[,1],
+      b.dlm = c(fit.dlm$bhat),      
+      sd.pool = summary(fit.pool)$coef[,2],  
+      sd.dlm = fit.dlm$sebhat)  
 
 # var component
 cbind(data.frame(summary(fit.pool)$varcor)$vcov, 
       c(fit.dlm$Vhat, fit.dlm$sigmahat^2) )
 
 # random effects (BLUP)
-cbind(u.pool= ranef(fit.pool),
-      u.dlm = fit.dlm$seuhat)
+cbind(u.pool = ranef(fit.pool)$site,
+      u.dlm = c(fit.dlm$uhat))
