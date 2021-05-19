@@ -15,7 +15,7 @@ lung_split <- split(lung2, lung2$site)
 ## fit logistic reg using pooled data
 fit.pool <- coxph(Surv(time, status) ~ age + sex, data = lung2)
 
-
+sites = c('site1', 'site2', 'site3')
 S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 1: initialize  ###############################
 control <- list(project_name = 'Lung cancer study',
