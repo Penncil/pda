@@ -195,7 +195,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #'       \emph{medRxiv}, \doi{10.1101/2021.04.18.21255694}. \cr 
 #' (ODAH) Mackenzie J. Edmondson, et al. (2021) An Efficient and Accurate Distributed Learning Algorithm for Modeling Multi-Site Zero-Inflated Count Outcomes. 
 #'    medRxiv, pp.2020-12. \cr
-#'    \doi{10.1101/2020.12.17.20248194v2}. \cr
+#'    \doi{10.1101/2020.12.17.20248194}. \cr
 
 #' @examples
 #' require(survival)
