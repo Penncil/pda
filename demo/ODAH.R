@@ -17,7 +17,7 @@ require(countreg)
 ## fit logistic reg using pooled data
 fit.pool <- hurdle(satellites ~ width+weight, data = cs)
 
- 
+sites = c('site1', 'site2')
 S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 1: initialize  ###############################
 control <- list(project_name = 'CrabSatellites study',
@@ -90,21 +90,7 @@ cbind(b.count.pool=fit.pool$coef$count,
       b.zero.pool=fit.pool$coef$zero,
       b.zero.meta=control$beta_zero_init,
       b.zero.odah=fit.odah$btilde_zero )
-
-# S=readline(prompt="Type  <Return>   to continue : ")
-# ## assume remote site2: (optional)
-# pda(site_id = 'site2', ipdata = dd_split[[2]], dir=mydir)
-# 
-#  
-# S=readline(prompt="Type  <Return>   to continue : ")
-# ## If all the sites broadcast their surrogate estimates,
-# ## a final synthesize step can further improve the estimate.
-# ## assume lead site1: uncomment to synchoronize the control before STEP 4
-# pda(site_id = 'site1', control = control, dir = mydir)
-# config <- getCloudConfig(site_id = 'site1', dir = mydir)
-# pdaSync(config)
-# 
-# S=readline(prompt="Type  <Return>   to continue : ")
+ 
 # # ########################  STEP 4: synthesize (optional)  ########################
 # ## assume lead site1:
 # pda(site_id = 'site1', ipdata = dd_split[[1]], dir=mydir)

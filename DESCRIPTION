@@ -12,7 +12,8 @@ Description: A collection of privacy-preserving distributed algorithms for condu
 Maintainer: Chongliang Luo <luocl3009@gmail.com>
 License: Apache License 2.0 
 Suggests: 
-  imager 
+  imager,
+  lme4 
 Depends: R (>= 3.5.0)
 Imports: 
   Rcpp (>= 0.12.19), 
@@ -22,8 +23,7 @@ Imports:
   jsonlite, 
   data.table, 
   survival,
-  minqa,
-  lme4
+  minqa
 LinkingTo: 
   Rcpp, 
   RcppArmadillo

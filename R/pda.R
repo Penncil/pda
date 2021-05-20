@@ -191,7 +191,9 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' (ODAC) Rui Duan, et al. (2020) Learning from local to global: An efficient distributed algorithm for modeling time-to-event data. \cr
 #'   \emph{Journal of the American Medical Informatics Association}, 27.7:1028–1036, \cr 
 #'    \url{https://doi.org/10.1093/jamia/ocaa044}. \cr
-#' (ODAP) Mackenzie J. Edmondson, et al. (2021) An Efficient and Accurate Distributed Learning Algorithm for Modeling Multi-Site Zero-Inflated Count Outcomes. 
+#' (ODACH) Chongliang Luo, et al. (2021) ODACH: A One-shot Distributed Algorithm for Cox model with Heterogeneous Multi-center Data. \cr
+#'       \emph{medRxiv}, \url{https://doi.org/10.1101/2021.04.18.21255694}. \cr 
+#' (ODAH) Mackenzie J. Edmondson, et al. (2021) An Efficient and Accurate Distributed Learning Algorithm for Modeling Multi-Site Zero-Inflated Count Outcomes. 
 #'    medRxiv, pp.2020-12. \cr
 #'    \url{https://www.medrxiv.org/content/10.1101/2020.12.17.20248194v2}. \cr
 

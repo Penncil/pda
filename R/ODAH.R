@@ -310,16 +310,16 @@ ODAH.estimate <- function(ipdata,control,config) {
     # Y <- pmin(outcome, 1)
     n1 <- length(outcome)
     logL_tilde_zero <- function(beta){
-      - (Lik_zero(beta, X_zero, outcome) + (logL_all_D1_zero/N - Lgradient_zero(bbar_zero, X_zero, outcome))%*%beta+
-           t(beta-bbar_zero)%*%(logL_all_D2_zero/N - Lgradient2_zero(bbar_zero, X_zero))%*%(beta-bbar_zero) / 2)
+      - (Lik_zero(beta, X_zero, outcome) + sum((logL_all_D1_zero/N - (Lgradient_zero(bbar_zero, X_zero, outcome)))*beta) +
+           c(t(beta-bbar_zero)%*%(logL_all_D2_zero/N - Lgradient2_zero(bbar_zero, X_zero))%*%(beta-bbar_zero)) / 2)
     }
     
     #second-order surogate likelihood, ZT-Poisson component: suppose the local data are stored in Xlocal, Ylocal
     # Y <- ipdata$outcome
     # n1 <- length(Y[Y>0])
     logL_tilde_count <- function(beta){
-      - (Lik_count(beta, X_count, outcome, offset) + (logL_all_D1_count/N_nonzero - Lgradient_count(bbar_count, X_count, outcome, offset))%*%beta+
-           t(beta-bbar_count)%*%(logL_all_D2_count/N_nonzero - Lgradient2_count(bbar_count, X_count, outcome, offset))%*%(beta-bbar_count) / 2)
+      - (Lik_count(beta, X_count, outcome, offset) + sum((logL_all_D1_count/N_nonzero - (Lgradient_count(bbar_count, X_count, outcome, offset)))*beta)+
+              c(t(beta-bbar_count)%*%(logL_all_D2_count/N_nonzero - Lgradient2_count(bbar_count, X_count, outcome, offset))%*%(beta-bbar_count)) / 2)
     }
     
     # optimize the surrogate logL
