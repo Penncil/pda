@@ -144,7 +144,7 @@ Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distri
       \emph{medRxiv}, \doi{10.1101/2021.04.18.21255694}. \cr 
 (ODAH) Mackenzie J. Edmondson, et al. (2021) An Efficient and Accurate Distributed Learning Algorithm for Modeling Multi-Site Zero-Inflated Count Outcomes. 
    medRxiv, pp.2020-12. \cr
-   \doi{10.1101/2020.12.17.20248194v2}. \cr
+   \doi{10.1101/2020.12.17.20248194}. \cr
 }
 \seealso{
 \code{pdaPut}, \code{pdaList}, \code{pdaGet}, \code{getCloudConfig} and \code{pdaSync}.
