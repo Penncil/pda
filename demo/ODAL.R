@@ -42,7 +42,7 @@ control <- list(project_name = 'Lung cancer study',
 mydir <- getwd()  # tempdir()
 ## assume lead site1: enter "1" to allow transferring the control file 
 pda(site_id = 'site1', control = control, dir = mydir)
-plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p0.png"), axes=FALSE)
+plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p0_1.png"), axes=FALSE)
 
  
 ## in actual collaboration, account/password for pda server will be assigned, thus:
