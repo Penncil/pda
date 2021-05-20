@@ -54,18 +54,18 @@ plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figur
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site3: enter "1" to allow tranferring your local estimate 
 pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
-plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p12.png"), axes=FALSE)
+plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p12_1.png"), axes=FALSE)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site2: enter "1" to allow tranferring your local estimate  
 pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
-plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p11.png"), axes=FALSE)
+plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p11_1.png"), axes=FALSE)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume lead site1: enter "1" to allow tranferring your local estimate  
 ## control.json is also automatically updated
 pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
-plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p13.png"), axes=FALSE)
+plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p13_1.png"), axes=FALSE)
 
 ## if lead site1 initialized before other sites,
 ## lead site1: uncomment to sync the control before STEP 2
@@ -77,12 +77,12 @@ S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 2: derivative  ###############################
 ## assume remote site3: enter "1" to allow tranferring your derivatives  
 pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
-plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p22.png"), axes=FALSE)
+plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p22_1.png"), axes=FALSE)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site2: enter "1" to allow tranferring your derivatives  
 pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
-plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p21.png"), axes=FALSE)
+plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p21_1.png"), axes=FALSE)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume lead site1: enter "1" to allow tranferring your derivatives  
@@ -93,7 +93,7 @@ S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 3: estimate  ###############################
 ## assume lead site1: enter "1" to allow tranferring the surrogate estimate  
 pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
-plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p31.png"), axes=FALSE)
+plot(load.image("https://raw.githubusercontent.com/Penncil/pda/master/demo/figures/p31_1.png"), axes=FALSE)
  
 ## the PDA ODAL is now completed!
 ## All the sites can still run their own surrogate estimates and broadcast them.
