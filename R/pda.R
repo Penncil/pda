@@ -180,23 +180,32 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distributed Statistical Inference, \cr
 #'  \emph{Journal of the American Statistical Association}, 114:526, 668-681 \cr 
 #'  \url{https://doi.org/10.1080/01621459.2018.1429274}.\cr 
+#'  \doi{10.1080/01621459.2018.1429274}.\cr 
 #' (DLM) Yixin Chen, et al. (2006) Regression cubes with lossless compression and aggregation. 
 #'    IEEE Transactions on Knowledge and Data Engineering, 18(12), pp.1585-1599. \cr
 #' (DLMM) Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
 #'    medRxiv, \url{https://doi.org/10.1101/2020.11.16.20230730}. \cr
+#'    medRxiv, \doi{10.1101/2020.11.16.20230730}. \cr
+#' (DPQL) Chongliang Luo, et al. (2021) dPQL: a lossless distributed algorithm for generalized linear mixed model with application to privacy-preserving hospital profiling. \cr
+#'    medRxiv, \url{https://doi.org/10.1101/2021.05.03.21256561}. \cr
+#'    medRxiv, \doi{10.1101/2021.05.03.21256561}. \cr
 #' (ODAL) Rui Duan, et al. (2020) Learning from electronic health records across multiple sites: \cr 
 #'  A communication-efficient and privacy-preserving distributed algorithm. \cr 
 #'  \emph{Journal of the American Medical Informatics Association}, 27.3:376–385,
 #'  \cr \url{https://doi.org/10.1093/jamia/ocz199}.\cr 
+#'  \cr \doi{10.1093/jamia/ocz199}.\cr 
 #' (ODAC) Rui Duan, et al. (2020) Learning from local to global: An efficient distributed algorithm for modeling time-to-event data. \cr
 #'   \emph{Journal of the American Medical Informatics Association}, 27.7:1028–1036, \cr 
 #'    \url{https://doi.org/10.1093/jamia/ocaa044}. \cr
+#'    \doi{10.1093/jamia/ocaa044}. \cr
 #' (ODACH) Chongliang Luo, et al. (2021) ODACH: A One-shot Distributed Algorithm for Cox model with Heterogeneous Multi-center Data. \cr
 #'       \emph{medRxiv}, \url{https://doi.org/10.1101/2021.04.18.21255694}. \cr 
+#'       \emph{medRxiv}, \doi{10.1101/2021.04.18.21255694}. \cr 
 #' (ODAH) Mackenzie J. Edmondson, et al. (2021) An Efficient and Accurate Distributed Learning Algorithm for Modeling Multi-Site Zero-Inflated Count Outcomes. 
 #'    medRxiv, pp.2020-12. \cr
 #'    \url{https://www.medrxiv.org/content/10.1101/2020.12.17.20248194v2}. \cr
-
+#'    \doi{10.1101/2020.12.17.20248194v2}. \cr
+#'    
 #' @examples
 #' require(survival)
 #' require(data.table)
@@ -327,7 +336,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     }else{                            # ODACH with heterogeneous baseline hazards across sites 
       ODAC.steps<-c('initialize','derive_UWZ', 'estimate','synthesize')
     }
-      ODAC.family<-'cox'
+    ODAC.family<-'cox'
   }else if(control$model=='DLM'){
     DLM.steps<-c('initialize', 'estimate')
     DLM.family<-'gaussian'
@@ -344,6 +353,26 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
         control$variables_heterogeneity <- 'Intercept'      
       }
     }
+  }else if(control$model=='DPQL'){
+    # control$maxround: prespecified number of rounds
+    # "derive_1"   "estimate_1" "derive_2"   "estimate_2" "derive_3"   "estimate_3"
+    DPQL.steps<-paste0(rep(c('derive', 'estimate'), control$maxround), '_', rep(1:control$maxround, each=2))   
+    DPQL.family<-control$family  # can be any glm family...
+    # if(control$heterogeneity==T){
+    #   if(is.null(control$heterogeneity_effect)){  # glmm with fixed site-specific effects?
+    #     stop('You specified control$heterogeneity = T, please also specify control$heterogeneity_effect as either "fixed" or "random"! ')
+    #   } else if(control$heterogeneity_effect!='fixed' & control$heterogeneity_effect!='random'){
+    #     stop('You specified control$heterogeneity = T, please also specify control$heterogeneity_effect as either "fixed" or "random"! ')
+    #   } 
+      if(length(setdiff(control$variables_heterogeneity, c(control$variables, "Intercept")))!=0)
+        stop('Please specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
+        # stop('You specified control$heterogeneity = T, please also specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
+      if(is.null(control$variables_heterogeneity)){
+        message('No control$variables_heterogeneity, use "Intercept" as default!')
+        # message('You specified control$heterogeneity = T, but no control$variables_heterogeneity, use "Intercept" as default!')
+        control$variables_heterogeneity <- 'Intercept'      
+      }
+    # }
   }
 
   family = get(paste0(control$model,'.family'))
@@ -381,22 +410,25 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
       ipdata <- list(ipdata=ipdata, X_count=X_count, X_zero=X_zero, offset=offset)  
       control$risk_factor = c('Intercept', control$variables_hurdle_count, 'Intercept', control$variables_hurdle_zero)   
   }else if(control$model=='ODAP'){
- 
       ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
                                       offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
                                       model.matrix(formula, mf))
       control$risk_factor = colnames(ipdata)[-c(1:2)]
-    
   }else if(control$model=='DLM'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
                                     model.matrix(formula, mf))
     control$risk_factor = colnames(ipdata)[-1] 
     control$risk_factor_heterogeneity = control$risk_factor[grepl(paste0(control$variables_heterogeneity, collapse='|'), control$risk_factor)]
+  }else if(control$model=='DPQL'){
+    ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
+                                    model.matrix(formula, mf))
+    control$risk_factor = colnames(ipdata)[-1]           # may induce more cols for dummy vars
+    control$risk_factor_heterogeneity = control$risk_factor[grepl(paste0(control$variables_heterogeneity, collapse='|'), control$risk_factor)]
   }
 
     
   if(is.character(control$step)){
-    step_function <- paste0(control$model,'.',control$step)
+    step_function <- paste0(control$model,'.', gsub('[^[:alpha:]]', '',control$step)) # "derive_1" for dPQL
     step_obj <- get(step_function)(ipdata, control, config)
     if(control$step=='estimate'){
       if(control$model=='DLM'){
@@ -404,6 +436,8 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
       }else{
         message("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
       }
+    } else if(control$step==paste0('estimate_', control$maxround)){  # dPQL
+      message("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
     }
     pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
     #sync needed?
@@ -445,13 +479,16 @@ pdaSync <- function(config){
     }
     # ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
     ODAC.family<-'cox'
-  }else if(control$model=='DLM'){
+  } else if(control$model=='DLM'){
     DLM.steps<-c('initialize','estimate')
     DLM.family<-'gaussian'
-  }
+  } else if(control$model=='DPQL'){
+    DPQL.steps<-paste0(rep(c('derive', 'estimate'), control$maxround), '_', rep(1:control$maxround, each=2)) 
+    DPQL.family<-control$family
+  } 
   
   files<-pdaList(config) 
-  if(all(paste0(control$sites,"_",control$step) %in% files)){
+  if(all(paste0(control$sites,"_",control$step) %in% files)){ # all init are ready
     if(control$step=="initialize"){
       init_i <- pdaGet(paste0(control$lead_site,'_initialize'),config)
       if(control$model=='DLM'){
@@ -501,19 +538,30 @@ pdaSync <- function(config){
       }
       mes <- 'beta_init added, step=2 (derivatives)! \n'
     }
-    steps = get(paste0(control$model,'.steps'))
-    current_index <-  which(steps==control$step)
-    if(current_index < length(steps)) {
-      next_index <- current_index + 1
-      next_step <- steps[next_index]
-      mes <- paste0('next step=',next_index,' (',next_step,')! \n')
-      control$step = next_step
-    } else {
-      mes <- paste0('finished! \n')
-      control$step = NULL
-    }
-    message(mes)
-    pdaPut(control,'control',config)
-    control
-  } 
+
+  }
+  
+  # for DPQL, attach intermediate estimate to control after each round
+  if(control$model=='DPQL' & control$step==paste0('estimate_', control$round)){
+    est <- pdaGet(paste0(config$site_id,'_estimate_',control$round),config)
+    control$bhat <- est$bhat
+    control$uhat <- est$uhat
+    if(control$round<control$maxround) control$round <- control$round + 1
+  }
+  
+  steps = get(paste0(control$model,'.steps'))
+  current_index <-  which(steps==control$step)
+  if(current_index < length(steps)) {
+    next_index <- current_index + 1
+    next_step <- steps[next_index]
+    mes <- paste0('next step=',next_index,' (',next_step,')! \n')
+    control$step = next_step
+  } else {
+    mes <- paste0('finished! \n')
+    control$step = NULL
+  }
+  message(mes)
+  pdaPut(control,'control',config)
+  control
+  
 }

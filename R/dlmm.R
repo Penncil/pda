@@ -18,8 +18,18 @@
 # https://style.tidyverse.org/functions.html#naming
 # https://ohdsi.github.io/Hades/codeStyle.html#OHDSI_code_style_for_R
 
+## for internal use only: functions for DLMM and dPQL
+# lmm.profile
+# lmm.profile0
+# lmm.fit
+# lmm.lrt
+# lmm.get.summary
+# lmm.get.summary.cut
+# lmm.fit.partial
+# dlmm
+# glmmDPQL.fit
 
-## eigine functions for distributed linear mixed model (DLMM)
+ 
 # require(Rcpp)
 # Rcpp::sourceCpp('dlmm.cpp')
 # require(minqa)
@@ -156,6 +166,7 @@ lmm.profile <- function(V, s2,             # var components para
   # SiY - t(SiZY)%*%Wi%*%SiZY - 2*(t(SiXY)-t(SiZY)%*%Wi%*%t(SiXZ))%*%b + t(b)%*%(SiX-SiXZ%*%Wi%*%t(SiXZ))%*%b
   return(res) 
 }
+
 
 #' @keywords internal
 lmm.profile0 <- function(V,                # var components para, = original V / s2    # s2, 
@@ -484,7 +495,6 @@ lmm.fit <- function(Y = NULL, X = NULL, Z = NULL, id.site = NULL, weights = NULL
 }
 
 
-
 #' @keywords internal
 lmm.lrt <- function(Y = NULL, X = NULL, id.site = NULL, # Z = NULL, 
                     p.threshold = 0.05,
@@ -566,6 +576,7 @@ lmm.lrt <- function(Y = NULL, X = NULL, id.site = NULL, # Z = NULL,
   return(list(LR=LR, id.re=id.re, fit.selected=fit.selected))
 }
 
+
 #' @keywords internal
 lmm.get.summary <- function(Y = NULL, X = NULL, Z = NULL, 
                             weights = NULL, id.site = NULL){
@@ -606,6 +617,7 @@ lmm.get.summary <- function(Y = NULL, X = NULL, Z = NULL,
   return(SiXYZ)
 }
 
+
 #' @keywords internal
 lmm.fit.partial <- function(id.re, SiXYZ, pooled=F, reml=T, hessian=T){
   for(si in names(SiXYZ)){
@@ -616,6 +628,7 @@ lmm.fit.partial <- function(id.re, SiXYZ, pooled=F, reml=T, hessian=T){
   fit1i <- lmm.fit(SiXYZ = SiXYZ, pooled=pooled, reml=reml, hessian=hessian)
   return(fit1i)
 }
+
 
 #' @keywords internal
 lmm.get.summary.cut <- function(SiXYZ, site=NULL, x.fix=NULL, x.random=NULL){
@@ -730,5 +743,93 @@ dlmm <- function(SiXYZ, site=NULL, x.fix=NULL, x.random=NULL,
 }
 
 
-
+#' @keywords internal
+glmmDPQL.fit <- function(Y = NULL, X = NULL, Z = NULL, id.site = NULL, 
+                         offset=NULL, weights = NULL, 
+                         fixef.init = NULL, ranef.init=NULL,
+                         pooled = F, reml = T, common.s2 = T,    # common residual var across sites
+                         family, SiXYZ = list(),                 # IPD not available, use summ stats
+                         corstr = 'independence',                # 'exchangeable', 'ar1', 'unstructured' 
+                         hessian = F, 
+                         niter = 10, tol=1e-06, verbose = T){
+  ## distributed PQL (DPQL) via DLMM:
+  ## MASS:glmmPQL essentially convert glmm estimation to iterative LMM
+  ## DPQL utilize the lossless DLMM algorithm to replicate 
+  ##      MASS:glmmPQL in a iterative and lossless way.
+  ## notice the DLMM used is a weighted version, thus requires 
+  ## t(Xi) %*% Wi %*% Xi, t(Xi) %*% Wi %*% Yi, t(Yi) %*% Wi %*% Yi
+  ## from each site, where the weight Wi is updated in each iteration
+  if (is.character(family)) 
+    family <- get(family)
+  if (is.function(family)) 
+    family <- family()
+  if (is.null(family$family)) {
+    print(family)
+    stop("'family' not recognized")
+  }
+  if(is.null(weights)) weights=rep(1, length(Y))
+  id.site.uniq <- unique(id.site)
+  K <- length(id.site.uniq)
+  qz <- ncol(Z)
+  if(is.null(offset)) offset = rep(0, length(Y)) 
+  
+  # get init values via glm
+  if(is.null(ranef.init)) ranef.init=matrix(0,K,qz)
+  if(is.null(fixef.init)){  # use glm to get init working Y
+    fit0 <- glm(Y ~ 0+X, offset=offset, family = family, weights=weights)
+    w <- fit0$prior.weights
+    eta <- fit0$linear.predictors
+    zz <- eta + fit0$residuals  
+    wz <- fit0$weights 
+  } else{ 
+    w <- weights
+    eta = c(X%*%fixef.init )
+    for(ii in seq_along(id.site.uniq))
+      eta[id.site==id.site.uniq[ii]] <- eta[id.site==id.site.uniq[ii]] + as.matrix(Z[id.site==id.site.uniq[ii],]) %*% ranef.init[ii,]
+    
+    mu = family$linkinv(eta)
+    mu.eta.val = family$mu.eta(eta)
+    wz = w * mu.eta.val^2/family$variance(mu) 
+    zz = eta + (Y-mu)/mu.eta.val - offset 
+  }
+  
+  # formula.lmer = formula
+  # formula.lmer[[2]] = quote(zz)
+  u = ranef.init
+  b = fixef.init
+  bu =  c(b,u)
+  
+  AD.list <- list()
+  
+  for (i in seq_len(niter)) {
+    if (verbose) message(gettextf("iteration %d", i), domain = NA) 
+    # data$zz = zz
+    # data$wz = wz
+    # fit <- lmer(formula.lmer, data = data, REML = REML, weights = wz)
+    
+    AD.list[[i]] = lmm.get.summary(Y = zz, X = X, Z = Z, weights = wz, id.site = id.site)
+    
+    fit <- lmm.fit(Y = zz, X, Z, id.site, weights = wz, pooled = pooled, 
+                   reml = reml, common.s2 = common.s2,  hessian = hessian, verbose=verbose)
+    # etaold <- eta 
+    eta <- X %*% fit$b  
+    bu = cbind(bu, c(fit$b, unlist(fit$ui)))
+    for(ii in seq_along(id.site.uniq))
+      eta[id.site==id.site.uniq[ii]] <- eta[id.site==id.site.uniq[ii]] + as.matrix(Z[id.site==id.site.uniq[ii],]) %*% fit$ui[[ii]]
+    
+    # if (sum((eta - etaold)^2) < tol * sum(eta^2))  break
+    dif = sum((bu[,i+1] - bu[,i])^2) / sum(bu[,i]^2) 
+    if(verbose) message('diff=', dif)
+    if (dif < tol)  break
+    
+    mu <- family$linkinv(eta)
+    mu.eta.val <- family$mu.eta(eta)
+    zz <- eta + (Y - mu)/mu.eta.val - offset
+    wz <- w * mu.eta.val^2/family$variance(mu) 
+  }
+  fit$iter = i
+  fit$bu = bu
+  fit$AD.list = AD.list
+  return(fit)
+}
  

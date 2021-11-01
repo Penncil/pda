@@ -43,3 +43,19 @@
 #'   \item{los}{LOS in days, ranging from 1 tp 28. Treated as continuous outcome in DLM}
 #' } 
 "LOS"
+
+
+#' COVID-19 LOS and mortality data
+#'
+#' A simulated data set of hospitalization Length of Stay (LOS) and mortality from 6 sites
+#'
+#' @format A data frame with 2100 rows and 6 variables:
+#' \describe{
+#'   \item{site}{site id, 600 'site1', 500 'site2', 400 'site3', 300 'site4', 200 'site5', 100 'site6'}
+#'   \item{age}{continuous age in year, min 3 max 97}
+#'   \item{sex}{2 categories, '1' for male and '0' for female}
+#'   \item{lab}{lab test results, continuous value ranging from 2.3 to 97.4}
+#'   \item{los}{LOS in days, ranging from 1 to 29}
+#'   \item{death}{mortality status, '1' for death and '0' for alive.}
+#' } 
+"covid"
