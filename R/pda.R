@@ -179,7 +179,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' @references
 #' Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distributed Statistical Inference, \cr
 #'  \emph{Journal of the American Statistical Association}, 114:526, 668-681 \cr 
-#'  \url{https://doi.org/10.1080/01621459.2018.1429274}.\cr 
+#'  \url{https://doi.org/10.1080/01621459.2018.1429274}.\cr  
 #'  \doi{10.1080/01621459.2018.1429274}.\cr 
 #' (DLM) Yixin Chen, et al. (2006) Regression cubes with lossless compression and aggregation. 
 #'    IEEE Transactions on Knowledge and Data Engineering, 18(12), pp.1585-1599. \cr
