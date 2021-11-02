@@ -24,8 +24,8 @@ DPQL estimation: (iterative) weighted DLMM using AD from all sites
 }
 \references{
 Chongliang Luo, et al. (2021) dPQL: a lossless distributed algorithm for generalized linear mixed model 
-                  with application to privacy-preserving hospital profiling. medRxiv, \url{https://doi.org/10.1101/2021.05.03.21256561}. \cr
+                  with application to privacy-preserving hospital profiling. medRxiv, \doi{10.1101/2021.05.03.21256561}. \cr
            Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
-   medRxiv, \url{https://doi.org/10.1101/2020.11.16.20230730}. \cr
+                medRxiv, \doi{10.1101/2020.11.16.20230730}. \cr
 }
 \keyword{internal}

@@ -63,17 +63,15 @@ for(ir in 1:control$maxround){
 
 ## the PDA DPQL is now completed! 
 ## compare the DPQL estimate with the pooled PQL estimate 
-# fit.pool <- glmmPQL(death~age+sex+lab, ~1|site, data=covid, family='binomial' )  
-fit.pool <- glmmDPQL.fit(Y=covid$death, X=cbind(1,as.matrix(covid[,2:4])), Z=matrix(1,nrow(covid),1), id.site = covid$site, 
-                         fixef.init=rep(0,4), family='binomial', pooled = T, niter = control$maxround)
+fit.dpql <- pdaGet(name = paste0('site1_estimate_',control$maxround), 
+                   config = getCloudConfig(site_id = 'site1', dir=mydir))
 
-fit.dpql <- pdaGet(name = 'site1_estimate_3', config = getCloudConfig(site_id = 'site1', dir=mydir))
-
+fit.pool <- glmmPQL(death~age+sex+lab, ~1|site, data=covid, family='binomial') # 5 iteration
+ 
 # fixef and ranef
-cbind(bu.pool=c(fit.pool$b, unlist(fit.pool$ui)),
-      bu.dpql=c(fit.dpql$bhat,fit.dpql$uhat),
-      sd.pool=c(fit.pool$b.sd, sqrt(unlist(fit.pool$varui_post))),
-      sd.dpql=c(fit.dpql$sebhat, fit.dpql$seuhat))
-
+cbind(bu.pool=c(fixef(fit.pool), ranef(fit.pool)$`(Intercept)`),
+      bu.dpql=c(fit.dpql$bhat,fit.dpql$uhat) )
+ 
 # var component
-c(fit.pool$V, fit.dpql$Vhat) 
+c(as.numeric(VarCorr(fit.pool)[1,1]), fit.dpql$Vhat) 
+ 

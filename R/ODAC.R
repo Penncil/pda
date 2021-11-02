@@ -18,7 +18,7 @@
 # https://style.tidyverse.org/functions.html#naming
 # https://ohdsi.github.io/Hades/codeStyle.html#OHDSI_code_style_for_R
 
-ODAC.steps<-c('initialize','derive','derive_UWZ','estimate','synthesize')
+ODAC.steps<-c('initialize','deriveUWZ','derive','estimate','synthesize')
 ODAC.family<-'cox'
 
 #' @useDynLib pda
@@ -50,7 +50,7 @@ ODAC.initialize <- function(ipdata,control,config){
 #' @useDynLib pda
 #' @title Generate pda derivatives
 #' 
-#' @usage ODAC.derive(ipdata, control, config)
+#' @usage ODAC.deriveUWZ(ipdata, control, config)
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
@@ -58,7 +58,7 @@ ODAC.initialize <- function(ipdata,control,config){
 #' 
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 #' @keywords internal
-ODAC.derive <- function(ipdata,control,config) {
+ODAC.deriveUWZ <- function(ipdata,control,config) {
   px <- ncol(ipdata) - 2
   # decide if doing ODAC derivatives 1st substep (calculate summary stats U, W, Z) 
   # or 2nd substep (calculate derivatives logL_D1, logL_D2)
@@ -112,7 +112,7 @@ ODAC.derive <- function(ipdata,control,config) {
 #' @useDynLib pda
 #' @title Generate pda UWZ derivatives
 #' 
-#' @usage ODAC.derive_UWZ(ipdata, control, config)
+#' @usage ODAC.derive(ipdata, control, config)
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
@@ -124,14 +124,14 @@ ODAC.derive <- function(ipdata,control,config) {
 #' @import Rcpp  
 #' @return  list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 #' @keywords internal
-ODAC.derive_UWZ <- function(ipdata,control,config){
+ODAC.derive <- function(ipdata,control,config){
   px <- ncol(ipdata) - 2
   if (control$heterogeneity == F){
     # decide if doing ODAC derivatives 1st substep (calculate summary stats U, W, Z) 
     # or 2nd substep (calculate derivatives logL_D1, logL_D2)
     # read and add up (U W Z) from all sites from the cloud
     for(site_i in control$sites){
-      sumstat_i <- pdaGet(paste0(site_i,'_derive'),config)
+      sumstat_i <- pdaGet(paste0(site_i,'_deriveUWZ'),config)
       
       if(site_i == control$sites[1]){
         U <- sumstat_i$U
@@ -251,7 +251,7 @@ ODAC.estimate <- function(ipdata,control,config) {
   logL_all_D2 <- matrix(0, px, px)
   N <- 0
   for(site_i in control$sites){
-    derivatives_i <- pdaGet(paste0(site_i,'_derive_UWZ'),config)
+    derivatives_i <- pdaGet(paste0(site_i,'_derive'),config)
     logL_all_D1 <- logL_all_D1 + derivatives_i$logL_D1
     logL_all_D2 <- logL_all_D2 + matrix(unlist(derivatives_i$logL_D2), px, px)
     N <- N + derivatives_i$site_size

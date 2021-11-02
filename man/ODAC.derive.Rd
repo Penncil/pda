@@ -2,7 +2,7 @@
 % Please edit documentation in R/ODAC.R
 \name{ODAC.derive}
 \alias{ODAC.derive}
-\title{Generate pda derivatives}
+\title{Generate pda UWZ derivatives}
 \usage{
 ODAC.derive(ipdata, control, config)
 }
@@ -17,6 +17,11 @@ ODAC.derive(ipdata, control, config)
 list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 }
 \description{
-Generate pda derivatives
+Generate pda UWZ derivatives
+}
+\details{
+Calculate and broadcast 1st and 2nd order derivative at initial bbar
+       for ODAC, this requires 2 substeps: 1st calculate summary stats (U, W, Z), 
+       2nd calculate derivatives (logL_D1, logL_D2)
 }
 \keyword{internal}

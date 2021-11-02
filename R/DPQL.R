@@ -35,10 +35,6 @@
 #' @param config local site configuration
 #' @details To initialize, fit glm at each individual site and send the estimated effect size and variances to the lead site. 
 #'          This step may be optional if we just use zero's as initial effect sizes to start the PQL algorithm.
-#' @references Chongliang Luo, et al. (2021) dPQL: a lossless distributed algorithm for generalized linear mixed model 
-#'                   with application to privacy-preserving hospital profiling. medRxiv, \url{https://doi.org/10.1101/2021.05.03.21256561}. \cr
-#'            Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
-#'    medRxiv, \url{https://doi.org/10.1101/2020.11.16.20230730}. \cr
 #' @return init
 #' @keywords internal
 DPQL.initialize <- function(ipdata,control,config){ 
@@ -62,9 +58,9 @@ DPQL.initialize <- function(ipdata,control,config){
 #' @details This step calculated the intermediate aggregated data (XtWX, XtWY, and YtWY) for each site. 
 #'           May need to be iterated several times until prespecified rounds are met.
 #' @references Chongliang Luo, et al. (2021) dPQL: a lossless distributed algorithm for generalized linear mixed model 
-#'                   with application to privacy-preserving hospital profiling. medRxiv, \url{https://doi.org/10.1101/2021.05.03.21256561}. \cr
+#'                   with application to privacy-preserving hospital profiling. medRxiv, \doi{10.1101/2021.05.03.21256561}. \cr
 #'            Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
-#'    medRxiv, \url{https://doi.org/10.1101/2020.11.16.20230730}. \cr
+#'                  medRxiv, \doi{10.1101/2020.11.16.20230730}. \cr
 #' @return list(SiX, SiXY, SiY, ni)
 #' @keywords internal
 DPQL.derive <- function(ipdata,control,config){
@@ -139,9 +135,9 @@ DPQL.derive <- function(ipdata,control,config){
 #' 
 #' @details DPQL estimation: (iterative) weighted DLMM using AD from all sites
 #' @references Chongliang Luo, et al. (2021) dPQL: a lossless distributed algorithm for generalized linear mixed model 
-#'                   with application to privacy-preserving hospital profiling. medRxiv, \url{https://doi.org/10.1101/2021.05.03.21256561}. \cr
+#'                   with application to privacy-preserving hospital profiling. medRxiv, \doi{10.1101/2021.05.03.21256561}. \cr
 #'            Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
-#'    medRxiv, \url{https://doi.org/10.1101/2020.11.16.20230730}. \cr
+#'                 medRxiv, \doi{10.1101/2020.11.16.20230730}. \cr
 #' @return  list(risk_factor, risk_factor_heterogeneity, bhat, sebhat, uhat, seuhat, Vhat) 
 #' @keywords internal
 DPQL.estimate <- function(ipdata=NULL,control,config) {

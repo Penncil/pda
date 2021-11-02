@@ -23,10 +23,4 @@ DPQL initialize
 To initialize, fit glm at each individual site and send the estimated effect size and variances to the lead site. 
          This step may be optional if we just use zero's as initial effect sizes to start the PQL algorithm.
 }
-\references{
-Chongliang Luo, et al. (2021) dPQL: a lossless distributed algorithm for generalized linear mixed model 
-                  with application to privacy-preserving hospital profiling. medRxiv, \url{https://doi.org/10.1101/2021.05.03.21256561}. \cr
-           Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
-   medRxiv, \url{https://doi.org/10.1101/2020.11.16.20230730}. \cr
-}
 \keyword{internal}

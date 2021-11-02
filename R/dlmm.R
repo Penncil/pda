@@ -833,3 +833,106 @@ glmmDPQL.fit <- function(Y = NULL, X = NULL, Z = NULL, id.site = NULL,
   return(fit)
 }
  
+
+
+
+
+
+
+
+#' @useDynLib pda
+#' @title A flexible version of MASS::glmmPQL
+#' 
+#' @usage myglmmPQL(formula.glm, formula, offset=NULL, family, data, fixef.init = NULL, 
+#'                  weights=NULL, REML=T, niter=10, verbose=T)
+#' @param formula.glm formula used to fit \code{glm} for initial fixed effects 
+#' @param formula formula used to fit iterative \code{lmer} in PQL algorithm
+#' @param offset \code{glm} offset term
+#' @param family \code{glm} family
+#' @param data \code{glm} data 
+#' @param fixef.init initial fixed effects estimates, set to zeros if NULL
+#' @param weights \code{glm} weights
+#' @param REML \code{lmer} logical scalar - Should the estimates be chosen to optimize the REML criterion (as opposed to the log-likelihood)?
+#' @param niter \code{glmmPQL} maximum number of iterations.
+#' @param verbose \code{glmmPQL} logical: print out record of iterations?
+#' @details Use lme4::lmer instead of nlme::varFixed in PQL iteration to allow REML
+#'  
+#' @return  An object wiht the same format as \code{lmer}.
+#' @keywords internal
+myglmmPQL <- function(formula.glm, formula, offset=NULL, family, data, 
+                      fixef.init = NULL, weights=NULL, REML=T, niter = 10, verbose = T){
+  if (is.character(family)) 
+    family <- get(family)
+  if (is.function(family)) 
+    family <- family()
+  if (is.null(family$family)) {
+    print(family)
+    stop("'family' not recognized")
+  }
+  
+  if(is.null(offset)) offset <- rep(0, nrow(data))
+  data$offset <- offset 
+  if(is.null(weights)) weights <- rep(1, nrow(data))
+  data$weights <- weights 
+  
+  
+  # get init values via glm
+  # if(is.null(ranef.init)) ranef.init=matrix(0,K,qz)
+  if(is.null(fixef.init)){  # use glm to get init working Y
+    fit0 <- glm(formula.glm, offset=offset, family = family, data=data, weights=weights)
+    w <- fit0$prior.weights
+    eta <- fit0$linear.predictors
+    zz <- eta + fit0$residuals  
+    wz <- fit0$weights
+  } else{ 
+    w <- weights
+    X <- model.matrix(formula.glm, model.frame(formula.glm, data))
+    Y <- as.numeric(model.response(model.frame(formula.glm, data)))
+    eta <- c(X%*%fixef.init)
+    # for(ii in seq_along(id.site.uniq))
+    #   eta[id.site==id.site.uniq[ii]] <- eta[id.site==id.site.uniq[ii]] + as.matrix(Z[id.site==id.site.uniq[ii],]) %*% ranef.init[ii,]
+    mu <- family$linkinv(eta)
+    mu.eta.val <- family$mu.eta(eta)
+    wz <- w * mu.eta.val^2/family$variance(mu) 
+    zz <- eta + (Y-mu)/mu.eta.val - offset 
+  }
+  
+  
+  formula.lmer = formula
+  formula.lmer[[2]] = quote(zz)
+  for (i in seq_len(niter)) {
+    if (verbose) message(gettextf("iteration %d", i), domain = NA)
+    # fit <- eval(mcall)
+    data$zz = zz
+    data$wz = wz
+    fit <- lme4::lmer(formula.lmer, data = data, REML = REML, weights = wz)
+    etaold <- eta
+    eta <- fitted(fit) + offset
+    if (sum((eta - etaold)^2) < 1e-06 * sum(eta^2))  break
+    mu <- family$linkinv(eta)
+    mu.eta.val <- family$mu.eta(eta)
+    zz <- eta + (Y - mu)/mu.eta.val - offset
+    wz <- w * mu.eta.val^2/family$variance(mu) 
+  }
+  
+  # attributes(fit$ logLik) <- NULL
+  # fit$call <- Call
+  # fit$family <- family
+  # fit$logLik <- as.numeric(NA)
+  # oldClass(fit) <- c("glmmPQL", oldClass(fit))
+  return(fit)
+}
+
+
+
+
+
+# fit.pool <- myglmmPQL(death~age+sex+lab, death~age+sex+lab+(1|site), data=covid, 
+#                       fixef.init=rep(0,4), family='binomial')
+# fit.pool <- glmmDPQL.fit(Y=covid$death, X=cbind(1,as.matrix(covid[,2:4])), Z=matrix(1,nrow(covid),1), id.site = covid$site,
+#                          fixef.init=rep(0,4), family='binomial', pooled = T, niter = control$maxround)
+# cbind(bu.pool=c(fit.pool$b, unlist(fit.pool$ui)),
+#       bu.dpql=c(fit.dpql$bhat,fit.dpql$uhat),
+#       sd.pool=c(fit.pool$b.sd, sqrt(unlist(fit.pool$varui_post))),
+#       sd.dpql=c(fit.dpql$sebhat, fit.dpql$seuhat))
+# c(fit.pool$V, fit.dpql$Vhat)

@@ -1,7 +1,7 @@
 Package: pda
 Type: Package
 Title: Privacy-Preserving Distributed Algorithms
-Version: 1.2-1
+Version: 1.2-2
 Date: 2021-11-01
 Authors@R: c(person("Chongliang", "Luo", role=c("aut","cre"), email ="luocl3009@gmail.com"),
                 person("Rui", "Duan", role="aut"), person("Mackenzie", "Edmondson", role="aut"),
@@ -23,7 +23,8 @@ Imports:
   jsonlite, 
   data.table, 
   survival,
-  minqa
+  minqa,
+  lme4
 LinkingTo: 
   Rcpp, 
   RcppArmadillo
