@@ -22,7 +22,7 @@ DLM initialize
 \references{
 Yixin Chen, et al. (2006) Regression cubes with lossless compression and aggregation. 
    IEEE Transactions on Knowledge and Data Engineering, 18(12), pp.1585-1599. \cr
-           Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
-   medRxiv, \url{https://doi.org/10.1101/2020.11.16.20230730}. \cr
+   (DLMM) Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
+   medRxiv, \doi{10.1101/2020.11.16.20230730}. \cr
 }
 \keyword{internal}

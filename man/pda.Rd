@@ -147,6 +147,7 @@ Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distri
 (ODAH) Mackenzie J. Edmondson, et al. (2021) An Efficient and Accurate Distributed Learning Algorithm for Modeling Multi-Site Zero-Inflated Count Outcomes. 
    medRxiv, pp.2020-12. \cr
    \doi{10.1101/2020.12.17.20248194}. \cr
+(ADAP) Xiaokang Liu, et al. (2021) ADAP: multisite learning with high-dimensional heterogeneous data via A Distributed Algorithm for Penalized regression. \cr
 }
 \seealso{
 \code{pdaPut}, \code{pdaList}, \code{pdaGet}, \code{getCloudConfig} and \code{pdaSync}.

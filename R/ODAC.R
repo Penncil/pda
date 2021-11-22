@@ -213,7 +213,7 @@ ODAC.derive <- function(ipdata,control,config){
     logL_D2 <- apply(d * (W2 - U*Z) / U^2, c(2, 3), sum, na.rm=T)  
     
     
-    derivatives <- list(b_meta=b_meta, 
+    derivatives <- list(# b_meta=b_meta, 
                         site=config$site_id, site_size = nrow(ipdata),
                         logL_D1=logL_D1, logL_D2=logL_D2)
   }
@@ -258,7 +258,8 @@ ODAC.estimate <- function(ipdata,control,config) {
   }
   
   # initial beta
-  bbar <- derivatives_i$b_meta
+  # bbar <- derivatives_i$b_meta
+  bbar <- control$beta_init
   
   # logL at local site
   if(hasTies){

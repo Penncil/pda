@@ -198,7 +198,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' (ODAH) Mackenzie J. Edmondson, et al. (2021) An Efficient and Accurate Distributed Learning Algorithm for Modeling Multi-Site Zero-Inflated Count Outcomes. 
 #'    medRxiv, pp.2020-12. \cr
 #'    \doi{10.1101/2020.12.17.20248194}. \cr
-#'    
+#' (ADAP) Xiaokang Liu, et al. (2021) ADAP: multisite learning with high-dimensional heterogeneous data via A Distributed Algorithm for Penalized regression. \cr
 #' @examples
 #' require(survival)
 #' require(data.table)
@@ -311,6 +311,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
     ODAL.family<-'binomial'
+  }else if(control$model=='ADAP'){
+    ADAP.steps<-c('initialize','derive','estimate')
+    ADAP.family<-'lasso'
   }else if(control$model=='ODAP'){
     ODAP.steps<-c('initialize','derive','estimate','synthesize')
     # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson) in control
@@ -389,6 +392,10 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
                                     model.matrix(formula, mf))
     control$risk_factor = colnames(ipdata)[-1]
+  }else if(control$model=='ADAP'){
+    ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
+                                    model.matrix(formula, mf))
+    control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='ODAH'){  # count and zero parts for hurdle
       X_count = data.table::data.table(model.matrix(formula, mf))
       # also make design X_zero
@@ -456,6 +463,9 @@ pdaSync <- function(config){
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
     ODAL.family<-'binomial'
+  }else if(control$model=='ADAP'){
+    ADAP.steps<-c('initialize','derive','estimate')
+    ADAP.family<-'lasso'
   }else if(control$model=='ODAP'){
     ODAP.steps<-c('initialize','derive','estimate','synthesize')
     # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson) in control
@@ -510,6 +520,24 @@ pdaSync <- function(config){
         #print(res)
         control$beta_zero_init = bmeta_zero
         control$beta_count_init = bmeta_count
+      }else if(control$model=='ADAP'){
+        bhat <- init_i$bhat_i 
+        # vhbat = rep(nrow(ipdata), ncol(ipdata)-1) stores each site's sample size
+        vbhat <- init_i$Vhat_i
+        for(site_i in control$sites){
+          if(site_i!=control$lead_site){
+            init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+            bhat = rbind(bhat, init_i$bhat_i) 
+            vbhat = rbind(vbhat, init_i$Vhat_i)
+          }
+        }
+        #estimate with weighted average  
+        bmeta = apply(diag(vbhat[,1])%*%bhat,2,function(x){sum(x, na.rm = TRUE)})/sum(vbhat[,1], na.rm = TRUE)
+        vmeta = NA
+        res = list(bmeta = bmeta, vmeta = vmeta)
+        message('sample size weighted average result:')
+        #print(res)
+        control$beta_init = bmeta
       }else{
         bhat <-init_i$bhat_i 
         vbhat <- init_i$Vhat_i
