@@ -1,7 +1,7 @@
 require(survival)
 require(data.table)
 require(pda)
-data(lung)
+# data(lung)
 
 ## In the toy example below we aim to analyze the association of lung status with age and sex using Cox regression,
 ## data(lung) from 'survival', we randomly assign to 3 sites: 'site1', 'site2', 'site3'
@@ -12,7 +12,7 @@ data(lung)
 
 data(lung2)
 lung_split <- split(lung2, lung2$site)
-## fit logistic reg using pooled data
+## fit Cox PH reg using pooled data
 fit.pool <- coxph(Surv(time, status) ~ age + sex, data = lung2)
 
 sites = c('site1', 'site2', 'site3')

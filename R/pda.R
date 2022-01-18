@@ -333,6 +333,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
       ODAC.steps<-c('initialize','derive', 'estimate','synthesize')
     }
     ODAC.family<-'cox'
+  }else if(control$model=='ODACAT'){  # multi-category  
+    ODACAT.steps <- c('initialize','derive','estimate')
+    ODACAT.family <- 'multicategory'
   }else if(control$model=='DLM'){
     DLM.steps<-c('initialize', 'estimate')
     DLM.family<-'gaussian'
@@ -414,6 +417,10 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
                                       offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
                                       model.matrix(formula, mf))
       control$risk_factor = colnames(ipdata)[-c(1:2)]
+  }else if(control$model=='ODACAT'){
+    ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),  ## multi-category y is 1:q
+                                    model.matrix(formula, mf))
+    control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='DLM'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
                                     model.matrix(formula, mf))
@@ -481,6 +488,9 @@ pdaSync <- function(config){
       ODAC.steps<-c('initialize','derive', 'estimate','synthesize')
     }
     ODAC.family<-'cox'
+  } else if(control$model=='ODACAT'){
+    ODACAT.steps<-c('initialize','derive','estimate')
+    ODACAT.family<-'multicategory'
   } else if(control$model=='DLM'){
     DLM.steps<-c('initialize','estimate')
     DLM.family<-'gaussian'

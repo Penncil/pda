@@ -1,14 +1,15 @@
 Package: pda
 Type: Package
 Title: Privacy-Preserving Distributed Algorithms
-Version: 1.2-3
-Date: 2021-11-21
+Version: 1.2-4
+Date: 2022-01-17
 Authors@R: c(person("Chongliang", "Luo", role=c("aut","cre"), email ="luocl3009@gmail.com"),
                 person("Rui", "Duan", role="aut"), person("Mackenzie", "Edmondson", role="aut"),
                 person("Jiayi", "Tong", role="aut"), person("Xiaokang", "Liu", role="aut"),
+                person("Kenneth", "Locke", role="aut"),
                 person("Yong", "Chen", role="aut", email ="ychen123@upenn.edu"),
                 person("Penn Computing Inference Learning (PennCIL) lab", role = c("cph")))
-Description: A collection of privacy-preserving distributed algorithms for conducting multi-site data analyses. The regression analyses can be linear regression for continuous outcome, logistic regression for binary outcome, Cox proportional hazard regression for time-to event outcome, or Poisson regression for count outcome. The PDA algorithm runs on a lead site and only requires summary statistics from collaborating sites, with one or few iterations. The package can be used together with the OTA online system (<https://pda-ota.pdamethods.org/>) for safe and convenient collaboration. For more information, please visit our software websites: <https://github.com/Penncil/pda>, and <https://pdamethods.org/>.
+Description: A collection of privacy-preserving distributed algorithms for conducting multi-site data analyses. The regression analyses can be linear regression for continuous outcome, logistic regression for binary outcome, Cox proportional hazard regression for time-to event outcome, Poisson regression for count outcome, or multi-CATegorical regression for nominal or ordinal outcome. The PDA algorithm runs on a lead site and only requires summary statistics from collaborating sites, with one or few iterations. The package can be used together with the OTA online system (<https://pda-ota.pdamethods.org/>) for safe and convenient collaboration. For more information, please visit our software websites: <https://github.com/Penncil/pda>, and <https://pdamethods.org/>.
 Maintainer: Chongliang Luo <luocl3009@gmail.com>
 License: Apache License 2.0 
 Suggests: 
@@ -24,7 +25,9 @@ Imports:
   data.table, 
   survival,
   minqa,
-  glmnet
+  glmnet,
+  MASS,
+  numDeriv
 LinkingTo: 
   Rcpp, 
   RcppArmadillo

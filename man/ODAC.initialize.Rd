@@ -22,5 +22,7 @@ ODAC initialize
 \references{
 Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". 
               Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
+             Chongliang Luo, et al. "ODACH: A One-shot Distributed Algorithm for Cox model with Heterogeneous Multi-center Data".
+              medRxiv, 2021, https://doi.org/10.1101/2021.04.18.21255694
 }
 \keyword{internal}

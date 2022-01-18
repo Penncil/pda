@@ -2,7 +2,7 @@
 % Please edit documentation in R/ODAC.R
 \name{ODAC.deriveUWZ}
 \alias{ODAC.deriveUWZ}
-\title{Generate pda derivatives}
+\title{Generate pda UWZ summary statistics before calculating derivatives}
 \usage{
 ODAC.deriveUWZ(ipdata, control, config)
 }
@@ -17,6 +17,6 @@ ODAC.deriveUWZ(ipdata, control, config)
 list(T_all=T_all, b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), U=U, W=W, Z=Z, logL_D1=logL_D1, logL_D2=logL_D2)
 }
 \description{
-Generate pda derivatives
+Generate pda UWZ summary statistics before calculating derivatives
 }
 \keyword{internal}

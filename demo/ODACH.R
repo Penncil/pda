@@ -1,9 +1,7 @@
-# Currently not working... 
-
 require(survival)
 require(data.table)
 require(pda)
-data(lung)
+# data(lung)
 
 ## In the toy example below we aim to analyze the association of lung status with age and sex using Cox regression,
 ## data(lung) from 'survival', we randomly assign to 3 sites: 'site1', 'site2', 'site3'
@@ -15,8 +13,8 @@ data(lung)
 
 data(lung2)
 lung_split <- split(lung2, lung2$site)
-## fit logistic reg using pooled data
-fit.pool <- coxph(Surv(time, status) ~ age + sex, data = lung2)
+## fit Cox PH reg using pooled data, stratified by site
+fit.pool <- coxph(Surv(time, status) ~ age + sex + strata(site), data = lung2)
 
 sites = c('site1', 'site2', 'site3')
 S=readline(prompt="Type  <Return>   to continue : ")
@@ -79,15 +77,16 @@ pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
 
 
 S=readline(prompt="Type  <Return>   to continue : ")
-# ############################  STEP 4: estimate  ###############################
+# ############################  STEP 3: estimate  ###############################
 ## assume lead site1: enter "1" to allow tranferring the surrogate estimate
 pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
 
-## the PDA ODAC is now completed!
+## the PDA ODACH is now completed!
 ## All the sites can still run their own surrogate estimates and broadcast them.
 
 S=readline(prompt="Type  <Return>   to continue : ")
-## compare the surrogate estimate with the pooled estimate
+
+## compare the surrogate estimate with the pooled and meta estimates
 config <- getCloudConfig(site_id = 'site1', dir=mydir)
 fit.pda <- pdaGet(name = 'site1_estimate', config = config)
 control <- pdaGet('control', config)
@@ -113,6 +112,6 @@ cbind(b.pool=fit.pool$coef,
 # pdaSync(config)
 # 
 # S=readline(prompt="Type  <Return>   to continue : ")
-# # ########################  STEP 5: synthesize (optional)  ########################
+# # ########################  STEP 4: synthesize (optional)  ########################
 # ## assume lead site1:
 # pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
