@@ -29,6 +29,7 @@ control <- list(project_name = 'Length of stay study',
                 family = 'gaussian',
                 outcome = "los",
                 variables = c('age', 'sex', 'lab'),
+                # xlev = list(sex=c('F', 'M')),  #levels of all categorical X's, with the first being the reference
                 # variables_heterogeneity = c('Intercept'),
                 optim_maxit = 100,
                 lead_site = 'site1',

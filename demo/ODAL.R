@@ -32,6 +32,7 @@ control <- list(project_name = 'Lung cancer study',
                 family = 'binomial',
                 outcome = "status",
                 variables = c('age', 'sex'),
+                # xlev = list(sex=c('F', 'M')),  #levels of all categorical X's, with the first being the reference
                 optim_maxit = 100,
                 lead_site = 'site1',
                 upload_date = as.character(Sys.time()) )

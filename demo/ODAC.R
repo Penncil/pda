@@ -10,8 +10,11 @@ require(pda)
 ## will be assigned to the sites at the server https://pda.one.
 ## Each site can access via web browser to check the communication of the summary stats.
 
-data(lung2)
-lung_split <- split(lung2, lung2$site)
+# load('pda/data/lung2.rda')
+data(lung2) 
+lung_split <- split(lung2, lung2$site) 
+
+
 ## fit Cox PH reg using pooled data
 fit.pool <- coxph(Surv(time, status) ~ age + sex, data = lung2)
 
@@ -26,6 +29,7 @@ control <- list(project_name = 'Lung cancer study',
                 family = 'cox',
                 outcome = "Surv(time, status)",
                 variables = c('age', 'sex'),
+                # xlev = list(sex=c('F', 'M')),  #levels of all categorical X's, with the first being the reference
                 optim_maxit = 100,
                 lead_site = 'site1',
                 upload_date = as.character(Sys.time()) )

@@ -375,6 +375,14 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   }
 
   family = get(paste0(control$model,'.family'))
+  ## prepare the ipdata: make factor of all categorical variables to make dummy design matrix,
+  ## in case some X's are degenerate at some site, see model.matrix(contrasts=...)
+  # xlev.contrasts <- control$xlev
+  # for(ii in names(control$xlev)){
+  #   ipdata[,ii] = factor(ipdata[,ii], levels = control$xlev[[ii]])
+  #   xlev.contrasts[[ii]] = 'contr.treatment' # options("contrasts") default
+  # }
+ 
   n = nrow(ipdata)
   if(family=='hurdle'){           # count and zero parts for hurdle, Xcount first
     variables <- control$variables_hurdle_count
@@ -382,7 +390,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     variables <- control$variables
   }
   formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
-  mf <- model.frame(formula, ipdata)
+  mf <- model.frame(formula, ipdata, xlev=control$xlev)
+  ## this is used in model.matrix(contrasts=...)
+  # if(options()$contrasts['unordered']=="contr.treatment") options(contrasts = c("contr.treatment", "contr.poly"))
   
   # create ipdata via model.matrix to make dummy variables for categorical covariates...
   # the resulted ipdata format will be used in later functions, i.e. ODAX etc

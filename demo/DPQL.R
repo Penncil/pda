@@ -27,6 +27,7 @@ control <- list(project_name = 'Covid mortality hospital profiling',
                 family = 'binomial',
                 outcome = "death",
                 variables = c('age', 'sex', 'lab'),
+                # xlev = list(sex=c('F', 'M')),  #levels of all categorical X's, with the first being the reference
                 variables_heterogeneity = c('Intercept'),
                 round = 1,
                 maxround = 5,

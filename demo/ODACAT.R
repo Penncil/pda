@@ -21,18 +21,19 @@ dd <- split(ODACAT_ordinal, ODACAT_ordinal$id.site)
 S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 1: initialize  ###############################
 control <- list(project_name = 'ODACAT Example',
-                        step = 'initialize',
-                        sites = sites,
-                        heterogeneity = FALSE,
-                        model = 'ODACAT',
-                        family = 'multicategory',
-                        number_outcome_categories=3,
-                        ordinal_categories=TRUE,
-                        outcome = "outcome",
-                        variables = c('X1','X2','X3'),
-                        optim_maxit = 100,
-                        lead_site = 'site1',
-                        upload_date = as.character(Sys.time()) )
+                step = 'initialize',
+                sites = sites,
+                heterogeneity = FALSE,
+                model = 'ODACAT',
+                family = 'multicategory',
+                number_outcome_categories=3,
+                ordinal_categories=TRUE,
+                outcome = "outcome",
+                variables = c('X1','X2','X3'),
+                # xlev = list(sex=c('F', 'M')),  #levels of all categorical X's, with the first being the reference
+                optim_maxit = 100,
+                lead_site = 'site1',
+                upload_date = as.character(Sys.time()) )
 
 ## fit polr reg using pooled data
 ODACAT_ordinal$outcome=factor(ODACAT_ordinal$outcome,levels=c(1,2,3))

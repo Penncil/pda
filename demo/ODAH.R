@@ -29,6 +29,7 @@ control <- list(project_name = 'CrabSatellites study',
                 outcome = "satellites",
                 variables_hurdle_count = c("width", "weight"),
                 variables_hurdle_zero = c("width", "weight"),
+                # xlev = list(sex=c('F', 'M')),  #levels of all categorical X's, with the first being the reference
                 offset = NULL,
                 optim_maxit = 100,
                 lead_site = 'site1',
