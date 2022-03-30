@@ -12,6 +12,8 @@ dGEM.derive(ipdata,control,config)
 \item{control}{pda control data}
 
 \item{config}{local site configuration}
+
+\item{hosdata}{hospital-level data}
 }
 \value{
 hospital_effect
