@@ -52,7 +52,7 @@ dGEM.initialize <- function(ipdata,control,config){
 #'
 #' @return  hospital_effect
 #' @keywords internal
-dGEM.derive <- function(ipdata,control,config,hosdata){
+dGEM.derive <- function(ipdata,control,config){
   
   # b_meta <- betameta
   bbar <- control$beta_init[-1]
