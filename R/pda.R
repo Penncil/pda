@@ -30,37 +30,37 @@
 #' @seealso \code{pda}
 #' @export
 pdaPut <- function(obj,name,config){
-    obj_Json <- jsonlite::toJSON(obj)
-    file_name <- paste0(name, '.json')
-    if(interactive()) {
-      if(!is.null(config$uri)){
-        message(paste("Put",file_name,"on public cloud:"))
-      }else{
-        message(paste("Put",file_name,"on local directory", config$dir, ':'))
-      }
-      message(obj_Json)
-      authorize = menu(c("Yes", "No"), title="Allow transfer?")
-    } else {
-      authorize = "1"
+  obj_Json <- jsonlite::toJSON(obj)
+  file_name <- paste0(name, '.json')
+  if(interactive()) {
+    if(!is.null(config$uri)){
+      message(paste("Put",file_name,"on public cloud:"))
+    }else{
+      message(paste("Put",file_name,"on local directory", config$dir, ':'))
     }
-    if (authorize != 1) {
-      warning("file not transferred. You can specify file transfer setting in pda().")
-      return(FALSE)
-    }
-    # the file to upload
-    if (is.character(config$dir)) {
-        file_path <- paste0(config$dir,'/', file_name)
-    } else {
-        file_path <- paste0(tempdir(),'/', file_name)
-    }
-    write(obj_Json, file_path)
-    if (is.character(config$uri)) {
-        # create the url target of the file
-        url <- file.path(config$uri, file_name)
-        # webdav PUT request to send a file to cloud
-        r<-httr::PUT(url, body = httr::upload_file(file_path), httr::authenticate(config$site_id, config$secret, 'digest'))
-        message(paste("putting:",url))
-    }
+    message(obj_Json)
+    authorize = menu(c("Yes", "No"), title="Allow transfer?")
+  } else {
+    authorize = "1"
+  }
+  if (authorize != 1) {
+    warning("file not transferred. You can specify file transfer setting in pda().")
+    return(FALSE)
+  }
+  # the file to upload
+  if (is.character(config$dir)) {
+    file_path <- paste0(config$dir,'/', file_name)
+  } else {
+    file_path <- paste0(tempdir(),'/', file_name)
+  }
+  write(obj_Json, file_path)
+  if (is.character(config$uri)) {
+    # create the url target of the file
+    url <- file.path(config$uri, file_name)
+    # webdav PUT request to send a file to cloud
+    r<-httr::PUT(url, body = httr::upload_file(file_path), httr::authenticate(config$site_id, config$secret, 'digest'))
+    message(paste("putting:",url))
+  }
 }
 
 #' @useDynLib pda
@@ -73,18 +73,18 @@ pdaPut <- function(obj,name,config){
 #' @seealso \code{pda}
 #' @export
 pdaList <- function(config){
-    if (is.character(config$uri)) {
-        res<-httr::GET(config$uri, httr::authenticate(config$site_id, config$secret, 'digest'))
-        files<-rvest::html_nodes(httr::content(res), xpath = "//table//td/a") 
-        files<-files[lapply(files,length)>0]
-        files<-regmatches(files, gregexpr("(?<=\")(.*?)(json)(?=\")", files, perl = TRUE))
-    } else if (is.character(config$dir)) {
-        files<-list.files(config$dir,pattern = "\\.json$") 
-    } else {
-        files<-list.files(tempdir(),pattern = "\\.json$") 
-    }
-    files<-substr(files,1,nchar(files)-5)
-    return(files)
+  if (is.character(config$uri)) {
+    res<-httr::GET(config$uri, httr::authenticate(config$site_id, config$secret, 'digest'))
+    files<-rvest::html_nodes(httr::content(res), xpath = "//table//td/a") 
+    files<-files[lapply(files,length)>0]
+    files<-regmatches(files, gregexpr("(?<=\")(.*?)(json)(?=\")", files, perl = TRUE))
+  } else if (is.character(config$dir)) {
+    files<-list.files(config$dir,pattern = "\\.json$") 
+  } else {
+    files<-list.files(tempdir(),pattern = "\\.json$") 
+  }
+  files<-substr(files,1,nchar(files)-5)
+  return(files)
 }
 
 
@@ -97,22 +97,22 @@ pdaList <- function(config){
 #' @seealso \code{pda}
 #' @export
 pdaGet <- function(name,config){
-    file_name <- paste0(name, '.json')
-    #print(paste("Get",file_name,"from public cloud:"))
-    # the file to upload
-    if (is.character(config$dir)) {
-        file_path <- paste0(config$dir,'/', file_name)
-    } else {
-        file_path <- paste0(tempdir(),'/', file_name)
-    }
-    if (is.character(config$uri)) {
-        url <- file.path(config$uri, file_name)
-        #write the file from GET request to file_path
-        res<-httr::GET(url, httr::write_disk(file_path, overwrite = TRUE), httr::authenticate(config$site_id, config$secret, 'digest'))
-        #print(paste("getting:",url))
-    } 
-    obj<-jsonlite::fromJSON(file_path)
-    return(obj)
+  file_name <- paste0(name, '.json')
+  #print(paste("Get",file_name,"from public cloud:"))
+  # the file to upload
+  if (is.character(config$dir)) {
+    file_path <- paste0(config$dir,'/', file_name)
+  } else {
+    file_path <- paste0(tempdir(),'/', file_name)
+  }
+  if (is.character(config$uri)) {
+    url <- file.path(config$uri, file_name)
+    #write the file from GET request to file_path
+    res<-httr::GET(url, httr::write_disk(file_path, overwrite = TRUE), httr::authenticate(config$site_id, config$secret, 'digest'))
+    #print(paste("getting:",url))
+  } 
+  obj<-jsonlite::fromJSON(file_path)
+  return(obj)
 }
 
 
@@ -134,15 +134,15 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
   pda_dir<-Sys.getenv('PDA_DIR')
   config$site_id=site_id
   if(!is.null(secret)) {
-      config$secret = secret
+    config$secret = secret
   } else if (pda_secret!='') {
-      config$secret = pda_secret
+    config$secret = pda_secret
   }
-
+  
   if(!is.null(uri)) {
-      config$uri = uri
+    config$uri = uri
   } else if (pda_uri!='') {
-      config$uri = pda_uri
+    config$uri = pda_uri
   } else{
     message('no cloud uri found! ')
   }
@@ -199,6 +199,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #'    medRxiv, pp.2020-12. \cr
 #'    \doi{10.1101/2020.12.17.20248194}. \cr
 #' (ADAP) Xiaokang Liu, et al. (2021) ADAP: multisite learning with high-dimensional heterogeneous data via A Distributed Algorithm for Penalized regression. \cr
+#' (dGEM) Jiayi Tong, et al. (2022) dGEM: Decentralized Generalized Linear Mixed Effects Model \cr
 #' @examples
 #' require(survival)
 #' require(data.table)
@@ -297,17 +298,17 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' 
 #' @return control
 #' @export
-pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
+pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,hosdata=NULL){
   config <- getCloudConfig(site_id,dir,uri,secret)
   #add a control if one was provided
   if(!(is.null(control)) &&  config$site_id==control$lead_site) { # control$sites[1]
-           pdaPut(obj=control,name='control',config=config)
-           return(control)    # ?
+    pdaPut(obj=control,name='control',config=config)
+    return(control)    # ?
   }
   control = pdaGet('control',config)
   message('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): ')
   message('your site = ', config$site_id)  
- 
+  
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
     ODAL.family<-'binomial'
@@ -363,17 +364,21 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
     #   } else if(control$heterogeneity_effect!='fixed' & control$heterogeneity_effect!='random'){
     #     stop('You specified control$heterogeneity = T, please also specify control$heterogeneity_effect as either "fixed" or "random"! ')
     #   } 
-      if(length(setdiff(control$variables_heterogeneity, c(control$variables, "Intercept")))!=0)
-        stop('Please specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
-        # stop('You specified control$heterogeneity = T, please also specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
-      if(is.null(control$variables_heterogeneity)){
-        message('No control$variables_heterogeneity, use "Intercept" as default!')
-        # message('You specified control$heterogeneity = T, but no control$variables_heterogeneity, use "Intercept" as default!')
-        control$variables_heterogeneity <- 'Intercept'      
-      }
+    if(length(setdiff(control$variables_heterogeneity, c(control$variables, "Intercept")))!=0)
+      stop('Please specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
+    # stop('You specified control$heterogeneity = T, please also specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
+    if(is.null(control$variables_heterogeneity)){
+      message('No control$variables_heterogeneity, use "Intercept" as default!')
+      # message('You specified control$heterogeneity = T, but no control$variables_heterogeneity, use "Intercept" as default!')
+      control$variables_heterogeneity <- 'Intercept'      
+    }
     # }
+  }else if(control$model == 'dGEM'){
+    dGEM.steps<-c('initialize','derive','estimate','synthesize')
+    dGEM.family<-'binomial'
+    variables_site_level <- control$variables_site_level
   }
-
+  
   family = get(paste0(control$model,'.family'))
   ## prepare the ipdata: make factor of all categorical variables to make dummy design matrix,
   ## in case some X's are degenerate at some site, see model.matrix(contrasts=...)
@@ -382,7 +387,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   #   ipdata[,ii] = factor(ipdata[,ii], levels = control$xlev[[ii]])
   #   xlev.contrasts[[ii]] = 'contr.treatment' # options("contrasts") default
   # }
- 
+  
   n = nrow(ipdata)
   if(family=='hurdle'){           # count and zero parts for hurdle, Xcount first
     variables <- control$variables_hurdle_count
@@ -391,6 +396,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   }
   formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
   mf <- model.frame(formula, ipdata, xlev=control$xlev)
+  
   ## this is used in model.matrix(contrasts=...)
   # if(options()$contrasts['unordered']=="contr.treatment") options(contrasts = c("contr.treatment", "contr.poly"))
   
@@ -398,8 +404,8 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
   # the resulted ipdata format will be used in later functions, i.e. ODAX etc
   if(control$model=='ODAC'){  
     ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
-                        status=as.numeric(model.response(mf))[-c(1:n)], 
-                        model.matrix(formula, mf)[,-1])
+                                    status=as.numeric(model.response(mf))[-c(1:n)], 
+                                    model.matrix(formula, mf)[,-1])
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else if(control$model=='ODAL'){
     ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
@@ -410,23 +416,23 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
                                     model.matrix(formula, mf))
     control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='ODAH'){  # count and zero parts for hurdle
-      X_count = data.table::data.table(model.matrix(formula, mf))
-      # also make design X_zero
-      formula <- as.formula(paste(control$outcome, paste(control$variables_hurdle_zero, collapse = "+"), sep = '~'))
-      mf <- model.frame(formula, ipdata)
-      X_zero = data.table::data.table(model.matrix(formula, mf))
-      if(is.character(control$offset)){
-        offset <- ipdata[,control$offset]
-      }else{
-        offset = rep(0, n) 
-      }
-      ipdata <- list(ipdata=ipdata, X_count=X_count, X_zero=X_zero, offset=offset)  
-      control$risk_factor = c('Intercept', control$variables_hurdle_count, 'Intercept', control$variables_hurdle_zero)   
+    X_count = data.table::data.table(model.matrix(formula, mf))
+    # also make design X_zero
+    formula <- as.formula(paste(control$outcome, paste(control$variables_hurdle_zero, collapse = "+"), sep = '~'))
+    mf <- model.frame(formula, ipdata)
+    X_zero = data.table::data.table(model.matrix(formula, mf))
+    if(is.character(control$offset)){
+      offset <- ipdata[,control$offset]
+    }else{
+      offset = rep(0, n) 
+    }
+    ipdata <- list(ipdata=ipdata, X_count=X_count, X_zero=X_zero, offset=offset)  
+    control$risk_factor = c('Intercept', control$variables_hurdle_count, 'Intercept', control$variables_hurdle_zero)   
   }else if(control$model=='ODAP'){
-      ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
-                                      offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
-                                      model.matrix(formula, mf))
-      control$risk_factor = colnames(ipdata)[-c(1:2)]
+    ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
+                                    offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
+                                    model.matrix(formula, mf))
+    control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else if(control$model=='ODACAT'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),  ## multi-category y is 1:q
                                     model.matrix(formula, mf))
@@ -441,25 +447,47 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL){
                                     model.matrix(formula, mf))
     control$risk_factor = colnames(ipdata)[-1]           # may induce more cols for dummy vars
     control$risk_factor_heterogeneity = control$risk_factor[grepl(paste0(control$variables_heterogeneity, collapse='|'), control$risk_factor)]
+  }else if(control$model=='dGEM'){
+    ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
+                                    model.matrix(formula, mf))
+    control$risk_factor = colnames(ipdata)[-1]
   }
-
-    
+  
+  
   if(is.character(control$step)){
     step_function <- paste0(control$model,'.', gsub('[^[:alpha:]]', '',control$step)) # "derive_1" for dPQL
-    step_obj <- get(step_function)(ipdata, control, config)
+    if(control$model == 'dGEM'){
+      if(control$step == 'derive'){
+        step_obj <- get(step_function)(ipdata, control, config, hosdata)
+      }else{
+        step_obj <- get(step_function)(ipdata, control, config)
+      }
+      if(control$step == 'synthesize'){
+        if(config$site_id != control$lead_site){
+          stop("Only lead site or coordinating center can perform the last step (i.e., synthesize)")
+        }
+      }
+    }else{
+      step_obj <- get(step_function)(ipdata, control, config)
+    }
     if(control$step=='estimate'){
       if(control$model=='DLM'){
         message("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
       }else{
-        message("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
+        if(control$model=='dGEM'){
+          message("Congratulations, this the final step: you are transfering the counterfactural event rate. The lead site or coordinating center will broadcast the final results")
+        }else{
+          message("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
+        }
       }
+      
     } else if(control$step==paste0('estimate_', control$maxround)){  # dPQL
       message("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
     }
     pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
     #sync needed?
     if(config$site_id==control$lead_site) {
-           control<-pdaSync(config)
+      control<-pdaSync(config)
     }
   }
   invisible(control)
@@ -507,7 +535,10 @@ pdaSync <- function(config){
   } else if(control$model=='DPQL'){
     DPQL.steps<-paste0(rep(c('derive', 'estimate'), control$maxround), '_', rep(1:control$maxround, each=2)) 
     DPQL.family<-control$family
-  } 
+  } else if(control$model=='dGEM'){
+    dGEM.steps<-c('initialize','derive','estimate','synthesize')
+    dGEM.family<-'binomial'
+  }
   
   files<-pdaList(config) 
   if(all(paste0(control$sites,"_",control$step) %in% files)){ # all init are ready
@@ -578,9 +609,39 @@ pdaSync <- function(config){
       }
       mes <- 'beta_init added, step=2 (derivatives)! \n'
     }
-
+    
+    
+    if(control$step=='derive'){
+      if(control$model == "dGEM"){
+        # get b_meta as initial bbar
+        ghat <- c()
+        vghat <- c()
+        hosdata <- c()
+        for(site_i in control$sites){
+          i = 1
+          init_i <- pdaGet(paste0(site_i,'_derive'),config)
+          ghat = rbind(ghat, init_i$gammahat_i)
+          vghat = rbind(vghat, init_i$Vgammahat_i) # sd, not variance
+          hosdata = rbind(hosdata, init_i$hosdata)
+          i = i + 1
+        }
+        
+        # meta-regression
+        gamma_meta_reg_new = rma.uni(ghat, vghat, mods =  hosdata)
+        gamma_BLUP <- blup(gamma_meta_reg_new)$pred
+        
+        control$estimated_hospital_effect = gamma_BLUP
+      }
+    }
+    
+    
   }
   
+  if(control$step=='synthesize'){
+    if(control$model == "dGEM"){
+      control$final_event_rate = pdaGet(paste0(control$lead_site,'_synthesize'),config)$final_event_rate
+    }
+  }
   # for DPQL, attach intermediate estimate to control after each round
   if(control$model=='DPQL' & control$step==paste0('estimate_', control$round)){
     est <- pdaGet(paste0(config$site_id,'_estimate_',control$round),config)
