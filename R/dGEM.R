@@ -49,10 +49,11 @@ dGEM.initialize <- function(ipdata,control,config){
 #' @param ipdata individual participant data
 #' @param control pda control data
 #' @param config local site configuration
+#' @param hosdata hospital-level data
 #'
 #' @return  hospital_effect
 #' @keywords internal
-dGEM.derive <- function(ipdata,control,config){
+dGEM.derive <- function(ipdata,control,config,hosdata){
   
   # b_meta <- betameta
   bbar <- control$beta_init[-1]
