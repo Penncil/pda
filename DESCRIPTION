@@ -27,7 +27,8 @@ Imports:
   minqa,
   glmnet,
   MASS,
-  numDeriv
+  numDeriv,
+  metafor
 LinkingTo: 
   Rcpp, 
   RcppArmadillo
