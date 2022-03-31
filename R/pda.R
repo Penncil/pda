@@ -620,14 +620,17 @@ pdaSync <- function(config){
         for(site_i in control$sites){
           i = 1
           init_i <- pdaGet(paste0(site_i,'_derive'),config)
+          print(init_i)
           ghat = rbind(ghat, init_i$gammahat_i)
-          vghat = rbind(vghat, init_i$Vgammahat_i) # sd, not variance
+          vghat = rbind(vghat, init_i$Vgammahat_i)
           hosdata = rbind(hosdata, init_i$hosdata)
           i = i + 1
         }
         
         # meta-regression
-        gamma_meta_reg_new = rma.uni(ghat, vghat, mods =  hosdata)
+        colnames(hosdata) = control$variables_site_level
+        formula <- as.formula(paste("", paste(control$variables_site_level, collapse = "+"), sep = '~'))
+        gamma_meta_reg_new = rma.uni(ghat, vghat, mods =  ~ formula, data = hosdata)
         gamma_BLUP <- blup(gamma_meta_reg_new)$pred
         
         control$estimated_hospital_effect = gamma_BLUP
