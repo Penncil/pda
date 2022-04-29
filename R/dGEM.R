@@ -117,7 +117,6 @@ dGEM.estimate <- function(ipdata,control,config) {
 #' @title PDA dGEM synthesize 
 #' 
 #' @usage dGEM.synthesize(ipdata,control,config)
-#' @param ipdata local data in data frame
 #' @param control pda control
 #' @param config pda cloud configuration
 #' 
@@ -125,7 +124,7 @@ dGEM.estimate <- function(ipdata,control,config) {
 #'
 #' @return  list(final_event_rate=final_event_rate)
 #' @keywords internal
-dGEM.synthesize <- function(ipdata,control,config) {
+dGEM.synthesize <- function(control,config) {
   
   N = 0
   for (site_i in control$sites){

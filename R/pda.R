@@ -172,6 +172,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' @param dir directory for shared flat file cloud
 #' @param uri Universal Resource Identifier for this run
 #' @param secret password to authenticate as site_id on uri
+#' @param hosdata hospital-level data, should include the same name as defined in the control file
 #' @return control
 #' @seealso \code{pdaPut}, \code{pdaList}, \code{pdaGet}, \code{getCloudConfig} and \code{pdaSync}.
 #' @import stats survival rvest jsonlite data.table httr Rcpp metafor
@@ -388,14 +389,17 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
   #   xlev.contrasts[[ii]] = 'contr.treatment' # options("contrasts") default
   # }
   
-  n = nrow(ipdata)
-  if(family=='hurdle'){           # count and zero parts for hurdle, Xcount first
-    variables <- control$variables_hurdle_count
-  }else{
-    variables <- control$variables
-  }
-  formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
-  mf <- model.frame(formula, ipdata, xlev=control$xlev)
+  if (!is.null(ipdata)){
+    n = nrow(ipdata)
+    if(family=='hurdle'){           # count and zero parts for hurdle, Xcount first
+      variables <- control$variables_hurdle_count
+    }else{
+      variables <- control$variables
+    }
+    formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
+    mf <- model.frame(formula, ipdata, xlev=control$xlev)
+  } 
+  
   
   ## this is used in model.matrix(contrasts=...)
   # if(options()$contrasts['unordered']=="contr.treatment") options(contrasts = c("contr.treatment", "contr.poly"))
@@ -448,23 +452,32 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     control$risk_factor = colnames(ipdata)[-1]           # may induce more cols for dummy vars
     control$risk_factor_heterogeneity = control$risk_factor[grepl(paste0(control$variables_heterogeneity, collapse='|'), control$risk_factor)]
   }else if(control$model=='dGEM'){
-    ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
-                                    model.matrix(formula, mf))
-    control$risk_factor = colnames(ipdata)[-1]
+    if (!is.null(ipdata)){
+      ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
+                                      model.matrix(formula, mf))
+      control$risk_factor = colnames(ipdata)[-1]
+    }
   }
   
   
   if(is.character(control$step)){
     step_function <- paste0(control$model,'.', gsub('[^[:alpha:]]', '',control$step)) # "derive_1" for dPQL
     if(control$model == 'dGEM'){
-      if(control$step == 'derive'){
-        step_obj <- get(step_function)(ipdata, control, config, hosdata)
-      }else{
-        step_obj <- get(step_function)(ipdata, control, config)
-      }
-      if(control$step == 'synthesize'){
-        if(config$site_id != control$lead_site){
-          stop("Only lead site or coordinating center can perform the last step (i.e., synthesize)")
+      if(!is.null(ipdata)){
+        if(control$step == 'derive'){
+          step_obj <- get(step_function)(ipdata, control, config, hosdata)
+        }else if (control$step == 'synthesize'){
+          if(config$site_id != control$lead_site){
+            stop("Only lead site or coordinating center can perform the last step (i.e., synthesize)")
+          }else{
+            step_obj <- get(step_function)(control, config)
+          }
+        } else {
+          step_obj <- get(step_function)(ipdata, control, config)
+        }
+      }else {
+        if (control$step == 'synthesize'){
+          step_obj <- get(step_function)(control, config)
         }
       }
     }else{
@@ -484,7 +497,17 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     } else if(control$step==paste0('estimate_', control$maxround)){  # dPQL
       message("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
     }
-    pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
+    
+    if(!is.null(ipdata)){
+      pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
+    }else{
+      if(control$model == "dGEM"){
+        if(control$step == "synthesize"){
+          pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
+        }
+      }
+    }
+    
     #sync needed?
     if(config$site_id==control$lead_site) {
       control<-pdaSync(config)
@@ -543,7 +566,9 @@ pdaSync <- function(config){
   files<-pdaList(config) 
   if(all(paste0(control$sites,"_",control$step) %in% files)){ # all init are ready
     if(control$step=="initialize"){
-      init_i <- pdaGet(paste0(control$lead_site,'_initialize'),config)
+      if(control$lead_site %in% control$sites){
+        init_i <- pdaGet(paste0(control$lead_site,'_initialize'),config)
+      }
       if(control$model=='DLM'){
         # DLM does not need derivative, thus estimate after initialize...
       }else if(control$model=='ODAH'){
@@ -590,13 +615,24 @@ pdaSync <- function(config){
         #print(res)
         control$beta_init = bmeta
       }else{
-        bhat <-init_i$bhat_i 
-        vbhat <- init_i$Vhat_i
-        for(site_i in control$sites){
-          if(site_i!=control$lead_site){
-            init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-            bhat = rbind(bhat, init_i$bhat_i)
-            vbhat = rbind(vbhat, init_i$Vhat_i)
+        if(control$lead_site %in% control$sites){
+          bhat <-init_i$bhat_i 
+          vbhat <- init_i$Vhat_i
+          for(site_i in control$sites){
+            if(site_i!=control$lead_site){
+              init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+              bhat = rbind(bhat, init_i$bhat_i)
+              vbhat = rbind(vbhat, init_i$Vhat_i)
+            }
+          }
+        }else{
+          init_i = pdaGet(paste0(control$sites[1],'_initialize'),config)
+          bhat <-init_i$bhat_i 
+          vbhat <- init_i$Vhat_i
+          for(site_i in control$sites[-1]){
+              init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+              bhat = rbind(bhat, init_i$bhat_i)
+              vbhat = rbind(vbhat, init_i$Vhat_i)
           }
         }
         #estimate from meta-analysis
@@ -620,7 +656,6 @@ pdaSync <- function(config){
         for(site_i in control$sites){
           i = 1
           init_i <- pdaGet(paste0(site_i,'_derive'),config)
-          print(init_i)
           ghat = rbind(ghat, init_i$gammahat_i)
           vghat = rbind(vghat, init_i$Vgammahat_i)
           hosdata = rbind(hosdata, init_i$hosdata)
