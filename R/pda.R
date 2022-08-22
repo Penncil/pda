@@ -30,7 +30,7 @@
 #' @seealso \code{pda}
 #' @export
 pdaPut <- function(obj,name,config){
-  obj_Json <- jsonlite::toJSON(obj)
+  obj_Json <- jsonlite::toJSON(obj, digits = 10)
   file_name <- paste0(name, '.json')
   if(interactive()) {
     if(!is.null(config$uri)){
@@ -320,6 +320,10 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     ODAP.steps<-c('initialize','derive','estimate','synthesize')
     # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson) in control
     ODAP.family<-control$family  
+  }else if(control$model=='ODAPB'){
+    ODAPB.steps<-c('initialize','derive','estimate','synthesize')
+    # for ODAPB need to specify family (poisson) in control
+    ODAPB.family<-control$family  
   }else if(control$model=='ODAH'){
     ODAH.steps<-c('initialize','derive','estimate','synthesize')
     #   family = 'hurdle' in control
@@ -436,6 +440,12 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
                                     offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
                                     model.matrix(formula, mf))
+        
+    control$risk_factor = colnames(ipdata)[-c(1:2)]
+  }else if(control$model=='ODAPB'){
+    ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),
+                                    offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
+                                    model.matrix(formula, mf))
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else if(control$model=='ODACAT'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),  ## multi-category y is 1:q
@@ -538,6 +548,11 @@ pdaSync <- function(config){
     ODAP.steps<-c('initialize','derive','estimate','synthesize')
     # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson) in control
     ODAP.family<-control$family  
+  }else if(control$model=='ODAPB'){
+    ODAPB.steps<-c('initialize','derive','estimate','synthesize')
+    # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson) in control
+    ODAPB.family<-control$family  
+  }
   }else if(control$model=='ODAH'){
     ODAH.steps<-c('initialize','derive','estimate','synthesize')
     # for ODAH family = 'hurdle' in control
