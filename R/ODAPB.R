@@ -86,7 +86,6 @@ ODAPB.initialize <- function(ipdata, control, config){
     fit_i <- glm(outcome ~ 0+. -offset, data = ipdata, family = "poisson"(link = "log"), offset = offset)
     betas = fit_i$coef
     mat_L1 = L_gradient_meat(betas,X,outcome,offset)
-    print(config$site_id)
     derivatives_i <- pdaGet(paste0(config$site_id,'_derive'),config)
     nlocal = derivatives_i$site_size
     
@@ -99,14 +98,7 @@ ODAPB.initialize <- function(ipdata, control, config){
       derivatives_i <- pdaGet(paste0(site_i,'_derive'),config)
       N <- N + derivatives_i$site_size
     }
-    print("total")
-    print(N)
     out = diag(inv_L2%*%mat_L1%*%inv_L2*(nlocal/N))
-    print(N)
-    print("out!!!")
-    print(out)
-    print("old out!!!")
-    print(diag(vcov(fit_i)))
     init <- list(site = config$site_id,
                  site_size = nrow(ipdata),
                  bhat_i = fit_i$coef,
@@ -146,8 +138,6 @@ ODAPB.derive <- function(ipdata, control, config){
     }
     bhat <- bhat[-1,] 
     vbhat <- vbhat[-1,]
-    print(bhat)
-    print(vbhat)
     betameta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = T)})/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
     vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
     
@@ -177,10 +167,6 @@ ODAPB.derive <- function(ipdata, control, config){
     
     logL_D1 <- Lgradient(bbar, X, outcome, offset)
     logL_D2 <- Lgradient2(bbar, X, offset)
-    print(bbar)
-    print(X)
-    print(outcome)
-    print(offset)
     derivatives <- list(
       site = config$site_id, 
       site_size = nrow(ipdata),
