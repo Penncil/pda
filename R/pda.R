@@ -552,7 +552,6 @@ pdaSync <- function(config){
     ODAPB.steps<-c('initialize','derive','estimate','synthesize')
     # for ODAP need to specify family (poisson, ztpoisson, quasipoisson, ztquasipoisson) in control
     ODAPB.family<-control$family  
-  }
   }else if(control$model=='ODAH'){
     ODAH.steps<-c('initialize','derive','estimate','synthesize')
     # for ODAH family = 'hurdle' in control
