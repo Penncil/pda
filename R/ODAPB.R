@@ -67,44 +67,12 @@ ODAPB.initialize <- function(ipdata, control, config){
   # if(!("time" %in% colnames(ipdata))) {
   #   ipdata$time <- 1
   # }
-  outcome <- ipdata$outcome
-  offset <- ipdata$offset
-  X <- as.matrix(ipdata[,-c(1,2)]) 
-  L_gradient_meat = function(betas,X,Y,offset) {
-    design <- as.matrix(X)
-    betas = as.matrix(betas)
-    Z = exp(design%*%betas)
-    t(offset + c(Y-Z)*design) %*% (offset + c(Y-Z)*design)
-  }
-  #second-order gradient
-  Lgradient2 <- function(betas, X, offset){
-    design <- as.matrix(X)
-    betas <- as.matrix(betas)
-    t(- exp(offset + c(design%*%betas))*design)%*%design/nrow(X)
-  }
-  if (family == "poisson") {
-    fit_i <- glm(outcome ~ 0+. -offset, data = ipdata, family = "poisson"(link = "log"), offset = offset)
-    betas = fit_i$coef
-    mat_L1 = L_gradient_meat(betas,X,outcome,offset)
-    derivatives_i <- pdaGet(paste0(config$site_id,'_derive'),config)
-    nlocal = derivatives_i$site_size
-    
-    mat_L2 = Lgradient2(betas,X,offset)*nlocal
-    inv_L2 = solve.default(mat_L2)
-    
-    
-    N <- 0
-    for(site_i in control$sites){
-      derivatives_i <- pdaGet(paste0(site_i,'_derive'),config)
-      N <- N + derivatives_i$site_size
-    }
-    out = diag(inv_L2%*%mat_L1%*%inv_L2*(nlocal/N))
-    init <- list(site = config$site_id,
-                 site_size = nrow(ipdata),
-                 bhat_i = fit_i$coef,
-                 Vhat_i =  diag(vcov(fit_i)), 
-                 phihat_i = 1)  
-  }
+  fit_i <- glm(outcome ~ 0+. -offset, data = ipdata, family = "poisson"(link = "log"), offset = offset)
+  init <- list(site = config$site_id,
+               site_size = nrow(ipdata),
+               bhat_i = fit_i$coef,
+               Vhat_i = diag(vcov(fit_i)), 
+               phihat_i = 1)  
   return(init)
 }
 
