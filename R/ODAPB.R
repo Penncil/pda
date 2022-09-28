@@ -61,6 +61,7 @@ my.ztpoisson.fit <- function(X, Y, offset){
 #' @return init
 #' @keywords internal
 ODAPB.initialize <- function(ipdata, control, config){
+  print("test")
   # install.packages("countreg", repos="http://R-Forge.R-project.org")
   # dist <- control$dist
   family <- control$family
