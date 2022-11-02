@@ -57,22 +57,25 @@ ODAL.derive <- function(ipdata,control,config){
   # data sanity check ...
     px <- ncol(ipdata) - 1  # X includes intercept
     # get b_meta as initial bbar
-    bhat <- rep(0, px)
-    vbhat <- rep(0, px)     # cov matrix?
-    for(site_i in control$sites){
-      init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-      bhat = rbind(bhat, init_i$bhat_i)
-      vbhat = rbind(vbhat, init_i$Vhat_i)
-    }
-    bhat = bhat[-1,]
-    vbhat = vbhat[-1,]
+    
+    ## Comment out by Jessie -- assume that only lead site has the access to aggregated data (xxx.json)
+    # bhat <- rep(0, px)
+    # vbhat <- rep(0, px)     # cov matrix?
+    # for(site_i in control$sites){
+    #   init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+    #   bhat = rbind(bhat, init_i$bhat_i)
+    #   vbhat = rbind(vbhat, init_i$Vhat_i)
+    # }
+    # bhat = bhat[-1,]
+    # vbhat = vbhat[-1,]
     
     #estimate from meta-analysis
-    betameta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = T)})/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
-    vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
+    # betameta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = T)})/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
+    # vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
     
     # b_meta <- betameta
-    bbar <- betameta #b_meta
+    # bbar <- betameta #b_meta
+    bbar <- control$beta_init[-1]
     
     # 1st and 2nd derivatives
     status <- ipdata$status
