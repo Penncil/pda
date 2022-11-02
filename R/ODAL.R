@@ -75,7 +75,7 @@ ODAL.derive <- function(ipdata,control,config){
     
     # b_meta <- betameta
     # bbar <- betameta #b_meta
-    bbar <- control$beta_init[-1]
+    bbar <- control$beta_init
     
     # 1st and 2nd derivatives
     status <- ipdata$status
