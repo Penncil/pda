@@ -97,19 +97,20 @@ ODAPB.derive <- function(ipdata, control, config){
   if (family == "poisson") {
     # data sanity check ...
     px <- ncol(ipdata) - 2  # number of covariates incl. intercept
-    bhat <- rep(0, px)
-    vbhat <- rep(0, px)     
-    for(site_i in control$sites){
-      init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-      bhat <- rbind(bhat, init_i$bhat_i)
-      vbhat <- rbind(vbhat, init_i$Vhat_i)
-    }
-    bhat <- bhat[-1,] 
-    vbhat <- vbhat[-1,]
-    betameta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = T)})/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
-    vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
+    # bhat <- rep(0, px)
+    # vbhat <- rep(0, px)     
+    # for(site_i in control$sites){
+    #   init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+    #   bhat <- rbind(bhat, init_i$bhat_i)
+    #   vbhat <- rbind(vbhat, init_i$Vhat_i)
+    # }
+    # bhat <- bhat[-1,] 
+    # vbhat <- vbhat[-1,]
+    # betameta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = T)})/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
+    # vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
     
-    bbar <- betameta 
+    # bbar <- betameta 
+    bbar <- control$beta_init
     
     # 1st and 2nd derivatives
     outcome <- ipdata$outcome
