@@ -446,7 +446,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
                                     offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
                                     model.matrix(formula, mf))
-        
+    
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else if(control$model=='ODAPB'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),
@@ -459,7 +459,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='ODACATH'){ # added by Jessie & Ken on Feb 24, 2023
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),  ## multi-category y is 1:q
-                                    model.matrix(formula, mf))[,-2] # remove the intercept column. ODACAT does not need that column. 
+                                    model.matrix(formula, mf))[,-2] # remove the intercept column. ODACATH does not need that column. 
     control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='DLM'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
@@ -501,9 +501,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
         }
       }
     }else{
-      print(control)
+      # print(control)
       step_obj <- get(step_function)(ipdata, control, config)
-      print(step_function)
+      # print(step_function)
     }
     
     
@@ -533,10 +533,8 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     }
     
     #sync needed?
-    print("---- config")
-    print(config)
     if(config$site_id==control$lead_site) {
-        control<-pdaSync(config)
+      control<-pdaSync(config)
     }
   }
   invisible(control)
@@ -670,9 +668,9 @@ pdaSync <- function(config){
           vbhat <- init_i$Vhat_i
           
           for(site_i in control$sites[-1]){
-              init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-              bhat = rbind(bhat, init_i$bhat_i)
-              vbhat = rbind(vbhat, init_i$Vhat_i)
+            init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+            bhat = rbind(bhat, init_i$bhat_i)
+            vbhat = rbind(vbhat, init_i$Vhat_i)
           }
         }
         #estimate from meta-analysis
@@ -682,7 +680,10 @@ pdaSync <- function(config){
         message('meta analysis (inverse variance weighted average) result:')
         #print(res)
         control$beta_init = bmeta
-        control$bhat_eta = bhat_eta
+        if (control$model == "ODACATH"){
+          control$bhat_eta = bhat_eta
+        }
+        
       }
       mes <- 'beta_init added, step=2 (derivatives)! \n'
     }
