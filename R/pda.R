@@ -449,7 +449,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else if(control$model=='ODACAT'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),  ## multi-category y is 1:q
-                                    model.matrix(formula, mf))
+                                    model.matrix(formula, mf))[,-2] # remove the intercept column. ODACAT does not need that column. 
     control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='DLM'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
