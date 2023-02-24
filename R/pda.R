@@ -564,7 +564,7 @@ pdaSync <- function(config){
     }
     ODAC.family<-'cox'
   } else if(control$model=='ODACAT'){
-    ODACAT.steps<-c('initialize','derive','estimate'，'synthesize')
+    ODACAT.steps<-c('initialize','derive','estimate','synthesize')
     ODACAT.family<-'multicategory'
   } else if(control$model=='DLM'){
     DLM.steps<-c('initialize','estimate')
