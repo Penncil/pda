@@ -342,6 +342,12 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
   }else if(control$model=='ODACAT'){  # multi-category  
     ODACAT.steps <- c('initialize','derive','estimate','synthesize')
     ODACAT.family <- 'multicategory'
+  }else if(control$model=='ODACATH'){ # added by Jessie & Ken on Feb 24, 2023
+    ODACAT.steps <- c('initialize','derive','estimate','synthesize')
+    ODACAT.family <- 'multicategory'
+    if(control$heterogeneity==T){
+      message("You specified control$heterogeneity = T, so you are using the hetero-version of ODACAT.")
+    }
   }else if(control$model=='DLM'){
     DLM.steps<-c('initialize', 'estimate')
     DLM.family<-'gaussian'
@@ -448,6 +454,10 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
                                     model.matrix(formula, mf))
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else if(control$model=='ODACAT'){
+    ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),  ## multi-category y is 1:q
+                                    model.matrix(formula, mf))[,-2] # remove the intercept column. ODACAT does not need that column. 
+    control$risk_factor = colnames(ipdata)[-1]
+  }else if(control$model=='ODACATH'){ # added by Jessie & Ken on Feb 24, 2023
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),  ## multi-category y is 1:q
                                     model.matrix(formula, mf))[,-2] # remove the intercept column. ODACAT does not need that column. 
     control$risk_factor = colnames(ipdata)[-1]
@@ -564,6 +574,9 @@ pdaSync <- function(config){
     }
     ODAC.family<-'cox'
   } else if(control$model=='ODACAT'){
+    ODACAT.steps<-c('initialize','derive','estimate','synthesize')
+    ODACAT.family<-'multicategory'
+  } else if(control$model=='ODACATH'){ # added by Jessie & Ken on Feb 24, 2023
     ODACAT.steps<-c('initialize','derive','estimate','synthesize')
     ODACAT.family<-'multicategory'
   } else if(control$model=='DLM'){
