@@ -343,8 +343,8 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     ODACAT.steps <- c('initialize','derive','estimate','synthesize')
     ODACAT.family <- 'multicategory'
   }else if(control$model=='ODACATH'){ # added by Jessie & Ken on Feb 24, 2023
-    ODACAT.steps <- c('initialize','derive','estimate','synthesize')
-    ODACAT.family <- 'multicategory'
+    ODACATH.steps <- c('initialize','derive','estimate','synthesize')
+    ODACATH.family <- 'multicategory'
     if(control$heterogeneity==T){
       message("You specified control$heterogeneity = T, so you are using the hetero-version of ODACAT.")
     }
@@ -501,8 +501,12 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
         }
       }
     }else{
+      print(control)
       step_obj <- get(step_function)(ipdata, control, config)
+      print(step_function)
     }
+    
+    
     if(control$step=='estimate'){
       if(control$model=='DLM'){
         message("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
@@ -529,8 +533,10 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     }
     
     #sync needed?
+    print("---- config")
+    print(config)
     if(config$site_id==control$lead_site) {
-      control<-pdaSync(config)
+        control<-pdaSync(config)
     }
   }
   invisible(control)
@@ -577,8 +583,8 @@ pdaSync <- function(config){
     ODACAT.steps<-c('initialize','derive','estimate','synthesize')
     ODACAT.family<-'multicategory'
   } else if(control$model=='ODACATH'){ # added by Jessie & Ken on Feb 24, 2023
-    ODACAT.steps<-c('initialize','derive','estimate','synthesize')
-    ODACAT.family<-'multicategory'
+    ODACATH.steps<-c('initialize','derive','estimate','synthesize')
+    ODACATH.family<-'multicategory'
   } else if(control$model=='DLM'){
     DLM.steps<-c('initialize','estimate')
     DLM.family<-'gaussian'
@@ -645,17 +651,24 @@ pdaSync <- function(config){
         if(control$lead_site %in% control$sites){
           bhat <-init_i$bhat_i 
           vbhat <- init_i$Vhat_i
+          if(control$model == "ODACATH"){
+            bhat_eta = init_i$bhat_eta_i
+          }
           for(site_i in control$sites){
             if(site_i!=control$lead_site){
               init_i <- pdaGet(paste0(site_i,'_initialize'),config)
               bhat = rbind(bhat, init_i$bhat_i)
               vbhat = rbind(vbhat, init_i$Vhat_i)
+              if (control$model == "ODACATH"){
+                bhat_eta = rbind(bhat_eta, init_i$bhat_eta_i)
+              }
             }
           }
         }else{
           init_i = pdaGet(paste0(control$sites[1],'_initialize'),config)
           bhat <-init_i$bhat_i 
           vbhat <- init_i$Vhat_i
+          
           for(site_i in control$sites[-1]){
               init_i <- pdaGet(paste0(site_i,'_initialize'),config)
               bhat = rbind(bhat, init_i$bhat_i)
@@ -669,6 +682,7 @@ pdaSync <- function(config){
         message('meta analysis (inverse variance weighted average) result:')
         #print(res)
         control$beta_init = bmeta
+        control$bhat_eta = bhat_eta
       }
       mes <- 'beta_init added, step=2 (derivatives)! \n'
     }
