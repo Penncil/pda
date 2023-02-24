@@ -17,7 +17,7 @@
 
 # https://style.tidyverse.org/functions.html#naming
 # https://ohdsi.github.io/Hades/codeStyle.html#OHDSI_code_style_for_R
- 
+
 # set in pda()?
 #NOTE: MLR models must contain intercept
 ODACAT.steps <- c('initialize','derive','estimate','synthesize')
@@ -36,14 +36,19 @@ ODACAT.family <- 'multicategory'
 #' @keywords internal
 ODACAT.initialize <- function(ipdata,control,config){
   n=nrow(ipdata)
-  p=ncol(ipdata[,2:ncol(ipdata)])-1
+  p=ncol(ipdata[,2:ncol(ipdata)])
+  print("p")
+  print(p)
   x= as.matrix(ipdata[,2:ncol(ipdata)])   # intercept will be added in model.fit... 
   y= as.matrix(ipdata[,1])
   
   #Proportional Odds Logistic Regression
   if(control$ordinal_categories==FALSE){
     b.t=rep(0,(p+1)*(control$number_outcome_categories-1))
+    print("b.t.")
+    print(b.t)
     fit.p=model.fit(x=x, y=y, b0=b.t, model = 'mlr')
+    print(fit.p)
     init=list(site = config$site_id,
               site_size = n,
               bhat_i = as.vector(fit.p$res$par),
@@ -85,6 +90,8 @@ ODACAT.derive <- function(ipdata,control,config){
     pp=p+(control$number_outcome_categories-1)
   }
   
+  bhat <- control$bhat
+  vbhat <- control$vbhat
   #Meta Analysis
   bhat <- rep(0, pp)
   vbhat <- rep(0, pp)     
@@ -246,6 +253,5 @@ ODACAT.synthesize <- function(ipdata,control,config) {
   return(list(btilde = btilde,
               Vtilde = Vtilde))
 }
-
 
 
