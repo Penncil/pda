@@ -20,7 +20,7 @@
  
 # set in pda()?
 #NOTE: MLR models must contain intercept
-ODACAT.steps <- c('initialize','derive','estimate')
+ODACAT.steps <- c('initialize','derive','estimate','synthesize')
 ODACAT.family <- 'multicategory'
 # ODACAT.ordinal_categories<-FALSE
 
@@ -37,7 +37,7 @@ ODACAT.family <- 'multicategory'
 ODACAT.initialize <- function(ipdata,control,config){
   n=nrow(ipdata)
   p=ncol(ipdata[,2:ncol(ipdata)])-1
-  x= as.matrix(ipdata[,3:ncol(ipdata)])   # intercept will be added in model.fit... 
+  x= as.matrix(ipdata[,2:ncol(ipdata)])   # intercept will be added in model.fit... 
   y= as.matrix(ipdata[,1])
   
   #Proportional Odds Logistic Regression
@@ -78,7 +78,7 @@ ODACAT.initialize <- function(ipdata,control,config){
 #' @keywords internal
 ODACAT.derive <- function(ipdata,control,config){
   n=nrow(ipdata)  
-  p=ncol(ipdata[,2:ncol(ipdata)])-1
+  p=ncol(ipdata[,2:ncol(ipdata)])
   if(control$ordinal_categories==FALSE){
     pp=(p+1)*(control$number_outcome_categories-1)
   }else{
@@ -107,7 +107,7 @@ ODACAT.derive <- function(ipdata,control,config){
   # bbar=meta_res$bbar #b_meta
   # vbar=meta_res$vmeta
   
-  x= as.matrix(ipdata[,3:ncol(ipdata)])   # intercept will be added in model.fit... 
+  x= as.matrix(ipdata[,2:ncol(ipdata)])   # intercept will be added in model.fit... 
   y= as.matrix(ipdata[,1])
   
   #First and Second Order Gradients
@@ -141,7 +141,7 @@ ODACAT.derive <- function(ipdata,control,config){
 ODACAT.estimate <- function(ipdata,control,config) {
   
   n_site=nrow(ipdata)
-  p=ncol(ipdata[,2:ncol(ipdata)])-1
+  p=ncol(ipdata[,2:ncol(ipdata)])
   K=length(control$sites)
   
   if(control$ordinal_categories==FALSE){
@@ -171,32 +171,80 @@ ODACAT.estimate <- function(ipdata,control,config) {
   
   
   #Surrogate Likelihood Estimation
-  x= as.matrix(ipdata[,3:ncol(ipdata)])   # intercept will be added in model.fit... 
+  x= as.matrix(ipdata[,2:ncol(ipdata)])   # intercept will be added in model.fit... 
   y= as.matrix(ipdata[,1])
   if(control$ordinal_categories==FALSE){
     surr_res=odacat.fit(x=x, y=y, #mydata=ipdata,
                         id.local=local_site_index,beta_bar=bbar,logL_N_D1_beta_bar=logL_N_D1_beta_bar,
                         logL_N_D2_beta_bar=logL_N_D2_beta_bar,nn=nn, model='mlr')
+    vcov=solve(surr_res$sol.odacat2.hess*n)
     surr <- list(btilde = surr_res$sol.odacat2$par, 
-                 btilde.se = sqrt(diag(solve(surr_res$sol.odacat2.hess*n))), 
+                 btilde.se = sqrt(diag(vcov)), 
                  btilde.theta=NULL,
                  btilde.theta.se=NULL,
                  site=config$site_id, 
-                 site_size=n_site)
+                 site_size=n_site,
+                 vcov=vcov)
   }else{
     surr_res=odacat.fit(x=x, y=y, # mydata=ipdata,
                         id.local=local_site_index,beta_bar=bbar,logL_N_D1_beta_bar=logL_N_D1_beta_bar,
                         logL_N_D2_beta_bar=logL_N_D2_beta_bar,nn=nn, model='polr')
-    surr_res_param_repar=repar(g=surr_res$sol.odacat2$par, g.covar=solve(surr_res$sol.odacat2.hess*n), px=p)
+    vcov.betatheta=solve(surr_res$sol.odacat2.hess*n)
+    surr_res_param_repar=repar2(g=surr_res$sol.odacat2$par, g.covar=vcov.betatheta, px=p)
     surr <- list(btilde = c(surr_res_param_repar$beta,surr_res_param_repar$zeta), 
                  btilde.se = sqrt(c(surr_res_param_repar$beta.var,surr_res_param_repar$zeta.var)),
                  btilde.theta=surr_res_param_repar$theta,
                  btilde.theta.se=sqrt(surr_res_param_repar$theta.var),
                  site=config$site_id, 
-                 site_size=n_site)
+                 site_size=n_site,
+                 vcov=surr_res_param_repar$vcov)
   }
   
   return(surr)
+}
+
+#' @useDynLib pda
+#' @title PDA synthesize surrogate estimates from all sites, optional
+#' 
+#' @usage ODACAT.synthesize(ipdata,control,config)
+#' @param ipdata local data in data frame
+#' @param control pda control
+#' @param config pda cloud configuration
+#' 
+#' @details Optional step-4: synthesize all the surrogate est btilde from each site, if step-3 from all sites is broadcasted
+#'
+#' @return  list(btilde=btilde, Vtilde=Vtilde)
+#' @keywords internal
+ODACAT.synthesize <- function(ipdata,control,config) {
+  p=ncol(ipdata[,2:ncol(ipdata)])
+  if(control$ordinal_categories==FALSE){
+    px=(p+1)*(control$number_outcome_categories-1)
+  }else{
+    px=p+(control$number_outcome_categories-1)
+  }
+  
+  K <- length(control$sites)
+  btilde_matrix=matrix(0,K,px)
+  vcov_sum <- rep(0, px)  
+  btilde.var_matrix=matrix(0,K,px)
+  
+  
+  
+  for(site_i in control$sites){
+    surr_i <- pdaGet(paste0(site_i,'_estimate'),config)
+    btilde_matrix[i,]=surr_i$btilde
+    btilde.var_matrix[i,]=diag(surr_i$vcov)
+    vcov_sum <- vcov_sum + surr_i$vcov
+  }
+  
+  # inv-Var weighted average est, and final Var = average Var-tilde
+  btilde=apply((1/btilde.var_matrix) *  btilde_matrix, 2,sum)/apply((1/btilde.var_matrix), 2, sum)
+  Vtilde=vcov_sum/K
+  
+  
+  message("all surrogate estimates synthesized, no need to broadcast! ")
+  return(list(btilde = btilde,
+              Vtilde = Vtilde))
 }
 
 

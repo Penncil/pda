@@ -340,7 +340,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     }
     ODAC.family<-'cox'
   }else if(control$model=='ODACAT'){  # multi-category  
-    ODACAT.steps <- c('initialize','derive','estimate')
+    ODACAT.steps <- c('initialize','derive','estimate','synthesize')
     ODACAT.family <- 'multicategory'
   }else if(control$model=='DLM'){
     DLM.steps<-c('initialize', 'estimate')
@@ -564,7 +564,7 @@ pdaSync <- function(config){
     }
     ODAC.family<-'cox'
   } else if(control$model=='ODACAT'){
-    ODACAT.steps<-c('initialize','derive','estimate')
+    ODACAT.steps<-c('initialize','derive','estimate'，'synthesize')
     ODACAT.family<-'multicategory'
   } else if(control$model=='DLM'){
     DLM.steps<-c('initialize','estimate')
