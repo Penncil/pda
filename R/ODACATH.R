@@ -40,38 +40,38 @@ ODACATH.initialize <- function(ipdata,control,config){
   x= as.matrix(ipdata[,2:ncol(ipdata)])   
   y= as.matrix(ipdata[,1])
   
-
+  
   #Proportional Odds Logistic Regression
   if(control$ordinal_categories==FALSE){ #MLR
-      l_tot=(p+1)*(control$number_outcome_categories-1)
-      beta_length=p*(control$number_outcome_categories-1)
-      eta_length=control$number_outcome_categories-1
-      beta0_record = rep(0,beta_length) #Shared beta coefficients by site
-      eta0_record = rep(0,eta_length) #Site specific eta coefficients by site
-      eta_indices=sapply(1:(control$number_outcome_categories-1),function(l){1+(l-1)*(p+1)})
-      beta_indices=seq(1:l_tot)
-      beta_indices=beta_indices[-eta_indices]
+    l_tot=(p+1)*(control$number_outcome_categories-1)
+    beta_length=p*(control$number_outcome_categories-1)
+    eta_length=control$number_outcome_categories-1
+    beta0_record = rep(0,beta_length) #Shared beta coefficients by site
+    eta0_record = rep(0,eta_length) #Site specific eta coefficients by site
+    eta_indices=sapply(1:(control$number_outcome_categories-1),function(l){1+(l-1)*(p+1)})
+    beta_indices=seq(1:l_tot)
+    beta_indices=beta_indices[-eta_indices]
     
-      sl1 = function(g) {Lik2(g=g,x=x,y=y,model="mlr")} #Log Likelihood
-      theta1_0=optim(rep(0,times=l_tot), sl1,method="BFGS", hessian=T, control = list(maxit=500,reltol=1e-8)) #Estimation of parameters 
-      beta0_record=theta1_0$par[beta_indices] #Recording estimated shared beta coefficients
-      eta0_record=theta1_0$par[eta_indices] #Recording estimated site specific beta coefficients
-      
-      ### compute the weight (Can alternatively use the inverse hessian of the results from nlminb)
-      ###Variance of coefficients computed as \sigma^2=(X'WX) where W=diag(p(1-p)) and p=exp(xb)/(1+exp(xb))
-      Vall=diag(solve(theta1_0$hessian*n))
-      V_beta=Vall[beta_indices]
-      V_eta=Vall[eta_indices]
-      
-      init=list(site = config$site_id,
-                site_size = n,
-                bhat_beta_i =beta0_record ,
-                Vhat_beta_i =V_beta ,
-                bhat_eta_i=eta0_record,
-                Vhat_eta_i=V_eta,
-                beta=NA,  
-                zeta=NA, 
-                theta=NA) 
+    sl1 = function(g) {Lik2(g=g,x=x,y=y,model="mlr")} #Log Likelihood
+    theta1_0=optim(rep(0,times=l_tot), sl1,method="BFGS", hessian=T, control = list(maxit=500,reltol=1e-8)) #Estimation of parameters 
+    beta0_record=theta1_0$par[beta_indices] #Recording estimated shared beta coefficients
+    eta0_record=theta1_0$par[eta_indices] #Recording estimated site specific beta coefficients
+    
+    ### compute the weight (Can alternatively use the inverse hessian of the results from nlminb)
+    ###Variance of coefficients computed as \sigma^2=(X'WX) where W=diag(p(1-p)) and p=exp(xb)/(1+exp(xb))
+    Vall=diag(solve(theta1_0$hessian*n))
+    V_beta=Vall[beta_indices]
+    V_eta=Vall[eta_indices]
+    
+    init=list(site = config$site_id,
+              site_size = n,
+              bhat_i =beta0_record ,
+              Vhat_i =V_beta ,
+              bhat_eta_i=eta0_record,
+              Vhat_eta_i=V_eta,
+              beta=NA,  
+              zeta=NA, 
+              theta=NA) 
   }else{ #POLR
     l_tot=p+(control$number_outcome_categories-1)
     beta_length=p
@@ -130,8 +130,8 @@ ODACATH.derive <- function(ipdata,control,config){
     beta0_record = rep(0,beta_length) #Shared beta coefficients by site
     eta0_record = rep(0,eta_length) #Site specific eta coefficients by site
     eta_indices=sapply(1:(control$number_outcome_categories-1),function(l){1+(l-1)*(p+1)})
-    beta_indices=seq(1:l_tot)
-    beta_indices=beta_indices[-eta_indices]
+    # beta_indices=seq(1:l_tot)
+    # beta_indices=beta_indices[-eta_indices]
   }else{
     l_tot=p+(control$number_outcome_categories-1)
     beta_length=p
@@ -139,43 +139,26 @@ ODACATH.derive <- function(ipdata,control,config){
     beta0_record = rep(0,beta_length) #Shared beta coefficients by site
     eta0_record = rep(0,eta_length) #Site specific eta coefficients by site
     eta_indices=(1:(control$number_outcome_categories-1))+p
-    beta_indices=seq(1:l_tot)
-    beta_indices=beta_indices[-eta_indices]
+    # beta_indices=seq(1:l_tot)
+    # beta_indices=beta_indices[-eta_indices]
   }
   
-  #Meta Analysis
-  bhat_beta <- rep(0, beta_length)
-  Vhat_beta <- rep(0, beta_length)
-  bhat_eta <- rep(0, eta_length)
-  Vhat_eta <- rep(0, eta_length)
+ 
+  bbar <- control$beta_init # read the meta-ininitalized value from control.json file
+  eta_mat=control$bhat_eta[,eta_indices]
   
-  for(site_i in control$sites){
-    init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-    bhat_beta = rbind(bhat_beta, init_i$bhat_beta_i)
-    Vhat_beta = rbind(Vhat_beta, init_i$Vhat_beta_i)
-    bhat_eta = rbind(bhat_eta, init_i$bhat_eta_i)
-    Vhat_eta = rbind(Vhat_eta, init_i$Vhat_eta_i)
-  }
-  bhat_beta =bhat_beta[-1,] 
-  Vhat_beta =Vhat_beta [-1,]
-  bhat_eta =bhat_eta[-1,]
-  Vhat_eta =Vhat_eta[-1,]
-
-  #estimate from meta-analysis
-  bbar = apply(bhat_beta/Vhat_beta,2,function(x){sum(x, na.rm = T)})/apply(1/Vhat_beta,2,function(x){sum(x, na.rm = T)}) 
-  vbbar = 1/apply(1/Vhat_beta,2,function(x){sum(x, na.rm = T)})
-  eta_mat=bhat_eta
-
   x= as.matrix(ipdata[,2:ncol(ipdata)])   # intercept will be added in model.fit... 
   y= as.matrix(ipdata[,1])
   
+  print(eta_indices)
   #Efficient Score within Site evaluated at beta-bar
   #Local Site
   site_name=config$site_id
   site=match(site_name,control$sites) #Site index
+  model = control$model
   #site =as.numeric(substr(siteid,nchar(siteid), nchar(siteid)))
   S_site=regular_es(beta=bbar,eta=eta_mat[site,],x=x,y=y,eta_indices=eta_indices,model=model)*n #Will divide the sum across all sites for N
-
+  
   derivatives <- list(
     site=config$site_id, 
     site_size = n,
@@ -240,7 +223,7 @@ ODACATH.estimate <- function(ipdata,control,config) {
   #Local Site
   local_site_name=config$site_id
   local_site=match(local_site_name,control$sites) #Local site index
-
+  
   bbar=bbar_mat[local_site,]
   
   #Surrogate Likelihood Estimation
