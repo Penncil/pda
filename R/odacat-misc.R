@@ -72,9 +72,17 @@ model.logL <- function(g, x, y , model='polr'){ # 'mlr'
   }else if(model=='mlr'){  
     bm = cbind(matrix(g, px, q),0)
     Xb = x %*% bm
-    li=sapply(1:nrow(x),function(i){Xb[i,y[i]]})-log(apply(exp(Xb),1,sum))
-    #li = diag(Xb[,y]) - log(apply(exp(Xb),1,sum)) slow for large datasets
-    logL =  - sum(li)
+    y_cats=sort(unique(y))
+    li=lapply(y_cats,function(l){ #Break up calculation by outcome category
+      yindices=which(y==l)
+      Xby=x[yindices,] %*% bm[,l]
+      Xb_sub=Xb[yindices,]
+      if(length(yindices)==1){
+        return(Xby-log(sum(exp(Xb_sub))))  
+      }else{
+        return(Xby-log(rowSums(exp(Xb_sub))))
+      }})
+    logL =  - sum(unlist(li))
   }
   return(logL/n)
 }
@@ -192,7 +200,7 @@ odacat.fit <- function(x, y,
                       nn,
                       model='polr',
                       verbose = F,  
-                      optim_control = list(maxit=10000)){
+                      optim_control = list(maxit=500,reltol=1e-8)){
   
   
   # ODAM1 and ODAM2
@@ -219,32 +227,68 @@ odacat.fit <- function(x, y,
 
 #meta.fit provides parameters in terms of beta and theta (reparameterized intercept)
 #' @keywords internal
-meta.fit <- function(p, # ipdata,
-                     control,config){
-  # n=nrow(ipdata)
-  # p=ncol(ipdata[,2:ncol(ipdata)])
-  if(control$ordinal_categories==FALSE){ #MLR
-  px=(p+1)*(control$number_outcome_categories-1)
-  }else{ #POLR
-  px=p+(control$number_outcome_categories-1) 
+meta.fit <- function(mydata, # col1=id.site, col2=y, col3+=X  
+                     b0, model='polr'){
+  # mydata=dd
+  K <- length(unique(mydata$id.site))
+  px <- ncol(mydata) - 2
+  q <- length(unique(mydata[,2]))-1  
+  pp = ifelse(model=='polr', px+q, (px+1)*q) 
+  if(missing(b0)) b0=rep(0,pp)
+  nn  = c(table(mydata$id.site))
+  mydata.s = split(mydata, mydata$id.site)
+  fit.all = lapply(mydata.s, function(a) tryCatch(
+    model.fit(x=a[,-c(1,2)], y=a[,2], model=model, b0=b0)$res,
+    error=function(e) list(par=rep(NA,pp), hess=matrix(NA,pp,pp))))
+  
+  # fit.all0 = lapply(mydata.s, function(a) polr(factor(y)~X1+X2, data=a))
+  
+  b.all = matrix(unlist(lapply(fit.all, function(a) a$par)), ncol=K)
+  v.all=sweep(matrix(unlist(lapply(fit.all, function(a) diag(solve(a$hess)))), ncol=K),2,nn,FUN="/")
+  
+  v.meta = 1 / rowSums(1 / v.all, na.rm=T)
+  b.meta = rowSums(b.all / v.all, na.rm=T) * v.meta
+  
+  
+  return(list(b.all=b.all,
+              v.all=v.all,
+              b.meta=b.meta,
+              v.meta=v.meta,
+              fit.all=fit.all))
+}
+
+
+#' @keywords internal
+repar2 <- function(g, g.covar, px){  
+  q <- length(g) - px
+  ind_q <- seq_len(q)
+  beta = g[1:px]
+  theta <- g[px + ind_q]
+  zeta <- cumsum(c(theta[1L], exp(theta[-1L])))
+  beta.var <- theta.var <- zeta.var <- rep(NA, q)
+  
+  
+  H <- g.covar  # solve(g.hess * n)
+  H_theta=g.covar[px + ind_q,px + ind_q]
+  beta.var <- diag(H)[seq_len(px)]
+  theta.var <- diag(H)[px+seq_len(q)]
+  
+  #Jacobian of theta transformation
+  theta_jac=matrix(0,q,q)
+  theta_jac[1,1]=1 #First row
+  for(i in 2:q){   
+    theta_jac[i,1:i]=c(1, exp(theta[2:q]))
   }
-  # get b_meta as initial bbar
-  bhat <- rep(0, px)
-  vbhat <- rep(0, px)     # cov matrix?
   
-  for(site_i in control$sites){
-    init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-    bhat = rbind(bhat, init_i$bhat_i)
-    vbhat = rbind(vbhat, init_i$Vhat_i)
-  }
-  bhat = bhat[-1,]
-  vbhat = vbhat[-1,]
+  #Building the entire jacobian matrix beta and alpha (as function of theta)
+  jac=matrix(0,length(g),length(g))
+  jac[1:px,1:px]=diag(px)
+  jac[(px+1):length(g),(px+1):length(g)]=theta_jac
   
-  #estimate from meta-analysis
-  betameta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = T)})/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
-  vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
+  vcov=jac%*%H%*%t(jac) #multivariate delta method to transform covariance matrix from beta,theta to beta,zeta (original scale)
   
- return(list(bbar=betameta,vmeta=vmeta))
+  return(list(beta = beta, theta = theta, zeta = zeta, 
+              beta.var = beta.var, theta.var=theta.var, zeta.var = zeta.var,vcov=vcov))
 }
 
 
