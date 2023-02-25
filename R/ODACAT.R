@@ -37,18 +37,13 @@ ODACAT.family <- 'multicategory'
 ODACAT.initialize <- function(ipdata,control,config){
   n=nrow(ipdata)
   p=ncol(ipdata[,2:ncol(ipdata)])
-  print("p")
-  print(p)
   x= as.matrix(ipdata[,2:ncol(ipdata)])   # intercept will be added in model.fit... 
   y= as.matrix(ipdata[,1])
   
   #Proportional Odds Logistic Regression
   if(control$ordinal_categories==FALSE){
     b.t=rep(0,(p+1)*(control$number_outcome_categories-1))
-    print("b.t.")
-    print(b.t)
     fit.p=model.fit(x=x, y=y, b0=b.t, model = 'mlr')
-    print(fit.p)
     init=list(site = config$site_id,
               site_size = n,
               bhat_i = as.vector(fit.p$res$par),
