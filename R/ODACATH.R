@@ -210,6 +210,7 @@ ODACATH.estimate <- function(ipdata,control,config) {
     beta_indices=beta_indices[-eta_indices]
   }
   
+  K = length(control$sites)
   S_site_mat <- matrix(NA, K, beta_length)
   eta_mat=matrix(NA,K,eta_length)
   bbar_mat=matrix(NA, K, beta_length) #Will be the same for each site but just need to capture for this function
@@ -274,7 +275,7 @@ ODACATH.estimate <- function(ipdata,control,config) {
                  eta_mat=eta_mat,
                  eta_mat_theta=NULL,
                  site=config$site_id, 
-                 site_size=n_site,
+                 site_size=n,
                  vcov=vcov)
   }else{
     
@@ -291,7 +292,7 @@ ODACATH.estimate <- function(ipdata,control,config) {
                  eta_mat=eta_mat_alpha,
                  eta_mat_theta=eta_mat,
                  site=config$site_id, 
-                 site_size=n_site,
+                 site_size=n,
                  vcov=vcov)
   }
   
