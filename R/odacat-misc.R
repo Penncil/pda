@@ -140,7 +140,7 @@ model.fit <- function(x, y, model='polr', b0){
   if(missing(b0)) b0 = rep(0, pp) 
   
   # ll <- function(g) polr.logL(g, x, y, wt, offset, method) 
-  res <- optim(b0, model.logL, x=x, y=y, model=model, method="BFGS", hessian=T, control = list(maxit=1000,reltol=1e-6))
+  res <- optim(b0, model.logL, x=x, y=y, model=model, method="BFGS", hessian=T,control = list(maxit=500,reltol=1e-8))
 
   tt = list()
   
