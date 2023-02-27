@@ -156,7 +156,6 @@ ODACATH.derive <- function(ipdata,control,config){
   #Local Site
   site_name=config$site_id
   site=match(site_name,control$sites) #Site index
-  model = control$model
   #site =as.numeric(substr(siteid,nchar(siteid), nchar(siteid)))
   S_site=regular_es(beta=bbar,eta=eta_mat[site,],x=x,y=y,eta_indices=eta_indices,model=model)*n #Will divide the sum across all sites for N
   
