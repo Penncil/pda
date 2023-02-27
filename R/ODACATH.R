@@ -97,8 +97,8 @@ ODACATH.initialize <- function(ipdata,control,config){
     
     init=list(site = config$site_id,
               site_size = n,
-              bhat_beta_i =beta0_record ,
-              Vhat_beta_i =V_beta ,
+              bhat_i =beta0_record ,
+              Vhat_i =V_beta ,
               bhat_eta_i=eta0_record,
               Vhat_eta_i=V_eta,
               beta=tt$beta,  
