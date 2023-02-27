@@ -124,6 +124,7 @@ ODACATH.derive <- function(ipdata,control,config){
   x= as.matrix(ipdata[,2:ncol(ipdata)])   
   y= as.matrix(ipdata[,1])
   if(control$ordinal_categories==FALSE){
+    model = "mlr"
     l_tot=(p+1)*(control$number_outcome_categories-1)
     beta_length=p*(control$number_outcome_categories-1)
     eta_length=control$number_outcome_categories-1
@@ -133,6 +134,7 @@ ODACATH.derive <- function(ipdata,control,config){
     # beta_indices=seq(1:l_tot)
     # beta_indices=beta_indices[-eta_indices]
   }else{
+    model = "polr"
     l_tot=p+(control$number_outcome_categories-1)
     beta_length=p
     eta_length=control$number_outcome_categories-1
@@ -144,13 +146,12 @@ ODACATH.derive <- function(ipdata,control,config){
   }
   
  
-  bbar <- control$beta_init # read the meta-ininitalized value from control.json file
-  eta_mat=control$bhat_eta[,eta_indices]
+  bbar = control$beta_init
+  eta_mat = matrix(unlist(control$bhat_eta),ncol = length(eta_indices), byrow = TRUE)
   
   x= as.matrix(ipdata[,2:ncol(ipdata)])   # intercept will be added in model.fit... 
   y= as.matrix(ipdata[,1])
   
-  print(eta_indices)
   #Efficient Score within Site evaluated at beta-bar
   #Local Site
   site_name=config$site_id
