@@ -322,16 +322,17 @@ ODACATH.synthesize <- function(ipdata,control,config) {
   }
   
   K <- length(control$sites)
-  btilde_matrix=matrix(0,px,px)
+  btilde_matrix=matrix(0,K,px)
   vcov_sum <- rep(0, px)  
-  btilde.var_matrix=matrix(0,px,px)
-  
-  
+  btilde.var_matrix=matrix(0,K,px)
+  i = 1
   for(site_i in control$sites){
     surr_i <- pdaGet(paste0(site_i,'_estimate'),config)
     btilde_matrix[i,]=surr_i$btilde
-    btilde.var_matrix[i,]=diag(surr_i$vcov)
-    vcov_sum <- vcov_sum + surr_i$vcov
+    btilde.var_matrix[i,] = diag(matrix(unlist(surr_i$vcov),ncol = length(surr_i$vcov[[1]]), byrow = TRUE))
+    print(btilde.var_matrix)
+    vcov_sum <- vcov_sum + matrix(unlist(surr_i$vcov),ncol = length(surr_i$vcov[[1]]), byrow = TRUE)
+    i = i + 1
   }
   
   # inv-Var weighted average est, and final Var = average Var-tilde
