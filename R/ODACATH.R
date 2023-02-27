@@ -189,6 +189,7 @@ ODACATH.estimate <- function(ipdata,control,config) {
   x= as.matrix(ipdata[,2:ncol(ipdata)])   
   y= as.matrix(ipdata[,1])
   if(control$ordinal_categories==FALSE){
+    model = "mlr"
     l_tot=(p+1)*(control$number_outcome_categories-1)
     beta_length=p*(control$number_outcome_categories-1)
     eta_length=control$number_outcome_categories-1
@@ -198,6 +199,7 @@ ODACATH.estimate <- function(ipdata,control,config) {
     beta_indices=seq(1:l_tot)
     beta_indices=beta_indices[-eta_indices]
   }else{
+    model = "polr"
     l_tot=p+(control$number_outcome_categories-1)
     beta_length=p
     eta_length=control$number_outcome_categories-1
@@ -218,6 +220,7 @@ ODACATH.estimate <- function(ipdata,control,config) {
     S_site_mat[i,]=derivatives_i$S_site
     eta_mat[i,]=derivatives_i$eta
     nn[i]=derivatives_i$site_size
+    bbar_mat[i,]=derivatives_i$bbar
   }
   N=sum(nn)
   
