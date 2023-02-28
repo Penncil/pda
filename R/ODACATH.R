@@ -145,9 +145,9 @@ ODACATH.derive <- function(ipdata,control,config){
     # beta_indices=beta_indices[-eta_indices]
   }
   
- 
+  
   bbar = control$beta_init
-  eta_mat = matrix(unlist(control$bhat_eta),ncol = length(eta_indices), byrow = TRUE)
+  eta_mat = unlist(control$bhat_eta)
   
   x= as.matrix(ipdata[,2:ncol(ipdata)])   # intercept will be added in model.fit... 
   y= as.matrix(ipdata[,1])
@@ -328,9 +328,8 @@ ODACATH.synthesize <- function(ipdata,control,config) {
   for(site_i in control$sites){
     surr_i <- pdaGet(paste0(site_i,'_estimate'),config)
     btilde_matrix[i,]=surr_i$btilde
-    btilde.var_matrix[i,] = diag(matrix(unlist(surr_i$vcov),ncol = length(surr_i$vcov[[1]]), byrow = TRUE))
-    print(btilde.var_matrix)
-    vcov_sum <- vcov_sum + matrix(unlist(surr_i$vcov),ncol = length(surr_i$vcov[[1]]), byrow = TRUE)
+    btilde.var_matrix[i,] = diag(unlist(surr_i$vcov))
+    vcov_sum <- vcov_sum + unlist(surr_i$vcov)
     i = i + 1
   }
   
