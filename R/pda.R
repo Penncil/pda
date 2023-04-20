@@ -388,6 +388,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     dGEM.steps<-c('initialize','derive','estimate','synthesize')
     dGEM.family<-'binomial'
     variables_site_level <- control$variables_site_level
+  }else if(control$model == 'OLGLM'){
+    OLGLM.steps<-c('initialize')
+    OLGLM.family<-'binomial'
   }
   
   family = get(paste0(control$model,'.family'))
@@ -477,6 +480,15 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
                                       model.matrix(formula, mf))
       control$risk_factor = colnames(ipdata)[-1]
     }
+  }else if(control$model=='OLGLM'){
+    if(control$step == "initialize"){
+      ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
+                                      model.matrix(formula, mf))
+      control$risk_factor = colnames(ipdata)[-1]
+    }else{
+      control$risk_factor = colnames(ipdata)[-1]
+    }
+    
   }
   
   
@@ -501,9 +513,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
         }
       }
     }else{
-      # print(control)
-      step_obj <- get(step_function)(ipdata, control, config)
-      # print(step_function)
+        step_obj <- get(step_function)(ipdata, control, config)
     }
     
     
@@ -592,6 +602,9 @@ pdaSync <- function(config){
   } else if(control$model=='dGEM'){
     dGEM.steps<-c('initialize','derive','estimate','synthesize')
     dGEM.family<-'binomial'
+  }else if(control$model == 'OLGLM'){
+    OLGLM.steps<-c('initialize')
+    OLGLM.family<-'binomial'
   }
   
   files<-pdaList(config) 
@@ -645,6 +658,72 @@ pdaSync <- function(config){
         message('sample size weighted average result:')
         #print(res)
         control$beta_init = bmeta
+      }else if(control$model == "OLGLM"){
+       
+        K <- length(control$sites)
+        if(control$heterogeneity == FALSE){
+          read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
+          
+          SXY <- read_AD$SXY[[1]]
+          Xtable <- as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
+          colnames(Xtable) <- c("intercept", control$variables, "n")
+          
+          Xcat <- Xtable[,colnames(Xtable)!='n']
+          Xcat <- as.matrix(Xcat)
+          counts <- Xtable$n
+          for(site_i in control$sites[-1]){
+            KSiteAD <- pdaGet(paste0(site_i,'_initialize'),config)
+            SXY <- SXY+KSiteAD$SXY[[1]]
+            
+            Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
+            colnames(Xtable) <- c("intercept", control$variables, "n")
+            counts <- counts + Xtable$n
+          }
+        }else{
+          read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
+          
+          SXY.intercept <- read_AD$SXY[[1]][1]
+          SXY.cov <- read_AD$SXY[[1]][-1]
+          Xtable <-as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
+          colnames(Xtable) <- c("intercept", control$variables, "n")
+          
+          Xcat0 <- Xtable[,colnames(Xtable)!='n']
+          Xcat <- Xcat0[,-1]
+          counts <- Xtable$n
+          
+          for(site_i in control$sites[-1]){
+            KSiteAD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
+            SXY.intercept <- c(SXY.intercept,KSiteAD$SXY[[1]][1])
+            SXY.cov <- SXY.cov+KSiteAD$SXY[[1]][-1]
+            
+            
+            Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
+            colnames(Xtable) <- c("intercept", control$variables, "n")
+            
+            Xcat0 <- Xtable[,colnames(Xtable)!='n']
+            Xcat_tmp <- Xcat0[,-1]
+            Xcat <- rbind(Xcat,Xcat_tmp)
+            counts <- c(counts, Xtable$n)
+          }
+          
+          SXY <- c(SXY.intercept,SXY.cov)
+          SiteID <- rep(1:K, each = nrow(Xcat0))
+          new.siteID <- sapply(1:K,function(i) ifelse(SiteID==i,1,0))
+          colnames(new.siteID) <- paste0("Site", 1:K)
+          Xcat <- cbind(new.siteID,Xcat)
+          Xcat <- as.matrix(Xcat)
+        }
+        
+        logLik_AD <- function(beta){
+          -(sum(SXY*beta)-sum(log(1+exp(Xcat%*%c(beta)))*counts))/sum(counts)
+        }
+        
+        fit.AD <- optim(par = rep(0, ncol(Xcat)), logLik_AD, method = "BFGS")
+        
+        res <- data.frame(est = fit.AD$par)
+        rownames(res) <- colnames(Xcat)
+        control$final_output = res
+        
       }else{
         if(control$lead_site %in% control$sites){
           bhat <-init_i$bhat_i 
@@ -711,6 +790,8 @@ pdaSync <- function(config){
         gamma_BLUP <- blup(gamma_meta_reg_new)$pred
         
         control$estimated_hospital_effect = gamma_BLUP
+      }else if(control$model == "OLGLM"){
+        message("You are done!")
       }
     }
     
