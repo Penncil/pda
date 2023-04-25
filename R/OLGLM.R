@@ -30,14 +30,14 @@ OLGLM.family <- 'binomial'
 #' @param control pda control data
 #' @param config local site configuration
 #' 
-#' @references Rui Duan, et al. "Learning from electronic health records across multiple sites: A communication-efficient and privacy-preserving distributed algorithm". 
-#'                Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocz199
+#' @references 
 #' @return init
 #' @keywords internal
 OLGLM.initialize <- function(ipdata,control,config){
 
-  Xmat <- ipdata[,-1] # remove first column, which is the outcome 
-  Y <- ipdata$status
+  
+  Xmat <- ipdata[,!colnames(ipdata) %in% control$outcome, with = FALSE] 
+  Y <- ipdata[,colnames(ipdata) %in% control$outcome, with = FALSE]
   Xmat.tbl <- data.frame(Xmat)
   category_combinations <- expand.grid(lapply(Xmat.tbl, unique),
                                        stringsAsFactors = FALSE)%>%arrange_all()
@@ -50,7 +50,7 @@ OLGLM.initialize <- function(ipdata,control,config){
     Xtable <- category_combinations%>%left_join(Xtable_initial,by = cols) %>% as.data.frame()
     Xtable$n[which(is.na(Xtable$n))] = 0
     colnames(Xtable) <- c(colnames(Xmat),'n')
-    if(is.null(control$cutoff)==FALSE){
+    if(is.numeric(control$cutoff)==TRUE){
       Xtable$n[Xtable$n>0 & Xtable$n <control$cutoff] <- rep(ceiling(control$cutoff/2))
     }
     SXY <- t(Y)%*%as.matrix(Xmat) 

@@ -663,8 +663,9 @@ pdaSync <- function(config){
         K <- length(control$sites)
         if(control$heterogeneity == FALSE){
           read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
+          print(read_AD$SXY)
           
-          SXY <- read_AD$SXY[[1]]
+          SXY <- read_AD$SXY
           Xtable <- as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
           colnames(Xtable) <- c("intercept", control$variables, "n")
           
@@ -673,7 +674,7 @@ pdaSync <- function(config){
           counts <- Xtable$n
           for(site_i in control$sites[-1]){
             KSiteAD <- pdaGet(paste0(site_i,'_initialize'),config)
-            SXY <- SXY+KSiteAD$SXY[[1]]
+            SXY <- SXY+KSiteAD$SXY
             
             Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
             colnames(Xtable) <- c("intercept", control$variables, "n")
@@ -682,8 +683,8 @@ pdaSync <- function(config){
         }else{
           read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
           
-          SXY.intercept <- read_AD$SXY[[1]][1]
-          SXY.cov <- read_AD$SXY[[1]][-1]
+          SXY.intercept <- read_AD$SXY[1]
+          SXY.cov <- read_AD$SXY[-1]
           Xtable <-as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
           colnames(Xtable) <- c("intercept", control$variables, "n")
           
@@ -693,8 +694,8 @@ pdaSync <- function(config){
           
           for(site_i in control$sites[-1]){
             KSiteAD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
-            SXY.intercept <- c(SXY.intercept,KSiteAD$SXY[[1]][1])
-            SXY.cov <- SXY.cov+KSiteAD$SXY[[1]][-1]
+            SXY.intercept <- c(SXY.intercept,KSiteAD$SXY[1])
+            SXY.cov <- SXY.cov+KSiteAD$SXY[-1]
             
             
             Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
@@ -720,8 +721,10 @@ pdaSync <- function(config){
         
         fit.AD <- optim(par = rep(0, ncol(Xcat)), logLik_AD, method = "BFGS")
         
-        res <- data.frame(est = fit.AD$par)
+        se <- sqrt(diag(solve(hessian(func = function(x) logLik_AD(x)*sum(counts), x = fit.AD$par))))
+        res <- data.frame(est = fit.AD$par, se = se)
         rownames(res) <- colnames(Xcat)
+        
         control$final_output = res
         
       }else{
