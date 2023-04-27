@@ -391,6 +391,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
   }else if(control$model == 'OLGLM'){
     OLGLM.steps<-c('initialize')
     OLGLM.family<-'binomial'
+  }else if(control$model == 'OLGLMM'){
+    OLGLMM.steps<-c('initialize')
+    OLGLMM.family<-'binomial'
   }
   
   family = get(paste0(control$model,'.family'))
@@ -490,6 +493,18 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     }
     
   }
+  else if(control$model=='OLGLMM'){
+    if (!is.null(ipdata)){
+      if(control$step == "initialize"){
+        ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
+                                        model.matrix(formula, mf))
+        control$risk_factor = colnames(ipdata)[-1]
+      }else{
+        control$risk_factor = colnames(ipdata)[-1]
+      }
+    }
+    
+  }
   
   
   if(is.character(control$step)){
@@ -512,8 +527,15 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
           step_obj <- get(step_function)(control, config)
         }
       }
-    }else{
+    }else if(control$model == "OLGLMM"){
+      if(is.null(ipdata) & (config$site_id == control$lead_site)){
+        print("As the leading site, you are going to produce the final results")
+      }else{
         step_obj <- get(step_function)(ipdata, control, config)
+      }
+    }
+    else{
+      step_obj <- get(step_function)(ipdata, control, config)
     }
     
     
@@ -606,6 +628,10 @@ pdaSync <- function(config){
     OLGLM.steps<-c('initialize')
     OLGLM.family<-'binomial'
   }
+  else if(control$model == 'OLGLMM'){
+    OLGLMM.steps<-c('initialize')
+    OLGLMM.family<-'binomial'
+  }
   
   files<-pdaList(config) 
   if(all(paste0(control$sites,"_",control$step) %in% files)){ # all init are ready
@@ -659,7 +685,7 @@ pdaSync <- function(config){
         #print(res)
         control$beta_init = bmeta
       }else if(control$model == "OLGLM"){
-       
+        
         K <- length(control$sites)
         if(control$heterogeneity == FALSE){
           read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
@@ -726,6 +752,53 @@ pdaSync <- function(config){
         rownames(res) <- colnames(Xcat)
         
         control$final_output = res
+        
+      }else if(control$model == "OLGLMM"){
+        for(site_i in control$site[1]){
+          AD = pdaGet(paste0(site_i,'_initialize'),config)
+          Xtable <- AD$Xtable
+          SY <- Xtable$SY
+          count <- Xtable$n
+          new_Xtable <- Xtable[,1:(1+length(control$variables))]
+          
+          new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
+          generate_Y <- function(Y_count, overall_count){
+            sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
+          }
+          new_Y <- unlist(mapply(generate_Y,SY,overall_count = count))
+          
+          output_0 = cbind(new_Y, new_X)
+          colnames(output_0) = c(control$outcome,"intercept",control$variables)
+          output_0$site <- site_i
+        }
+        
+        for(site_i in control$sites[-1]){
+          AD = pdaGet(paste0(site_i,'_initialize'),config)
+          Xtable <- AD$Xtable
+          SY <- Xtable$SY
+          count <- Xtable$n
+          new_Xtable <- Xtable[,1:(1+length(control$variables))]
+          
+          new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
+          generate_Y <- function(Y_count, overall_count){
+            sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
+          }
+          new_Y <- unlist(mapply(generate_Y,SY,overall_count = count))
+          
+          output = cbind(new_Y, new_X)
+          colnames(output) = c(control$outcome,"intercept",control$variables)
+          output$site <- site_i
+          output_0 <- rbind(output_0, output)
+        }
+        
+        
+        fit.pool.recons <- glmmPQL(as.formula(paste(control$outcome, paste(control$variables, collapse = "+"), sep = '~')), 
+                                   ~1|site, 
+                                   data = output_0,
+                                   family='binomial')
+        control$est <- fit.pool.recons$coefficients
+        control$varFix <- fit.pool.recons$varFix
+        control$rand_se <- fit.pool.recons$sigma
         
       }else{
         if(control$lead_site %in% control$sites){
