@@ -37,7 +37,6 @@ OLGLMM.initialize <- function(ipdata,control,config){
 
   
   Xmat <- ipdata[,!colnames(ipdata) %in% control$outcome, with = FALSE] 
-  print(Xmat)
   Y <- ipdata[,colnames(ipdata) %in% control$outcome, with = FALSE]
   Xmat.tbl <- data.frame(Xmat)
   category_combinations <- expand.grid(lapply(Xmat.tbl, unique),
