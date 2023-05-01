@@ -28,9 +28,9 @@ Imports:
   glmnet,
   MASS,
   numDeriv,
-  metafor
-  rootSolve
-  ordinal
+  metafor,
+  rootSolve,
+  ordinal,
   prodlim
 LinkingTo: 
   Rcpp, 
