@@ -46,7 +46,7 @@ OLGLMM.initialize <- function(ipdata,control,config){
   if(control$link == "canonical"){
     Xmat.tbl <- as_tibble(Xmat.tbl)
     cols <- colnames(Xmat.tbl)
-    Xtable_initial <- Xmat.tbl %>%group_by_at(.vars = cols)%>%summarise(n = n())
+    Xtable_initial <- Xmat.tbl %>%group_by_at(.vars = cols)%>%dplyr::summarise(n = n())
     Xtable <- category_combinations%>%left_join(Xtable_initial,by = cols) %>% as.data.frame()
     Xtable$n[which(is.na(Xtable$n))] = 0
     colnames(Xtable) <- c(colnames(Xmat),'n')
@@ -60,7 +60,7 @@ OLGLMM.initialize <- function(ipdata,control,config){
     SX_tbl <- matrix(NA, ncol = length(colnames(Xmat.tbl))^2, nrow = nrow(Xtable))
     unique_combine = nrow(Xtable)
     for (m in 1:unique_combine){
-      index = !is.na(row.match(Xmat.tbl, Xtable[m,1:(1+length(control$variables))]))
+      index = !is.na(prodlim::row.match(Xmat.tbl, Xtable[m,1:(1+length(control$variables))]))
       sub_Y = Y[index]
       sub_X = Xmat[index,]
       SX = t(sub_X) %*% as.matrix(sub_X) 
