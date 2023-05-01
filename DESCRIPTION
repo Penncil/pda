@@ -29,6 +29,9 @@ Imports:
   MASS,
   numDeriv,
   metafor
+  rootSolve
+  ordinal
+  prodlim
 LinkingTo: 
   Rcpp, 
   RcppArmadillo
