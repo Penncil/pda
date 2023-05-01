@@ -31,7 +31,8 @@ Imports:
   metafor,
   rootSolve,
   ordinal,
-  prodlim
+  prodlim,
+  dplyr
 LinkingTo: 
   Rcpp, 
   RcppArmadillo
