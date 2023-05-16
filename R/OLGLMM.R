@@ -40,14 +40,14 @@ OLGLMM.initialize <- function(ipdata,control,config){
   Y <- ipdata[,colnames(ipdata) %in% control$outcome, with = FALSE]
   Xmat.tbl <- data.frame(Xmat)
   category_combinations <- expand.grid(lapply(Xmat.tbl, unique),
-                                       stringsAsFactors = FALSE)%>%arrange_all()
+                                       stringsAsFactors = FALSE) %>% dplyr::arrange_all()
   colnames(Xmat.tbl) <- colnames(category_combinations)
   
   if(control$link == "canonical"){
-    Xmat.tbl <- as_tibble(Xmat.tbl)
+    Xmat.tbl <- dplyr::as_tibble(Xmat.tbl)
     cols <- colnames(Xmat.tbl)
-    Xtable_initial <- Xmat.tbl %>%group_by_at(.vars = cols)%>%dplyr::summarise(n = n())
-    Xtable <- category_combinations%>%left_join(Xtable_initial,by = cols) %>% as.data.frame()
+    Xtable_initial <- Xmat.tbl %>%dplyr::group_by_at(.vars = cols)%>%dplyr::summarise(n = dplyr::n())
+    Xtable <- category_combination s%>% dplyr::left_join(Xtable_initial,by = cols) %>% as.data.frame()
     Xtable$n[which(is.na(Xtable$n))] = 0
     colnames(Xtable) <- c(colnames(Xmat),'n')
     if(is.numeric(control$cutoff)==TRUE){
