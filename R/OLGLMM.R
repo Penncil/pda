@@ -47,7 +47,7 @@ OLGLMM.initialize <- function(ipdata,control,config){
     Xmat.tbl <- dplyr::as_tibble(Xmat.tbl)
     cols <- colnames(Xmat.tbl)
     Xtable_initial <- Xmat.tbl %>%dplyr::group_by_at(.vars = cols)%>%dplyr::summarise(n = dplyr::n())
-    Xtable <- category_combination s%>% dplyr::left_join(Xtable_initial,by = cols) %>% as.data.frame()
+    Xtable <- category_combinations%>% dplyr::left_join(Xtable_initial,by = cols) %>% as.data.frame()
     Xtable$n[which(is.na(Xtable$n))] = 0
     colnames(Xtable) <- c(colnames(Xmat),'n')
     if(is.numeric(control$cutoff)==TRUE){
