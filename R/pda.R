@@ -792,7 +792,7 @@ pdaSync <- function(config){
         }
         
         
-        fit.pool.recons <- glmmPQL(as.formula(paste(control$outcome, paste(control$variables, collapse = "+"), sep = '~')), 
+        fit.pool.recons <- MASS::glmmPQL(as.formula(paste(control$outcome, paste(control$variables, collapse = "+"), sep = '~')), 
                                    ~1|site, 
                                    data = output_0,
                                    family='binomial')
