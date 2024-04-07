@@ -20,6 +20,13 @@
 
 # set in pda() ?
 dGEM.steps <- c('initialize','derive','estimate','synthesize')
+
+# Note: The implementation of downstream analysis (i..e, hospital profiling) will 
+# depend on the guidelines specified in the protocol, 
+# allowing for the optional implementation in alignment with project-specific needs. 
+# If a project's emphasis is on deploying a decentralized GLMM without hospital profiling, 
+# there is no necessity to proceed to 'estimate' step, as after 'derive', the coordianting
+# center will have the esimated common effects and random effects. 
 dGEM.family <- 'binomial'
 
 #' @useDynLib pda
