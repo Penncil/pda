@@ -42,10 +42,58 @@ dGEM.family <- 'binomial'
 #' @keywords internal
 dGEM.initialize <- function(ipdata,control,config){
   fit_i <- glm(status ~ 0+., data=ipdata,family = "binomial"(link = "logit"))  
+  fit_null <- glm(status ~ 1, data = ipdata, family = 'binomial')
+  R2 <- 1 - logLik(fit_i)/logLik(fit_null)
+  AIC <- AIC(fit_i)
+  BIC <- BIC(fit_i)
+
+
+  ### Split the data and then estimate the AUC
+  # Number of repetitions
+  n_repeats <- 50
+  
+  # Initialize a vector to store AUC values
+  auc_values <- numeric(n_repeats)
+  
+  # Repeat the process 50 times
+  set.seed(1234) # Set seed for reproducibility
+  for (i in 1:n_repeats) {
+    # Split the data into training and testing
+    sample_size <- floor(0.75 * nrow(ipdata))
+    train_indices <- sample(seq_len(nrow(ipdata)), size = sample_size)
+    train_data <- tmp_data_to_fit[train_indices, ]
+    test_data <- tmp_data_to_fit[-train_indices, ]
+    
+    # Check if test_data$outcome has two levels
+    if (length(unique(test_data$status)) < 2) {
+      next # Skip this iteration
+    }
+    
+    # Fit logistic regression model on training data
+    model <- glm(status ~ ., data = train_data, family = binomial)
+    
+    # Make predictions on the testing data
+    predictions <- predict(model, newdata = test_data, type = "response")
+    
+    # Calculate AUC
+    roc_curve <- roc(test_data$status, predictions)
+    auc_value <- auc(roc_curve)
+    
+    # Store AUC value
+    auc_values[i] <- auc_value
+  }
+  
+  # Calculate the average AUC
+  average_auc <- mean(auc_values)
+  
   init <- list(site = config$site_id,
                site_size = nrow(ipdata),
                bhat_i = fit_i$coef,
-               Vhat_i = diag(vcov(fit_i)))  # glm summary(fit_i)$coef[,2]^2 may omit NA's
+               Vhat_i = diag(vcov(fit_i)),
+              R2 = R2,
+              auc = average_auc,
+              AIC = AIC,
+              BIC = BIC)  # glm summary(fit_i)$coef[,2]^2 may omit NA's
   return(init)
 }
 
