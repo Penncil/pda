@@ -185,16 +185,19 @@ ODAC.derive <- function(ipdata,control,config){
     # px <- ncol(X)
     
     ## get the initial values, beta_bar (i.e., bbar), broadcasted by sites
-    bhat_wt_sum <- rep(0, px)
-    wt_sum <- rep(0, px)     # cov matrix?
-    
-    for(site_i in control$sites){
-      init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-      bhat_wt_sum <- bhat_wt_sum + init_i$bhat_i / init_i$Vhat_i
-      wt_sum <- wt_sum + 1 / init_i$Vhat_i  # cov matrix?
-    }
-    b_meta <- bhat_wt_sum / wt_sum
-    bbar <- b_meta
+    # bhat_wt_sum <- rep(0, px)
+    # wt_sum <- rep(0, px)     # cov matrix?
+    # 
+    # for(site_i in control$sites){
+    #   init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+    #   bhat_wt_sum <- bhat_wt_sum + init_i$bhat_i / init_i$Vhat_i
+    #   wt_sum <- wt_sum + 1 / init_i$Vhat_i  # cov matrix?
+    # }
+    # b_meta <- bhat_wt_sum / wt_sum
+    # bbar <- b_meta
+    ## (bug fix: AliFarnudi, 20240801) 
+    ## b_meta has already calculated from pdaSync lines 804-835 and stored in control
+    bbar = control$beta_init
      
     
     hasTies <- any(duplicated(ipdata$time)) 
