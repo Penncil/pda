@@ -52,7 +52,8 @@ ODAC.initialize <- function(ipdata,control,config){
                Vhat_i = summary(fit_i)$coef[,2]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
                site = config$site_id,
                site_size = nrow(ipdata)
-  init$Vhat_i <- ifelse(init$Vhat_i == 0, 1e-22, init$Vhat_i))
+  )
+  init$Vhat_i <- ifelse(init$Vhat_i == 0, 1e-22, init$Vhat_i)
   return(init)
 }
 
