@@ -49,7 +49,7 @@ ODAC.initialize <- function(ipdata,control,config){
   
   init <- list(T_i = T_i,
                bhat_i = fit_i$coef,
-               Vhat_i = summary(fit_i)$coef[,2]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
+               Vhat_i = summary(fit_i)$coef[,"se(coef)"]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
                site = config$site_id,
                site_size = nrow(ipdata))
   return(init)
