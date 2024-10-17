@@ -86,3 +86,18 @@
 #'   \item{X3}{the third covariate, binary}
 #' } 
 "ODACAT_ordinal"
+
+#' ODACH_CC simulated data 
+#'
+#' A simulated data set for ODACH with case-cohort design demonstration
+#'
+#' @format A data frame with 413 rows and 6 variables:
+#' \describe{
+#'   \item{site}{site id, 187 'site1', 133 'site2', 93 'site3'. The full_cohort_size are 800, 600 and 400} 
+#'   \item{subcohort}{1=subcohort, e.g. uniformly subsampled from full_cohort_size, 0=case} 
+#'   \item{time}{survival time}
+#'   \item{status}{censoring status 0=censored, 1=dead} 
+#'   \item{X1}{the first covariate, continuous}
+#'   \item{X2}{the second covariate, continuous} 
+#' } 
+"odach_cc"
