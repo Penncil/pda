@@ -394,6 +394,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
   }else if(control$model == 'OLGLMM'){
     OLGLMM.steps<-c('initialize')
     OLGLMM.family<-'binomial'
+  }else if(control$model == 'ODACH_CC'){ 
+    ODACH_CC.steps<-c('initialize','derive', 'estimate','synthesize')
+    ODACH_CC.family<-'cox'
   }
   
   family = get(paste0(control$model,'.family'))
@@ -491,9 +494,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     }else{
       control$risk_factor = colnames(ipdata)[-1]
     }
-    
-  }
-  else if(control$model=='OLGLMM'){
+  } else if(control$model=='OLGLMM'){
     if (!is.null(ipdata)){
       if(control$step == "initialize"){
         ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
@@ -503,7 +504,15 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
         control$risk_factor = colnames(ipdata)[-1]
       }
     }
-    
+  } else if(control$model=='ODACH_CC'){
+    if (!is.null(ipdata)){
+      ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
+                                      status=as.numeric(model.response(mf))[-c(1:n)],
+                                      subcohort = ipdata$subcohort,
+                                      # sampling_weight = ipdata$sampling_weight,
+                                      model.matrix(formula, mf)[,-1])
+      control$risk_factor = colnames(ipdata)[-c(1:3)] 
+    }
   }
   
   
@@ -627,10 +636,12 @@ pdaSync <- function(config){
   }else if(control$model == 'OLGLM'){
     OLGLM.steps<-c('initialize')
     OLGLM.family<-'binomial'
-  }
-  else if(control$model == 'OLGLMM'){
+  }else if(control$model == 'OLGLMM'){
     OLGLMM.steps<-c('initialize')
     OLGLMM.family<-'binomial'
+  }else if(control$model=='ODACH_CC'){  # ODACH with case-cohort design
+    ODACH_CC.steps<-c('initialize','derive', 'estimate','synthesize') 
+    ODACH_CC.family<-'cox'
   }
   
   files<-pdaList(config) 
