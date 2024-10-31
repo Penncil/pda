@@ -5,8 +5,8 @@ require(data.table)
 # rho = 0.2 
 # odach_cc$sampling_weight[synthetic_data$subcohort==1] = 1/rho  
   
-load('/Users/chongliangluo/Library/CloudStorage/Dropbox/PDA-git/pda/data/odach_cc.rda')
-setwd('/Users/chongliangluo/Library/CloudStorage/Dropbox/PDA_test/CL/')
+# load('/Users/chongliangluo/Library/CloudStorage/Dropbox/PDA-git/pda/data/odach_cc.rda')
+# setwd('/Users/chongliangluo/Library/CloudStorage/Dropbox/PDA_test/CL/')
 
 ## In the toy example below we aim to analyze the association of survival {time} with X1 and X2 using Cox reg with case-cohort design,
 ## data(odach_cc) simulated, subsampled case+cohort data, 3 sites: 'site1', 'site2', 'site3'
@@ -77,8 +77,7 @@ pda(site_id = 'site1', control = control, dir = mydir)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site3: enter "1" to allow tranferring your local estimate
-pda(site_id = 'site3', ipdata = data_split[[3]], dir=mydir)
-ODACH_CC.initialize(ipdata,control,config)
+pda(site_id = 'site3', ipdata = data_split[[3]], dir=mydir) 
   
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site2: enter "1" to allow tranferring your local estimate
