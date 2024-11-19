@@ -51,7 +51,7 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   # coxph with case-cohort design
   ipdata$ID = 1:nrow(ipdata) # for running cch... 
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  formula <- as.formula(paste("Surv(time, status) ~", paste(control$variables, collapse = "+")))
+  formula <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor, collapse = "+")))
   fit_i <- survival::cch(formula, data = ipdata, subcoh = ~subcohort, id = ~ID, 
                          cohort.size = full_cohort_size, method = control$method)
   # fit_i$var # summary(fit_i)$coef[,2]^2
@@ -159,6 +159,7 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
                fn = logL_tilde,
                # gr = logL_tilde_D1,
                hessian = TRUE,
+               method = control$optim_method,
                control = list(maxit=control$optim_maxit))
   
   surr <- list(bbar=bbar, full_cohort_size=full_cohort_size, 

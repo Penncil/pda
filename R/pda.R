@@ -21,24 +21,28 @@
 #' @useDynLib pda
 #' @title Function to upload object to cloud as json
 #' 
-#' @usage pdaPut(obj,name,config)
+#' @usage pdaPut(obj,name,config,upload_without_confirm)
 #' @param obj R object to encode as json and uploaded to cloud
 #' @param name of file
 #' @param config a list of variables for cloud configuration
+#' @param upload_without_confirm logical. TRUE if want silent upload, no interactive confirm 
 #' @importFrom utils menu
 #' @return NONE
 #' @seealso \code{pda}
 #' @export
-pdaPut <- function(obj,name,config){
-  obj_Json <- jsonlite::toJSON(obj, digits = 10)
+pdaPut <- function(obj,name,config,upload_without_confirm){
+  obj_Json <- jsonlite::toJSON(obj, digits = 8)
   file_name <- paste0(name, '.json')
-  if(interactive()) {
-    if(!is.null(config$uri)){
-      message(paste("Put",file_name,"on public cloud:"))
-    }else{
-      message(paste("Put",file_name,"on local directory", config$dir, ':'))
-    }
-    message(obj_Json)
+  
+  if(!is.null(config$uri)){
+    message(paste("Put",file_name,"on public cloud:"))
+  }else{
+    message(paste("Put",file_name,"on local directory", config$dir, ':'))
+  }
+  message(obj_Json)
+  
+  # if(interactive()) {
+  if(upload_without_confirm==F) {
     authorize = menu(c("Yes", "No"), title="Allow transfer?")
   } else {
     authorize = "1"
@@ -172,7 +176,8 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' @param dir directory for shared flat file cloud
 #' @param uri Universal Resource Identifier for this run
 #' @param secret password to authenticate as site_id on uri
-#' @param hosdata hospital-level data, should include the same name as defined in the control file
+#' @param upload_without_confirm logical. TRUE if want silent upload, no interactive confirm 
+#' @param hosdata (for dGEM) hospital-level data, should include the same name as defined in the control file
 #' @return control
 #' @seealso \code{pdaPut}, \code{pdaList}, \code{pdaGet}, \code{getCloudConfig} and \code{pdaSync}.
 #' @import stats survival rvest jsonlite data.table httr Rcpp metafor
@@ -299,11 +304,14 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' 
 #' @return control
 #' @export
-pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,hosdata=NULL){
+pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
+                upload_without_confirm=F,  
+                hosdata=NULL # for dGEM
+                ){ 
   config <- getCloudConfig(site_id,dir,uri,secret)
   #add a control if one was provided
   if(!(is.null(control)) &&  config$site_id==control$lead_site) { # control$sites[1]
-    pdaPut(obj=control,name='control',config=config)
+    pdaPut(obj=control,name='control',config=config,upload_without_confirm)
     return(control)    # ?
   }
   control = pdaGet('control',config)
@@ -416,9 +424,15 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
       variables <- control$variables
     }
     formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
-    mf <- model.frame(formula, ipdata, xlev=control$xlev)
+    mf <- model.frame(formula, ipdata, xlev=control$variables_lev)
   } 
   
+  # Data sanity check: columns with no variation, or missed categorical levels...
+  # if detected, may need to revise the data at this site, or 
+  #     exclude problematic variables from the protocol, or
+  #     exclude the site
+  svd_d = svd(model.matrix(formula, mf))$d
+  if(sum(svd_d < 1e-10)>=1) warning(site_id, ': data degeneration detected!!! Please discuss with your collaborators!')
   
   ## this is used in model.matrix(contrasts=...)
   # if(options()$contrasts['unordered']=="contr.treatment") options(contrasts = c("contr.treatment", "contr.poly"))
@@ -564,18 +578,18 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
     }
     
     if(!is.null(ipdata)){
-      pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
+      pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm)
     }else{
       if(control$model == "dGEM"){
         if(control$step == "synthesize"){
-          pdaPut(step_obj,paste0(config$site_id,'_',control$step),config)
+          pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm)
         }
       }
     }
     
     #sync needed?
     if(config$site_id==control$lead_site) {
-      control<-pdaSync(config)
+      control<-pdaSync(config,upload_without_confirm)
     }
   }
   invisible(control)
@@ -591,7 +605,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,h
 #' @return control
 #' @seealso \code{pda}
 #' @export  
-pdaSync <- function(config){  
+pdaSync <- function(config,upload_without_confirm){  
   control = pdaGet('control',config)
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
@@ -844,6 +858,10 @@ pdaSync <- function(config){
         vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
         res = list(bmeta = bmeta, vmeta = vmeta)
         message('meta analysis (inverse variance weighted average) result:')
+        
+        ## sanity check: use more robust weighted median as init? 
+        # bmeta = apply(bhat, 2, function(a) spatstat::weighted.median(a, site_size) )
+        
         #print(res)
         control$beta_init = bmeta
         if (control$model == "ODACATH"){
@@ -910,7 +928,7 @@ pdaSync <- function(config){
     control$step = NULL
   }
   message(mes)
-  pdaPut(control,'control',config)
+  pdaPut(control,'control',config,upload_without_confirm)
   control
   
 }

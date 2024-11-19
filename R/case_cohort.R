@@ -1,5 +1,8 @@
 
-## prepare calculation for case-cohort  design
+## prepare calculation for case-cohort design at ONE site
+# the purpose of this function is to "pre-calculate" the weight before calculating the log-likelihood
+# this would accelerate the subsequent calculation of log-likelihood
+# currently, we only provide Prentice weight; more options will be provided later
 prepare_case_cohort <- function(ipdata, method, full_cohort_size){
   # for each site, pre-calculate the failure time points, the risk sets, and the respective weights
 
@@ -126,3 +129,31 @@ hess_plk <- function(beta, cc_prep){
   return(res)
 }
 
+
+
+# this function fits Cox PH to case-cohort (survival::cch) with the pooled multi-site data
+cch_pooled <- function(formula, data, subcoh='subcohort', site='site',
+                       full_cohort_size, method = "Prentice", optim_method = "BFGS"
+                       ){ 
+  n = nrow(data)  
+  site_uniq = unique(data[,site]) 
+  # formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
+  mf <- model.frame(formula, data)
+  
+  ipdata = data.table::data.table(site=data[,site],
+                                  time=as.numeric(model.response(mf))[1:n], 
+                                  status=as.numeric(model.response(mf))[-c(1:n)],
+                                  subcohort = data[,subcoh], 
+                                  model.matrix(formula, mf)[,-1]) 
+  
+  initial_beta = rep(0, ncol(ipdata)-4)
+  names(initial_beta) = names(ipdata)[-c(1:4)]
+  pool_fun <- function(beta) sum(sapply(site_uniq, function(site_id) 
+        log_plk(beta, prepare_case_cohort(ipdata[site==site_id,-'site'], method, full_cohort_size[site_id]))))
+  # pool_fun(initial_beta)
+  
+  result <- optim(par = initial_beta, fn = pool_fun, 
+                  control = list(fnscale = -1), method = optim_method ) 
+   
+  return(result)
+}
