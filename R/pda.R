@@ -525,6 +525,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
                                       subcohort = ipdata$subcohort,
                                       # sampling_weight = ipdata$sampling_weight,
                                       model.matrix(formula, mf)[,-1])
+      # convert irregular risk factor names, e.g. `Group (A,B,C) B` to Group..A.B.C..B
+      # this should (and will) apply to all other models...
+      ipdata = data.table(data.frame(ipdata)) 
       control$risk_factor = colnames(ipdata)[-c(1:3)] 
     }
   }
