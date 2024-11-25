@@ -132,6 +132,7 @@ hess_plk <- function(beta, cc_prep){
 
 
 # this function fits Cox PH to case-cohort (survival::cch) with the pooled multi-site data
+#' @export
 cch_pooled <- function(formula, data, subcoh='subcohort', site='site',
                        full_cohort_size, method = "Prentice", optim_method = "BFGS"
                        ){ 
