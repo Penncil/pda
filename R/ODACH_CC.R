@@ -157,9 +157,12 @@ ODACH_CC.estimate <- function(ipdata, control, config) {
   # X <- as.matrix(ipdata[,-c(1:3)])
   # n <- length(time)
   # px <- ncol(X)
-  px <- ncol(ipdata) - 3
+  if ("tenter" %in% colnames(ipdata)) {
+    px <- ncol(ipdata) - 4
+  } else {
+    px <- ncol(ipdata) - 3
+  }
   # hasTies <- any(duplicated(ipdata$time))
-
   # download derivatives of other sites from the cloud
   # calculate 2nd order approx of the total logL
   logL_all_D1 <- rep(0, px)
