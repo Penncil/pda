@@ -52,16 +52,34 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   ipdata$ID = 1:nrow(ipdata) # for running cch... 
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
   formula <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor, collapse = "+")))
-  fit_i <- survival::cch(formula, data = ipdata, subcoh = ~subcohort, id = ~ID, 
-                         cohort.size = full_cohort_size, method = control$method)
-  # fit_i$var # summary(fit_i)$coef[,2]^2
+  fit_i <- tryCatch(survival::cch(formula, data = ipdata, subcoh = ~subcohort, id = ~ID, 
+                         cohort.size = full_cohort_size, method = control$method), error=function(e) NULL)  
   
-  init <- list(bhat_i = fit_i$coef,
-               Vhat_i = summary(fit_i)$coef[,"SE"]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
-               site = config$site_id,
-               site_size = nrow(ipdata),
-               full_cohort_size = full_cohort_size, 
-               method = control$method)
+  if(!is.null(fit_i)){
+    ## get intermediate for robust variance est of ODACH_CC est
+    # fit_i$var # summary(fit_i)$coef[,2]^2
+    full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
+    cc_prep = prepare_case_cohort(ipdata[,-'ID'], control$method, full_cohort_size) 
+    logL_D2 <- hess_plk(fit_i$coef, cc_prep)
+    S_i <- logL_D2 %*% fit_i$var %*% logL_D2 # Skhat in Yudong's note...
+      
+    init <- list(bhat_i = fit_i$coef,
+                 Vhat_i = summary(fit_i)$coef[,"SE"]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
+                 S_i = S_i, 
+                 site = config$site_id,
+                 site_size = nrow(ipdata),
+                 full_cohort_size = full_cohort_size, 
+                 method = control$method)
+  } else{
+    init <- list(bhat_i = NA,
+                 Vhat_i = NA,  
+                 S_i = NA,
+                 site = config$site_id,
+                 site_size = nrow(ipdata),
+                 full_cohort_size = full_cohort_size, 
+                 method = control$method)
+  }
+  
   return(init)
 }
  
@@ -149,10 +167,7 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   logL_diff_D1 <- logL_all_D1 - logL_local_D1(bbar)  # / N / n
   logL_diff_D2 <- logL_all_D2 - logL_local_D2(bbar)  # / N / n
   logL_tilde <- function(b) -(logL_local(b) + sum(b * logL_diff_D1) + 1/2 * t(b-bbar) %*% logL_diff_D2 %*% (b-bbar)) #  / n
-  # logL_tilde_D1 <- function(b) -(logL_local_D1(b) / n + logL_diff_D1 + logL_diff_D2 %*% (b-bbar))
-  # cat(logL_diff_D1)
-  # cat(logL_diff_D2)
-  # cat(logL_tilde(bbar+0.2))
+  # logL_tilde_D1 <- function(b) -(logL_local_D1(b) / n + logL_diff_D1 + logL_diff_D2 %*% (b-bbar)) 
   
   # optimize the surrogate logL 
   sol <- optim(par = bbar, 
@@ -162,9 +177,16 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
                method = control$optim_method,
                control = list(maxit=control$optim_maxit))
   
-  surr <- list(bbar=bbar, full_cohort_size=full_cohort_size, 
-               btilde = sol$par, Htilde = sol$hessian, site=config$site_id, site_size=nrow(ipdata))
+  # robust var estimate: see Yudong's note
+  # setilde = sqrt(diag(solve(sol$hessian))/N)
+  # hess of surrogate log-L at btilde, this is slightly diff than Yudong's, to avoid another iteration...
+  logL_tilde_D2 = logL_local_D2(bbar) + logL_diff_D2 
+  # put together
+  Stilde = solve(logL_tilde_D2) %*% control$S_i_sum %*% solve(logL_tilde_D2)
+  setilde = sqrt(diag(Stilde))
   
+  surr <- list(bbar=bbar, full_cohort_size=full_cohort_size, 
+               btilde = sol$par, setilde=setilde, Htilde = sol$hessian, site=config$site_id, site_size=nrow(ipdata))
   return(surr)
 }
 
@@ -182,8 +204,7 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
 #' @import Rcpp  
 #' @return  list(btilde=btilde,  Vtilde=Vtilde)
 #' @keywords internal
-ODACH_CC.synthesize <- function(ipdata,control,config) {
-  
+ODACH_CC.synthesize <- function(ipdata,control,config) { 
   px <- length(control$risk_factor)
   K <- length(control$sites)
   btilde_wt_sum <- rep(0, px)

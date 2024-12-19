@@ -45,13 +45,22 @@ ODAC.initialize <- function(ipdata,control,config){
   }else{
     T_i <- NA
   }
-  fit_i <- survival::coxph(survival::Surv(time, status) ~ ., data=ipdata)
+  fit_i <- tryCatch(survival::coxph(survival::Surv(time, status) ~ ., data=ipdata), error=function(e) NULL)
   
-  init <- list(T_i = T_i,
-               bhat_i = fit_i$coef,
-               Vhat_i = summary(fit_i)$coef[,"se(coef)"]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
-               site = config$site_id,
-               site_size = nrow(ipdata))
+  if(!is.null(fit_i)){
+    init <- list(T_i = T_i,
+                 bhat_i = fit_i$coef,
+                 Vhat_i = summary(fit_i)$coef[,"se(coef)"]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
+                 site = config$site_id,
+                 site_size = nrow(ipdata))
+  } else{
+    init <- list(T_i = T_i,
+                 bhat_i = NA,
+                 Vhat_i = NA,   
+                 site = config$site_id,
+                 site_size = nrow(ipdata))
+  }
+  
   return(init)
 }
 
@@ -280,10 +289,13 @@ ODAC.estimate <- function(ipdata,control,config) {
                fn = logL_tilde,
                # gr = logL_tilde_D1,
                hessian = TRUE,
+               method = control$optim_method,
                control = list(maxit=control$optim_maxit))
   
-  surr <- list(btilde = sol$par, Htilde = sol$hessian, site=config$site_id, site_size=nrow(ipdata))
+  # var estimate: by inv hessian 
+  setilde = sqrt(diag(solve(sol$hessian))/N)
   
+  surr <- list(btilde = sol$par, setilde=setilde, Htilde = sol$hessian, site=config$site_id, site_size=nrow(ipdata))
   return(surr)
 }
 
