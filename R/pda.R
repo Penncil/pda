@@ -872,7 +872,7 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
         } else if(control$init_method == 'median'){ 
           bmeta = apply(bhat, 2, median, na.rm=T) 
         } else if(control$init_method == 'weighted.median'){
-          bmeta = apply(bhat, 2, function(x) weighted.median(x, site_size))
+          bmeta = apply(bhat, 2, function(x) spatstat.univar::weighted.median(x, site_size))
         } else if(control$init_method == 'lead'){
           bmeta = bhat[control$sites==control$lead_site,]
         } #print(res)
