@@ -28,9 +28,11 @@ data_split <- split(odach_cc, odach_cc$site)
 fit.pool <- cch_pooled(Surv(time, status) ~ X1+`Group (A,B,C)`+Category, data=odach_cc,  
                        full_cohort_size=c(site1=800,site2=600,site3=400), method='Prentice')
 fit.pool$par
-#          X1      GroupB      GroupC   CategoryY   CategoryZ 
-# -0.50824965  0.12309366  0.25814696 -0.25125968  0.03014395 
- 
+#          X1   `Group (A,B,C)`B  `Group (A,B,C)`C CategoryY (X,Y,Z) CategoryZ (X,Y,Z) 
+# -0.50824965         0.12309366        0.25814696      -0.25125968         0.03014395 
+sqrt(diag(-solve(fit.pool$hessian)))
+# 0.1097648         0.3183301         0.2966302         0.3044304         0.2829128 
+
 
 # cch each site
 sapply(1:3, function(i) cch(Surv(time, status) ~ X1+`Group (A,B,C)`+Category, 
@@ -38,6 +40,12 @@ sapply(1:3, function(i) cch(Surv(time, status) ~ X1+`Group (A,B,C)`+Category,
                             subcoh = ~subcohort, id = ~ID, 
                             cohort.size =c(site1=800,site2=600,site3=400)[i], 
                             method = 'Prentice')$coef) 
+#                          [,1]       [,2]         [,3]
+# XX1                -0.5184543 -0.4707972 -0.610918824
+# X`Group (A,B,C)`B   0.4805595  0.2383644 -0.074294738
+# X`Group (A,B,C)`C   0.8929081  0.6133549 -1.371104126
+# XCategoryY (X,Y,Z) -0.5006887 -0.7252045  0.747914104
+# XCategoryZ (X,Y,Z) -0.1715390  0.1941511 -0.006210128
 
 sites = c('site1', 'site2', 'site3')
 S=readline(prompt="Type  <Return>   to continue : ")
@@ -55,6 +63,7 @@ control <- list(project_name = 'ODACH case-cohort toy example',
                                      Category=c('X (X,Y,Z)','Y (X,Y,Z)','Z (X,Y,Z)')),  
                 full_cohort_size = c(site1=800,site2=600,site3=400), # for ODACH_CC
                 method = 'Prentice',                          # for ODACH_CC weights
+                init_method = 'meta', # 'meta','median','weighted.median','lead'
                 optim_method = 'BFGS',
                 optim_maxit = 100,
                 lead_site = 'site1',
@@ -65,7 +74,7 @@ control <- list(project_name = 'ODACH case-cohort toy example',
 ## specify your working directory, default is the tempdir
 mydir <- getwd()   # tempdir()
 ## assume lead site1: enter "1" to allow transferring the control file
-pda(site_id = 'site1', control = control, dir = mydir, upload_without_confirm = T)
+pda(site_id = 'site1', control = control, dir = mydir, upload_without_confirm = T,silent_message =F)
 ## in actual collaboration, account/password for pda server will be assigned, thus:
 # pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')
 ## you can also set your environment variables, and no need to specify them in pda:
@@ -103,8 +112,16 @@ S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 3: estimate  ###############################
 ## assume lead site1: enter "1" to allow tranferring the surrogate estimate
 pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confirm=T)
-# [-0.50811268,0.12339569,0.25802334,-0.25067117,0.03074594]
-# this is almost identical to pooled cch!
+# "btilde":[-0.50811268,0.12339569,0.25802334,-0.25067117,0.03074594]
+# "setilde":[0.13333819,0.35353426,0.31805217,0.3313836,0.33198831]
+# btilde is almost identical to pooled cch!
+# setilde (robust) is slightly greater than inv-Hessian 
+
+config <- getCloudConfig(site_id =control$lead_site, dir=mydir)
+fit.pda = pdaGet(name = 'site1_estimate', config = config)
+sqrt(diag(solve(fit.pda$Htilde))) # inv-Hessian s.e. est
+# 0.1101771 0.3178109 0.2988028 0.3016307 0.2845887
+
 
 ## the PDA ODACH_CC is now completed!
 ## All the sites can still run their own surrogate estimates and broadcast them.

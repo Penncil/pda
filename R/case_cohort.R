@@ -182,11 +182,18 @@ cch_pooled <- function(formula, data, subcoh = "subcohort", site = "site",
     }))
   }
   # pool_fun(initial_beta)
+<<<<<<< HEAD
 
   result <- optim(
     par = initial_beta, fn = pool_fun,
     control = list(fnscale = -1), method = optim_method
   )
 
+=======
+  
+  result <- optim(par = initial_beta, fn = pool_fun, 
+                  control = list(fnscale = -1), method = optim_method, hessian = T) 
+   
+>>>>>>> master
   return(result)
 }

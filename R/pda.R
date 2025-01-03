@@ -30,16 +30,18 @@
 #' @return NONE
 #' @seealso \code{pda}
 #' @export
-pdaPut <- function(obj,name,config,upload_without_confirm){
+pdaPut <- function(obj,name,config,upload_without_confirm,silent_message=F){
+  mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
+  
   obj_Json <- jsonlite::toJSON(obj, digits = 8)
-  file_name <- paste0(name, '.json')
+  file_name <- paste0(name, '.json')  
   
   if(!is.null(config$uri)){
-    message(paste("Put",file_name,"on public cloud:"))
+    mymessage(paste("Put",file_name,"on public cloud:"))
   }else{
-    message(paste("Put",file_name,"on local directory", config$dir, ':'))
+    mymessage(paste("Put",file_name,"on local directory", config$dir, ':'))
   }
-  message(obj_Json)
+  mymessage(obj_Json)
   
   # if(interactive()) {
   if(upload_without_confirm==F) {
@@ -63,7 +65,7 @@ pdaPut <- function(obj,name,config,upload_without_confirm){
     url <- file.path(config$uri, file_name)
     # webdav PUT request to send a file to cloud
     r<-httr::PUT(url, body = httr::upload_file(file_path), httr::authenticate(config$site_id, config$secret, 'digest'))
-    message(paste("putting:",url))
+    mymessage(paste("putting:",url))
   }
 }
 
@@ -130,7 +132,8 @@ pdaGet <- function(name,config){
 #' @return A list of cloud parameters: site_id, secret and uri
 #' @seealso \code{pda}
 #' @export
-getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
+getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=T){
+  mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
   config<-list()
   pda_user<-Sys.getenv('PDA_USER')
   pda_secret<-Sys.getenv('PDA_SECRET')
@@ -148,7 +151,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
   } else if (pda_uri!='') {
     config$uri = pda_uri
   } else{
-    message('no cloud uri found! ')
+    mymessage('no cloud uri found! ')
   }
   
   if(!is.null(dir)) {
@@ -156,9 +159,10 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
   } else if (pda_dir!='') {
     config$dir = pda_dir
   }else{
-    message('no public or local directory supplied, use local temporary:', tempdir())
+    mymessage('no public or local directory supplied, use local temporary:', tempdir())
     config$dir = tempdir()
   }
+   
   config;
 }
 
@@ -305,19 +309,22 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL){
 #' @return control
 #' @export
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
-                upload_without_confirm=F,  
+                upload_without_confirm=F, silent_message=F, 
                 hosdata=NULL # for dGEM
                 ){ 
-  config <- getCloudConfig(site_id,dir,uri,secret)
+  config <- getCloudConfig(site_id,dir,uri,secret,silent_message)
+  mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
+  
   #add a control if one was provided
   if(!(is.null(control)) &&  config$site_id==control$lead_site) { # control$sites[1]
-    pdaPut(obj=control,name='control',config=config,upload_without_confirm)
+    pdaPut(obj=control,name='control',config=config,upload_without_confirm,silent_message)
     return(control)    # ?
   }
-  control = pdaGet('control',config)
-  message('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): ')
-  message('your site = ', config$site_id)  
-  
+  control = pdaGet('control',config) 
+  mymessage('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): ')
+  mymessage('your site = ', config$site_id)  
+   
+  ## specify pda steps and family based on model
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
     ODAL.family<-'binomial'
@@ -354,7 +361,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     ODACATH.steps <- c('initialize','derive','estimate','synthesize')
     ODACATH.family <- 'multicategory'
     if(control$heterogeneity==T){
-      message("You specified control$heterogeneity = T, so you are using the hetero-version of ODACAT.")
+      mymessage("You specified control$heterogeneity = T, so you are using the hetero-version of ODACAT.")
     }
   }else if(control$model=='DLM'){
     DLM.steps<-c('initialize', 'estimate')
@@ -368,7 +375,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       if(length(setdiff(control$variables_heterogeneity, c(control$variables, "Intercept")))!=0)
         stop('You specified control$heterogeneity = T, please also specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
       if(is.null(control$variables_heterogeneity)){
-        message('You specified control$heterogeneity = T, but no control$variables_heterogeneity, use "Intercept" as default!')
+        mymessage('You specified control$heterogeneity = T, but no control$variables_heterogeneity, use "Intercept" as default!')
         control$variables_heterogeneity <- 'Intercept'      
       }
     }
@@ -387,7 +394,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       stop('Please specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
     # stop('You specified control$heterogeneity = T, please also specify control$variables_heterogeneity as a SUBSET of "Intercept" and control$variables!')
     if(is.null(control$variables_heterogeneity)){
-      message('No control$variables_heterogeneity, use "Intercept" as default!')
+      mymessage('No control$variables_heterogeneity, use "Intercept" as default!')
       # message('You specified control$heterogeneity = T, but no control$variables_heterogeneity, use "Intercept" as default!')
       control$variables_heterogeneity <- 'Intercept'      
     }
@@ -408,14 +415,14 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
   }
   
   family = get(paste0(control$model,'.family'))
+  
   ## prepare the ipdata: make factor of all categorical variables to make dummy design matrix,
-  ## in case some X's are degenerate at some site, see model.matrix(contrasts=...)
+  # in case some X's are degenerate at some site, see model.matrix(contrasts=...)
   # xlev.contrasts <- control$xlev
   # for(ii in names(control$xlev)){
   #   ipdata[,ii] = factor(ipdata[,ii], levels = control$xlev[[ii]])
   #   xlev.contrasts[[ii]] = 'contr.treatment' # options("contrasts") default
-  # }
-  
+  # } 
   if (!is.null(ipdata)){
     n = nrow(ipdata)
     if(family=='hurdle'){           # count and zero parts for hurdle, Xcount first
@@ -443,6 +450,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
                                     status=as.numeric(model.response(mf))[-c(1:n)], 
                                     model.matrix(formula, mf)[,-1])
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else if(control$model=='ODAL'){
     ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
@@ -542,7 +550,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     }
   }
   
-  
+  ## execute the current step function
   if(is.character(control$step)){
     step_function <- paste0(control$model,'.', gsub('[^[:alpha:]]', '',control$step)) # "derive_1" for dPQL
     if(control$model == 'dGEM'){
@@ -574,35 +582,35 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       step_obj <- get(step_function)(ipdata, control, config)
     }
     
-    
+    ## pda completion message
     if(control$step=='estimate'){
       if(control$model=='DLM'){
-        message("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
+        mymessage("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
       }else{
         if(control$model=='dGEM'){
-          message("Congratulations, this the final step: you are transfering the counterfactural event rate. The lead site or coordinating center will broadcast the final results")
+          mymessage("Congratulations, this the final step: you are transfering the counterfactural event rate. The lead site or coordinating center will broadcast the final results")
         }else{
-          message("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
+          mymessage("Congratulations, the PDA is completed! You can continue broadcasting your surrogate estimate to further synthesize them.")
         }
       }
-      
     } else if(control$step==paste0('estimate_', control$maxround)){  # dPQL
-      message("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
+      mymessage("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
     }
     
+    ## write output to .json file
     if(!is.null(ipdata)){
-      pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm)
+      pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm,silent_message)
     }else{
       if(control$model == "dGEM"){
         if(control$step == "synthesize"){
-          pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm)
+          pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm,silent_message)
         }
       }
     }
     
-    #sync needed?
+    ## synchronize control file (at lead site)
     if(config$site_id==control$lead_site) {
-      control<-pdaSync(config,upload_without_confirm)
+      control<-pdaSync(config,upload_without_confirm,silent_message)
     }
   }
   invisible(control)
@@ -618,8 +626,10 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
 #' @return control
 #' @seealso \code{pda}
 #' @export  
-pdaSync <- function(config,upload_without_confirm){  
+pdaSync <- function(config,upload_without_confirm,silent_message=F){  
   control = pdaGet('control',config)
+  mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
+  
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
     ODAL.family<-'binomial'
@@ -700,7 +710,7 @@ pdaSync <- function(config,upload_without_confirm){
         vmeta_count = 1/apply(1/vbhat_count,2,function(x){sum(x, na.rm = TRUE)})
         res = list(bmeta_zero = bmeta_zero, vmeta_zero = vmeta_zero, 
                    bmeta_count = bmeta_count, vmeta_count = vmeta_count)
-        message('meta analysis (inverse variance weighted average) result:')
+        mymessage('meta analysis (inverse variance weighted average) result:')
         #print(res)
         control$beta_zero_init = bmeta_zero
         control$beta_count_init = bmeta_count
@@ -719,39 +729,33 @@ pdaSync <- function(config,upload_without_confirm){
         bmeta = apply(diag(vbhat[,1])%*%bhat,2,function(x){sum(x, na.rm = TRUE)})/sum(vbhat[,1], na.rm = TRUE)
         vmeta = NA
         res = list(bmeta = bmeta, vmeta = vmeta)
-        message('sample size weighted average result:')
+        mymessage('sample size weighted average result:')
         #print(res)
         control$beta_init = bmeta
-      }else if(control$model == "OLGLM"){
-        
+      }else if(control$model == "OLGLM"){ 
         K <- length(control$sites)
         if(control$heterogeneity == FALSE){
           read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
-          print(read_AD$SXY)
-          
+          # print(read_AD$SXY) 
           SXY <- read_AD$SXY
           Xtable <- as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
-          colnames(Xtable) <- c("intercept", control$variables, "n")
-          
+          colnames(Xtable) <- c("intercept", control$variables, "n") 
           Xcat <- Xtable[,colnames(Xtable)!='n']
           Xcat <- as.matrix(Xcat)
           counts <- Xtable$n
           for(site_i in control$sites[-1]){
             KSiteAD <- pdaGet(paste0(site_i,'_initialize'),config)
-            SXY <- SXY+KSiteAD$SXY
-            
+            SXY <- SXY+KSiteAD$SXY 
             Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
             colnames(Xtable) <- c("intercept", control$variables, "n")
             counts <- counts + Xtable$n
           }
         }else{
-          read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
-          
+          read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config) 
           SXY.intercept <- read_AD$SXY[1]
           SXY.cov <- read_AD$SXY[-1]
           Xtable <-as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
-          colnames(Xtable) <- c("intercept", control$variables, "n")
-          
+          colnames(Xtable) <- c("intercept", control$variables, "n") 
           Xcat0 <- Xtable[,colnames(Xtable)!='n']
           Xcat <- Xcat0[,-1]
           counts <- Xtable$n
@@ -759,12 +763,9 @@ pdaSync <- function(config,upload_without_confirm){
           for(site_i in control$sites[-1]){
             KSiteAD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
             SXY.intercept <- c(SXY.intercept,KSiteAD$SXY[1])
-            SXY.cov <- SXY.cov+KSiteAD$SXY[-1]
-            
-            
+            SXY.cov <- SXY.cov+KSiteAD$SXY[-1] 
             Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
-            colnames(Xtable) <- c("intercept", control$variables, "n")
-            
+            colnames(Xtable) <- c("intercept", control$variables, "n") 
             Xcat0 <- Xtable[,colnames(Xtable)!='n']
             Xcat_tmp <- Xcat0[,-1]
             Xcat <- rbind(Xcat,Xcat_tmp)
@@ -777,34 +778,27 @@ pdaSync <- function(config,upload_without_confirm){
           colnames(new.siteID) <- paste0("Site", 1:K)
           Xcat <- cbind(new.siteID,Xcat)
           Xcat <- as.matrix(Xcat)
-        }
-        
+        } 
         logLik_AD <- function(beta){
           -(sum(SXY*beta)-sum(log(1+exp(Xcat%*%c(beta)))*counts))/sum(counts)
-        }
-        
-        fit.AD <- optim(par = rep(0, ncol(Xcat)), logLik_AD, method = "BFGS")
-        
+        } 
+        fit.AD <- optim(par = rep(0, ncol(Xcat)), logLik_AD, method = "BFGS") 
         se <- sqrt(diag(solve(hessian(func = function(x) logLik_AD(x)*sum(counts), x = fit.AD$par))))
         res <- data.frame(est = fit.AD$par, se = se)
-        rownames(res) <- colnames(Xcat)
-        
-        control$final_output = res
-        
+        rownames(res) <- colnames(Xcat) 
+        control$final_output = res 
       }else if(control$model == "OLGLMM"){
         for(site_i in control$site[1]){
           AD = pdaGet(paste0(site_i,'_initialize'),config)
           Xtable <- AD$Xtable
           SY <- Xtable$SY
           count <- Xtable$n
-          new_Xtable <- Xtable[,1:(1+length(control$variables))]
-          
+          new_Xtable <- Xtable[,1:(1+length(control$variables))] 
           new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
           generate_Y <- function(Y_count, overall_count){
             sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
           }
-          new_Y <- unlist(mapply(generate_Y,SY,overall_count = count))
-          
+          new_Y <- unlist(mapply(generate_Y,SY,overall_count = count)) 
           output_0 = cbind(new_Y, new_X)
           colnames(output_0) = c(control$outcome,"intercept",control$variables)
           output_0$site <- site_i
@@ -815,20 +809,17 @@ pdaSync <- function(config,upload_without_confirm){
           Xtable <- AD$Xtable
           SY <- Xtable$SY
           count <- Xtable$n
-          new_Xtable <- Xtable[,1:(1+length(control$variables))]
-          
+          new_Xtable <- Xtable[,1:(1+length(control$variables))] 
           new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
           generate_Y <- function(Y_count, overall_count){
             sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
           }
-          new_Y <- unlist(mapply(generate_Y,SY,overall_count = count))
-          
+          new_Y <- unlist(mapply(generate_Y,SY,overall_count = count)) 
           output = cbind(new_Y, new_X)
           colnames(output) = c(control$outcome,"intercept",control$variables)
           output$site <- site_i
           output_0 <- rbind(output_0, output)
-        }
-        
+        } 
         
         fit.pool.recons <- MASS::glmmPQL(as.formula(paste(control$outcome, paste(control$variables, collapse = "+"), sep = '~')), 
                                    ~1|site, 
@@ -836,9 +827,8 @@ pdaSync <- function(config,upload_without_confirm){
                                    family='binomial')
         control$est <- fit.pool.recons$coefficients
         control$varFix <- fit.pool.recons$varFix
-        control$rand_se <- fit.pool.recons$sigma
-        
-      }else{
+        control$rand_se <- fit.pool.recons$sigma 
+      }else{ 
         if(control$lead_site %in% control$sites){
           bhat <-init_i$bhat_i 
           vbhat <- init_i$Vhat_i
@@ -855,36 +845,59 @@ pdaSync <- function(config,upload_without_confirm){
               }
             }
           }
-        }else{
+        }else{ # all other ODAX..
           init_i = pdaGet(paste0(control$sites[1],'_initialize'),config)
           bhat <-init_i$bhat_i 
           vbhat <- init_i$Vhat_i
-          
           for(site_i in control$sites[-1]){
             init_i <- pdaGet(paste0(site_i,'_initialize'),config)
             bhat = rbind(bhat, init_i$bhat_i)
             vbhat = rbind(vbhat, init_i$Vhat_i)
           }
         }
-        #estimate from meta-analysis
-        bmeta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
-        vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
-        res = list(bmeta = bmeta, vmeta = vmeta)
-        message('meta analysis (inverse variance weighted average) result:')
         
-        ## sanity check: use more robust weighted median as init? 
-        # bmeta = apply(bhat, 2, function(a) spatstat::weighted.median(a, site_size) )
+        site_size = c()
+        for(site_i in control$sites){ 
+          init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+          site_size <- c(site_size, init_i$site_size)
+        }
+        # print(site_size)
         
-        #print(res)
+        ## estimate for pda init: meta, or median, or lead est?...
+        if(control$init_method == 'meta'){
+          bmeta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
+          vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
+          # res = list(bmeta = bmeta, vmeta = vmeta)
+          mymessage('meta analysis (inverse variance weighted average) result:')
+        } else if(control$init_method == 'median'){ 
+          bmeta = apply(bhat, 2, median, na.rm=T) 
+        } else if(control$init_method == 'weighted.median'){
+          bmeta = apply(bhat, 2, function(x) weighted.median(x, site_size))
+        } else if(control$init_method == 'lead'){
+          bmeta = bhat[control$sites==control$lead_site,]
+        } #print(res)
         control$beta_init = bmeta
+        
+        ## robust var est for ODACH_CC est (might also for other ODAX later?)
+        if (control$model == "ODACH_CC"){
+          px = length(control$beta_init) 
+          K = length(control$sites)
+          S_i_sum = array(NA,c(px,px, K))
+          for(i in 1:K){ 
+            site_i = control$sites[i]
+            init_i <- pdaGet(paste0(site_i,'_initialize'),config)
+            S_i_sum[,,i] <- init_i$S_i
+          }
+          control$S_i_sum = apply(S_i_sum,c(1,2),sum,na.rm=T) 
+          # print(control$S_i_sum)
+        } 
+        
         if (control$model == "ODACATH"){
           control$bhat_eta = bhat_eta
-        }
-        
+        } 
       }
       mes <- 'beta_init added, step=2 (derivatives)! \n'
-    }
-    
+    } 
     
     if(control$step=='derive'){
       if(control$model == "dGEM"){
@@ -905,15 +918,12 @@ pdaSync <- function(config,upload_without_confirm){
         colnames(hosdata) = control$variables_site_level
         formula <- as.formula(paste("", paste(control$variables_site_level, collapse = "+"), sep = '~'))
         gamma_meta_reg_new = rma.uni(ghat, vghat, mods = formula, data = hosdata)
-        gamma_BLUP <- blup(gamma_meta_reg_new)$pred
-        
+        gamma_BLUP <- blup(gamma_meta_reg_new)$pred 
         control$estimated_hospital_effect = gamma_BLUP
       }else if(control$model == "OLGLM"){
-        message("You are done!")
+        mymessage("You are done!")
       }
-    }
-    
-    
+    }    
   }
   
   if(control$step=='synthesize'){
@@ -929,6 +939,7 @@ pdaSync <- function(config,upload_without_confirm){
     if(control$round<control$maxround) control$round <- control$round + 1
   }
   
+  ## update control with next step
   steps = get(paste0(control$model,'.steps'))
   current_index <-  which(steps==control$step)
   if(current_index < length(steps)) {
@@ -940,8 +951,9 @@ pdaSync <- function(config,upload_without_confirm){
     mes <- paste0('finished! \n')
     control$step = NULL
   }
-  message(mes)
-  pdaPut(control,'control',config,upload_without_confirm)
-  control
   
+  mymessage(mes)
+  pdaPut(control,'control',config,upload_without_confirm,silent_message)
+  
+  control
 }
