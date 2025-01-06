@@ -7,16 +7,14 @@ prepare_case_cohort <- function(ipdata, method, full_cohort_size) {
 
   # find over which position lies the failure times
   failure_position <- which(ipdata$status == 1)
-  # find failure times
-  failure_times <- ipdata$texit[which(ipdata$status == 1)]
-  # the number of failures
-  failure_num <- length(failure_times)
 
   risk_size <- 0
   risk_sets <- as.list(rep(NA, failure_num))
   risk_set_weights <- as.list(rep(NA, failure_num))
   if ("tenter" %in% colnames(ipdata)) {
     covariate <- as.matrix(ipdata[, -c(1:4)])
+    failure_times <- ipdata$texit[which(ipdata$status == 1)]
+    failure_num <- length(failure_times)
 
     for (j in 1:failure_num) {
       # Prentice weight: Subjects in the risk set (R_j) inside subcohort get a weight of 1
@@ -38,11 +36,15 @@ prepare_case_cohort <- function(ipdata, method, full_cohort_size) {
     }
   } else {
     covariate <- as.matrix(ipdata[, -c(1:3)])
+    failure_times <- ipdata$time[which(ipdata$status == 1)]
+    # the number of failures
+    failure_num <- length(failure_times)
 
-    # full_cohort_size = nrow(ipdata) # ?
     Barlow_IPW <- full_cohort_size / sum(ipdata$subcohort)
 
-
+    risk_size <- 0
+    risk_sets <- as.list(rep(NA, failure_num))
+    risk_set_weights <- as.list(rep(NA, failure_num))
     for (j in 1:failure_num) {
       my_risk_set1 <- which((ipdata$subcohort == 1) & (ipdata$time >= failure_times[j]))
       risk_size <- risk_size + length(my_risk_set1)
