@@ -858,15 +858,23 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
           bmeta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
           vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
           # res = list(bmeta = bmeta, vmeta = vmeta)
-          mymessage('meta analysis (inverse variance weighted average) result:')
+          mymessage('meta (inv var weighted avg) as initial est:')
         } else if(control$init_method == 'median'){ 
           bmeta = apply(bhat, 2, median, na.rm=T) 
+          mymessage('median as initial est:')
         } else if(control$init_method == 'weighted.median'){
           bmeta = apply(bhat, 2, function(x) weighted.median(x, site_size))
+          mymessage('median (site size weighted) as initial est:')
         } else if(control$init_method == 'lead'){
           bmeta = bhat[control$sites==control$lead_site,]
+          mymessage('lead site est as initial est:')
         } #print(res)
+        
         control$beta_init = bmeta
+        if(any(is.na(control$beta_init))){
+          control$beta_init[is.na(bmeta)] = 0
+          warning('some coefs are all NAs and use 0 as init est, use caution and check your X variables!!!')
+        }
         
         ## robust var est for ODACH_CC est (might also for other ODAX later?)
         if (control$model == "ODACH_CC"){
