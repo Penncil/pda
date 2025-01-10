@@ -53,6 +53,7 @@ ODAC.initialize <- function(ipdata,control,config){
                  Vhat_i = summary(fit_i)$coef[,"se(coef)"]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
                  site = config$site_id,
                  site_size = nrow(ipdata))
+    init$Vhat_i[init$Vhat_i==0] = NA
   } else{
     init <- list(T_i = T_i,
                  bhat_i = NA,
@@ -83,33 +84,38 @@ ODAC.deriveUWZ <- function(ipdata,control,config) {
   # or 2nd substep (calculate derivatives logL_D1, logL_D2)
   # collect event time pts and meta est from the cloud
   T_all <- c()
-  bhat_wt_sum <- rep(0, px)
-  wt_sum <- rep(0, px)     # cov matrix?
+  # bhat_wt_sum <- rep(0, px)
+  # wt_sum <- rep(0, px)     # cov matrix?
   for(site_i in control$sites){
     init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-    T_all <- c(T_all, init_i$T_i)
-    if(!any(is.na(init_i$bhat_i))){
-      # NA may occur is some site has some degenerated X, meta will not use these sites but later surr lik can use them
-      bhat_wt_sum <- bhat_wt_sum + init_i$bhat_i / init_i$Vhat_i
-      wt_sum <- wt_sum + 1 / init_i$Vhat_i  # cov matrix?
-    }
+    T_all <- c(T_all, as.numeric(init_i$T_i)) # in case no event T
+    #   if(!any(is.na(init_i$bhat_i))){
+    #     # NA may occur is some site has some degenerated X, meta will not use these sites but later surr lik can use them
+    #     bhat_wt_sum <- bhat_wt_sum + init_i$bhat_i / init_i$Vhat_i
+    #     wt_sum <- wt_sum + 1 / init_i$Vhat_i  # cov matrix?
+    #   }
   }
-  
+  # 
   T_all <- sort(unique(T_all))
   nt <- length(T_all)
-  b_meta <- bhat_wt_sum / wt_sum
-  bbar <- b_meta
+  # b_meta <- bhat_wt_sum / wt_sum
+  # bbar <- b_meta
+  ## (bug fix: ChongliangLuo, 20250105) 
+  ## b_meta has already calculated from pdaSync lines 856-869 and stored in control
+  bbar = control$beta_init
+  
   # add fake data points to help calculate the summary stats in risk sets ar each time pts
-  t_max <- max(ipdata$time)+1
+  # t_max <- max(ipdata$time)+1
+  t_max <- max(c(ipdata$time, T_all))+1 # 20250105
   # generate dataframe in format expected by ODAC
   pfdata <- cbind(T_all, 0, matrix(0, nt, px))
   pfdata <- rbind(ipdata, pfdata, use.names=FALSE)
   pfdata <- pfdata[, 'interval':=cut(pfdata$time, breaks = c(T_all, t_max), labels = 1:nt, right=FALSE)][order(pfdata$interval),]
-  pfdata$interval[is.na(pfdata$interval)]<-nt
+  ## 20250105 bug fix: a surv T before T_all[1] should not be counted in any risk set!!!!
+  # pfdata$interval[is.na(pfdata$interval)] <- nt
+  pfdata = pfdata[!is.na(pfdata$interval),]
   # X <- as.matrix(pfdata[, control$variables, with=F])
-  X <- as.matrix(pfdata[,-c(1,2)][,-'interval'])
-  print(head(X))
-  print(bbar)
+  X <- as.matrix(pfdata[,-c(1,2)][,-'interval']) 
   
   # summary stats: U, W, Z
   eXb <- c(exp(X %*% bbar))
@@ -122,12 +128,14 @@ ODAC.deriveUWZ <- function(ipdata,control,config) {
   
   # since fake X=0, cumulative W and Z will be the same, 
   # but exp(Xb)=1, so need to remove cumulated ones from each time pts
+  # print(nrow(UWZ) )
+  # print(nt)
   U <- UWZ[,1] - c(nt:1)
   W <- UWZ[,2:(px+1)]
   Z <- array(UWZ[,-c(1:(px+1))], c(nt,px,px))
   
   # summary_stat
-  derivatives <- list(T_all=T_all, b_meta=b_meta, site=config$site_id, site_size=nrow(ipdata), U=U, W=W, Z=Z)
+  derivatives <- list(T_all=T_all, b_init=bbar, site=config$site_id, site_size=nrow(ipdata), U=U, W=W, Z=Z)
   
   # broadcast to the cloud?
   return(derivatives)
@@ -173,7 +181,8 @@ ODAC.derive <- function(ipdata,control,config){
     
     # number of events in ipdata at each event time pts in T_all
     T_all <- sumstat_i$T_all
-    d <- c(table(c(ipdata[ipdata$status==T,time], T_all)) - 1)
+    # bug: diff floating digits than T_all so need to round(time, 4) before running pda...
+    d <- c(table(c(ipdata[ipdata$status==T,time], T_all)) - 1) 
     
     # 1st and 2nd derivatives
     # X <- as.matrix(ipdata[ipdata$status==TRUE, control$variables, with=F])
@@ -183,7 +192,7 @@ ODAC.derive <- function(ipdata,control,config){
     W2 <- array(NA, c(dim(W), px))
     for(ii in 1:px) W2[,,ii] <- W[,ii] * W
     logL_D2 <- apply(d * (W2 - U*Z) / U^2, c(2, 3), sum, na.rm=T)  
-    derivatives <- list(T_all=T_all, b_meta=sumstat_i$b_meta, U=U, W=W, Z=Z, 
+    derivatives <- list(T_all=T_all, b_init=sumstat_i$b_init, U=U, W=W, Z=Z, 
                         site=config$site_id, site_size = nrow(ipdata),
                         logL_D1=logL_D1, logL_D2=logL_D2)
   } else { # ODACH
@@ -219,7 +228,7 @@ ODAC.derive <- function(ipdata,control,config){
       logL_D2 <- -matrix(rcpp_coxph_logL_hessian(bbar, time = time, event = status, z = X), px, px) # / n
     }
     
-    derivatives <- list(# b_meta=b_meta, 
+    derivatives <- list(b_init=bbar, 
                         site=config$site_id, site_size = nrow(ipdata),
                         logL_D1=logL_D1, logL_D2=logL_D2)
   }
@@ -295,7 +304,12 @@ ODAC.estimate <- function(ipdata,control,config) {
   # var estimate: by inv hessian 
   setilde = sqrt(diag(solve(sol$hessian))/N)
   
-  surr <- list(btilde = sol$par, setilde=setilde, Htilde = sol$hessian, site=config$site_id, site_size=nrow(ipdata))
+  surr <- list(btilde = sol$par, setilde=setilde, Htilde = sol$hessian, 
+               site=config$site_id, site_size=nrow(ipdata),
+               logL_all_D1 =logL_all_D1 / N,
+               logL_diff_D1 = logL_diff_D1,
+               logL_all_D2 =logL_all_D2 / N,
+               logL_diff_D2 = logL_diff_D2)
   return(surr)
 }
 

@@ -70,6 +70,7 @@ ODACH_CC.initialize <- function(ipdata,control,config){
                  site_size = nrow(ipdata),
                  full_cohort_size = full_cohort_size, 
                  method = control$method)
+    init$Vhat_i[init$Vhat_i==0] = NA # 20250106
   } else{
     init <- list(bhat_i = NA,
                  Vhat_i = NA,  
