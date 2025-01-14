@@ -106,9 +106,10 @@ ODACH_CC.initialize <- function(ipdata, control, config) {
       formula,
       data = ipdata_prentice
     )
-    cc_prep <- prepare_case_cohort(ipdata[, -"ID"], control$method, full_cohort_size)
-      logL_D2 <- hess_plk(fit_i$coef, cc_prep)
-      S_i <- logL_D2 %*% fit_i$var %*% logL_D2 # Skhat in Yudong's note...
+    # cc_prep <- prepare_case_cohort(ipdata[, -"ID"], control$method, full_cohort_size)
+    # logL_D2 <- hess_plk(fit_i$coef, cc_prep)
+    # S_i <- logL_D2 %*% fit_i$var %*% logL_D2 # Skhat in Yudong's note...
+    S_i <- NA
 
     init <- list(
       bhat_i = fit_i$coef,
@@ -190,6 +191,7 @@ ODACH_CC.estimate <- function(ipdata, control, config) {
   logL_all_D1 <- rep(0, px)
   logL_all_D2 <- matrix(0, px, px)
   N <- 0
+  
   for (site_i in control$sites) {
     derivatives_i <- pdaGet(paste0(site_i, "_derive"), config)
     logL_all_D1 <- logL_all_D1 + derivatives_i$logL_D1
@@ -214,6 +216,7 @@ ODACH_CC.estimate <- function(ipdata, control, config) {
   logL_tilde <- function(b) -(logL_local(b) + sum(b * logL_diff_D1) + 1 / 2 * t(b - bbar) %*% logL_diff_D2 %*% (b - bbar)) #  / n
   # logL_tilde_D1 <- function(b) -(logL_local_D1(b) / n + logL_diff_D1 + logL_diff_D2 %*% (b-bbar))
 
+  
   # optimize the surrogate logL
   sol <- optim(
     par = bbar,
@@ -224,14 +227,17 @@ ODACH_CC.estimate <- function(ipdata, control, config) {
     control = list(maxit = control$optim_maxit)
   )
 
-  # robust var estimate: see Yudong's note
-  # setilde = sqrt(diag(solve(sol$hessian))/N)
-  # hess of surrogate log-L at btilde, this is slightly diff than Yudong's, to avoid another iteration...
-  logL_tilde_D2 <- logL_local_D2(bbar) + logL_diff_D2
-  # put together
-  Stilde <- solve(logL_tilde_D2) %*% control$S_i_sum %*% solve(logL_tilde_D2)
-  setilde <- sqrt(diag(Stilde))
-
+  if ("tenter" %in% colnames(ipdata)) {
+    setilde <- 0
+  } else {
+    # robust var estimate: see Yudong's note
+    # setilde = sqrt(diag(solve(sol$hessian))/N)
+    # hess of surrogate log-L at btilde, this is slightly diff than Yudong's, to avoid another iteration...
+    logL_tilde_D2 <- logL_local_D2(bbar) + logL_diff_D2
+    # put together
+    Stilde <- solve(logL_tilde_D2) %*% control$S_i_sum %*% solve(logL_tilde_D2)
+    setilde <- sqrt(diag(Stilde))
+  }
   surr <- list(
     bbar = bbar, full_cohort_size = full_cohort_size,
     btilde = sol$par, setilde = setilde, Htilde = sol$hessian, site = config$site_id, site_size = nrow(ipdata)
