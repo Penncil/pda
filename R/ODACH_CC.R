@@ -69,7 +69,8 @@ ODACH_CC.initialize <- function(ipdata, control, config) {
     if (!is.null(fit_i)) {
       ## get intermediate for robust variance est of ODACH_CC est
       # fit_i$var # summary(fit_i)$coef[,2]^2
-      cc_prep <- prepare_case_cohort(ipdata[, -"ID"], control$method, full_cohort_size)
+      full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
+      cc_prep <- prepare_case_cohort(ipdata[,-'ID'], control$method, full_cohort_size) 
       logL_D2 <- hess_plk(fit_i$coef, cc_prep)
       S_i <- logL_D2 %*% fit_i$var %*% logL_D2 # Skhat in Yudong's note...
 
@@ -106,9 +107,7 @@ ODACH_CC.initialize <- function(ipdata, control, config) {
       formula,
       data = ipdata_prentice
     )
-    # cc_prep <- prepare_case_cohort(ipdata[, -"ID"], control$method, full_cohort_size)
-    # logL_D2 <- hess_plk(fit_i$coef, cc_prep)
-    # S_i <- logL_D2 %*% fit_i$var %*% logL_D2 # Skhat in Yudong's note...
+    
     S_i <- NA
 
     init <- list(
@@ -121,6 +120,7 @@ ODACH_CC.initialize <- function(ipdata, control, config) {
       method = control$method
     )
   }
+  
   return(init)
 }
 
