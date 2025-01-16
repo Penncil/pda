@@ -528,11 +528,21 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     }
   } else if(control$model=='ODACH_CC'){
     if (!is.null(ipdata)){
-      ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
-                                      status=as.numeric(model.response(mf))[-c(1:n)],
-                                      subcohort = ipdata$subcohort,
-                                      # sampling_weight = ipdata$sampling_weight,
-                                      model.matrix(formula, mf)[,-1])
+      Y <- model.extract(mf, "response")
+      if (ncol(Y) == 3) {
+          ipdata <- data.table::data.table(tenter=as.numeric(Y[1:n, 1]), 
+                                           texit=as.numeric(Y[1:n, 2]), 
+                                           status=as.numeric(Y[1:n, 3]),
+                                           subcohort = ipdata$subcohort,
+                                           # sampling_weight = ipdata$sampling_weight,
+                                           model.matrix(formula, mf)[,-1])
+      } else {
+          ipdata <- data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
+                                           status=as.numeric(model.response(mf))[-c(1:n)],
+                                           subcohort = ipdata$subcohort,
+                                           # sampling_weight = ipdata$sampling_weight,
+                                           model.matrix(formula, mf)[,-1])
+      }
       # convert irregular risk factor names, e.g. `Group (A,B,C) B` to Group..A.B.C..B
       # this should (and will) apply to all other models...
       ipdata = data.table(data.frame(ipdata)) 
@@ -863,7 +873,7 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
           bmeta = apply(bhat, 2, median, na.rm=T) 
           mymessage('median as initial est:')
         } else if(control$init_method == 'weighted.median'){
-          bmeta = apply(bhat, 2, function(x) weighted.median(x, site_size))
+          bmeta = apply(bhat, 2, function(x) spatstat.univar::weighted.median(x, site_size))
           mymessage('median (site size weighted) as initial est:')
         } else if(control$init_method == 'lead'){
           bmeta = bhat[control$sites==control$lead_site,]
