@@ -49,29 +49,42 @@
 #' @keywords internal
 ODACH_CC.initialize <- function(ipdata,control,config){
   # coxph with case-cohort design
-  ipdata$ID = 1:nrow(ipdata) # for running cch... 
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  formula <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor, collapse = "+")))
-  fit_i <- tryCatch(survival::cch(formula, data = ipdata, subcoh = ~subcohort, id = ~ID, 
+  px = ncol(ipdata) - 3
+  
+  # handle data degeneration (e.g. missing categories in some site)
+  col_deg = apply(ipdata[,-c(1:3)],2,var)==0    # degenerated X columns...
+  ipdata_i = ipdata[,-(which(col_deg)+3),with=F]
+  ipdata_i$ID = 1:nrow(ipdata_i) # for running cch... 
+  
+  formula_i <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+")))  
+  # formula <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor, collapse = "+")))
+  fit_i <- tryCatch(survival::cch(formula_i, data = ipdata_i, subcoh = ~subcohort, id = ~ID, 
                          cohort.size = full_cohort_size, method = control$method), error=function(e) NULL)  
   
   if(!is.null(fit_i)){
-    ## get intermediate for robust variance est of ODACH_CC est
-    # fit_i$var # summary(fit_i)$coef[,2]^2
-    full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-    cc_prep = prepare_case_cohort(ipdata[,-'ID'], control$method, full_cohort_size) 
+    ## get intermediate for robust variance est of ODACH_CC est 
+    cc_prep = prepare_case_cohort(ipdata_i[,-'ID'], control$method, full_cohort_size) 
     logL_D2 <- hess_plk(fit_i$coef, cc_prep)
-    S_i <- logL_D2 %*% fit_i$var %*% logL_D2 # Skhat in Yudong's note...
-      
-    init <- list(bhat_i = fit_i$coef,
-                 Vhat_i = summary(fit_i)$coef[,"SE"]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
+    S_i = matrix(0, px, px)
+    S_i[!col_deg, !col_deg] <- logL_D2 %*% fit_i$var %*% logL_D2 # Skhat in Yudong's note...
+    
+    # for degenerated X, coef=0, var=Inf
+    bhat_i = rep(0,px)
+    Vhat_i = rep(Inf,px) 
+    bhat_i[!col_deg] <- fit_i$coef
+    Vhat_i[!col_deg] <- summary(fit_i)$coef[,"SE"]^2
+    
+    init <- list(bhat_i = bhat_i,
+                 Vhat_i = Vhat_i,      
                  S_i = S_i, 
                  site = config$site_id,
                  site_size = nrow(ipdata),
                  full_cohort_size = full_cohort_size, 
                  method = control$method)
-    init$Vhat_i[init$Vhat_i==0] = NA # 20250106
+    # init$Vhat_i[init$Vhat_i==0] = NA # 20250106
   } else{
+    warning('survival::cch() failed!!!')
     init <- list(bhat_i = NA,
                  Vhat_i = NA,  
                  S_i = NA,

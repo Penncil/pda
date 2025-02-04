@@ -855,24 +855,23 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
         
         ## estimate for pda init: meta, or median, or lead est?...
         if(control$init_method == 'meta'){
-          bmeta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
-          vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
-          # res = list(bmeta = bmeta, vmeta = vmeta)
+          binit = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
+          # vinit = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)}) 
           mymessage('meta (inv var weighted avg) as initial est:')
         } else if(control$init_method == 'median'){ 
-          bmeta = apply(bhat, 2, median, na.rm=T) 
+          binit = apply(bhat, 2, median, na.rm=T) 
           mymessage('median as initial est:')
         } else if(control$init_method == 'weighted.median'){
-          bmeta = apply(bhat, 2, function(x) weighted.median(x, site_size))
+          binit = apply(bhat, 2, function(x) weighted.median(x, site_size))
           mymessage('median (site size weighted) as initial est:')
         } else if(control$init_method == 'lead'){
-          bmeta = bhat[control$sites==control$lead_site,]
+          binit = bhat[control$sites==control$lead_site,]
           mymessage('lead site est as initial est:')
         } #print(res)
         
-        control$beta_init = bmeta
+        control$beta_init = binit
         if(any(is.na(control$beta_init))){
-          control$beta_init[is.na(bmeta)] = 0
+          control$beta_init[is.na(control$beta_init)] = 0
           warning('some coefs are all NAs and use 0 as init est, use caution and check your X variables!!!')
         }
         

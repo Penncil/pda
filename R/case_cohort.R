@@ -132,29 +132,61 @@ hess_plk <- function(beta, cc_prep){
 
 
 # this function fits Cox PH to case-cohort (survival::cch) with the pooled multi-site data
+# notice this assumes varying baseline hazard functions across sites
 #' @export
-cch_pooled <- function(formula, data, subcoh='subcohort', site='site',
-                       full_cohort_size, method = "Prentice", optim_method = "BFGS"
-                       ){ 
+cch_pooled <- function(formula, data, subcoh='subcohort', site='site', variables_lev,
+                       full_cohort_size, method = "Prentice", optim_method = "BFGS",
+                       var_sandwich=T){ 
   n = nrow(data)  
-  site_uniq = unique(data[,site]) 
-  # formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
-  mf <- model.frame(formula, data)
+  site_uniq = unique(data[,site])  
+  mf <- model.frame(formula, data, xlev=variables_lev)
   
   ipdata = data.table::data.table(site=data[,site],
                                   time=as.numeric(model.response(mf))[1:n], 
                                   status=as.numeric(model.response(mf))[-c(1:n)],
                                   subcohort = data[,subcoh], 
-                                  model.matrix(formula, mf)[,-1]) 
+                                  model.matrix(formula, mf)[,-1])
+  ipdata = data.table(data.frame(ipdata)) 
+  risk_factor = colnames(ipdata)[-c(1:4)]
   
-  initial_beta = rep(0, ncol(ipdata)-4)
+  # notice here we allow data degeneration (e.g. missing categories in some site)
+  px = ncol(ipdata)-4
+  initial_beta = rep(0, px)
   names(initial_beta) = names(ipdata)[-c(1:4)]
   pool_fun <- function(beta) sum(sapply(site_uniq, function(site_id) 
         log_plk(beta, prepare_case_cohort(ipdata[site==site_id,-'site'], method, full_cohort_size[site_id]))))
-  # pool_fun(initial_beta)
-  
+
   result <- optim(par = initial_beta, fn = pool_fun, 
                   control = list(fnscale = -1), method = optim_method, hessian = T) 
-   
+  
+  # calculate sandwich var estimate, degenerated data columns are given 0 coefs
+  if(var_sandwich==T){
+    block1 <- result$hessian 
+    block2 <- NULL
+    # data_split <- split(data, data$site)
+    data_split <- split(ipdata, ipdata$site)
+    
+    for(i in 1:length(site_uniq)){
+      site_id <- site_uniq[i]
+      ipdata_i = data_split[[i]]
+      col_deg = apply(ipdata_i[,-c(1:4)],2,var)==0    # degenerated X columns...
+      ipdata_i = ipdata_i[,-(which(col_deg)+4),with=F]
+      formula_i <- as.formula(paste("Surv(time, status) ~", paste(risk_factor[!col_deg], collapse = "+")))  
+      
+      cch_i <- survival::cch(formula_i, data = cbind(ID=1:nrow(ipdata_i), ipdata_i),
+                                 subcoh = ~subcohort, id = ~ID, 
+                                 cohort.size = full_cohort_size[site_id], method = method)
+      local_hess <- hess_plk(cch_i$coefficients, 
+                             prepare_case_cohort(ipdata_i[,-'site'],  
+                                                method, full_cohort_size[site_id]))
+      tmp = matrix(0, px, px)
+      tmp[!col_deg,!col_deg] <- local_hess %*% cch_i$var %*% local_hess
+      block2[[i]] <- tmp
+    }
+    
+    var <- solve(block1) %*% Reduce("+", block2) %*% solve(block1) 
+    result$var <- var # this is the output for variance estimates
+  }
+  
   return(result)
 }
