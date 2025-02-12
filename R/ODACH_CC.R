@@ -57,14 +57,24 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   ipdata_i = ipdata[,-(which(col_deg)+3),with=F]
   ipdata_i$ID = 1:nrow(ipdata_i) # for running cch... 
   
-  formula_i <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+")))  
-  # formula <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor, collapse = "+")))
-  fit_i <- tryCatch(survival::cch(formula_i, data = ipdata_i, subcoh = ~subcohort, id = ~ID, 
-                         cohort.size = full_cohort_size, method = control$method), error=function(e) NULL)  
+  # formula_i <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+")))   
+  # fit_i <- tryCatch(survival::cch(formula_i, data = ipdata_i, subcoh = ~subcohort, id = ~ID, 
+  #                        cohort.size = full_cohort_size, method = control$method), error=function(e) NULL)  
+  
+  ## 3 ways to do local est: cch, coxph with a tweak of the formula, and cch_pooled
+  # to avoid numerical error using cch() indicated by Ali, we use coxph with a tweak of the formula...
+  # generally cch, coxph and cch_pooled will generate almost identical b and close var (for continuous X, coxph has smaller S.E. than the other two)
+  # but coxph only works for Prentice wt, so will look into it later (and may revert to cch_pooled...)
+  precision <- min(diff(sort(ipdata_i$time))) / 2 #  
+  ipdata_i$time_in = 0
+  ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
+  formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
+  fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
+  
   
   if(!is.null(fit_i)){
     ## get intermediate for robust variance est of ODACH_CC est 
-    cc_prep = prepare_case_cohort(ipdata_i[,-'ID'], control$method, full_cohort_size) 
+    cc_prep = prepare_case_cohort(ipdata_i[,-c('ID','time_in')], control$method, full_cohort_size) 
     logL_D2 <- hess_plk(fit_i$coef, cc_prep)
     S_i = matrix(0, px, px)
     S_i[!col_deg, !col_deg] <- logL_D2 %*% fit_i$var %*% logL_D2 # Skhat in Yudong's note...
@@ -73,7 +83,7 @@ ODACH_CC.initialize <- function(ipdata,control,config){
     bhat_i = rep(0,px)
     Vhat_i = rep(Inf,px) 
     bhat_i[!col_deg] <- fit_i$coef
-    Vhat_i[!col_deg] <- summary(fit_i)$coef[,"SE"]^2
+    Vhat_i[!col_deg] <- diag(fit_i$var) # summary(fit_i)$coef[,"SE"]^2
     
     init <- list(bhat_i = bhat_i,
                  Vhat_i = Vhat_i,      

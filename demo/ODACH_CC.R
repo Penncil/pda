@@ -50,7 +50,7 @@ control <- list(project_name = 'ODACH case-cohort toy example',
                 upload_date = as.character(Sys.time()) )
 
 ## cch stratified by site, using self-written cch_pooled()
-fit.pool <- cch_pooled(Surv(time, status) ~ X1+`Group (A,B,C)`+Category, data=odach_cc, variables_lev = control$variables_lev, 
+fit.pool <- cch_pooled(Surv(time, status) ~ X1+`Group (A,B,C)`+Category, data=odach_cc, variables_lev = control$variables_lev,
                        full_cohort_size=c(site1=800,site2=600,site3=400), method='Prentice',var_sandwich=T)
 fit.pool$par
 #          X1   `Group (A,B,C)`B  `Group (A,B,C)`C CategoryY (X,Y,Z) CategoryZ (X,Y,Z) 
@@ -59,6 +59,13 @@ sqrt(diag(-solve(fit.pool$hessian)))  # naive s.e. from inv hessian
 # 0.1105210         0.3184666         0.2969597         0.2831813         0.3211316 
 sqrt(diag(fit.pool$var)) # robust s.e. from sandwich 
 # 0.1358760         0.3567799         0.3109574         0.3122135         0.3692968 
+
+
+# precision <- 1e-4  
+# odach_cc$time_in = 0
+# odach_cc[odach_cc$subcohort == 0, "time_in"] <- odach_cc[odach_cc$subcohort == 0, "time"] - precision
+# odach_cc$ID = 1:nrow(odach_cc)
+# fit.pool <- coxph(Surv(time_in, time, status) ~ X1+`Group (A,B,C)`+Category + strata(site)+cluster(ID), data=odach_cc, robust=T)
 
 
 # cch each site
