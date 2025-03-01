@@ -158,6 +158,7 @@ cch_pooled <- function(formula, data, subcoh='subcohort', site='site', variables
 
   result <- optim(par = initial_beta, fn = pool_fun, 
                   control = list(fnscale = -1), method = optim_method, hessian = T) 
+  b_pooled = result$par
   
   # calculate sandwich var estimate, degenerated data columns are given 0 coefs
   if(var_sandwich==T){
@@ -171,13 +172,20 @@ cch_pooled <- function(formula, data, subcoh='subcohort', site='site', variables
       ipdata_i = data_split[[i]]
       col_deg = apply(ipdata_i[,-c(1:4)],2,var)==0    # degenerated X columns...
       ipdata_i = ipdata_i[,-(which(col_deg)+4),with=F]
-      formula_i <- as.formula(paste("Surv(time, status) ~", paste(risk_factor[!col_deg], collapse = "+")))  
+      # use coxph(Surv(time_in, time, status)~.) to do cch...
+      precision <- min(diff(sort(ipdata_i$time))) / 2 #  
+      ipdata_i$time_in = 0
+      ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
       
-      cch_i <- survival::cch(formula_i, data = cbind(ID=1:nrow(ipdata_i), ipdata_i),
-                                 subcoh = ~subcohort, id = ~ID, 
-                                 cohort.size = full_cohort_size[site_id], method = method)
-      local_hess <- hess_plk(cch_i$coefficients, 
-                             prepare_case_cohort(ipdata_i[,-'site'],  
+      # formula_i <- as.formula(paste("Surv(time, status) ~", paste(risk_factor[!col_deg], collapse = "+")))  
+      # cch_i <- survival::cch(formula_i, data = cbind(ID=1:nrow(ipdata_i), ipdata_i),
+      #                            subcoh = ~subcohort, id = ~ID, 
+      #                            cohort.size = full_cohort_size[site_id], method = method)
+      formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
+      cch_i <- tryCatch(coxph(formula_i, data=cbind(ID=1:nrow(ipdata_i), ipdata_i), robust=T), error=function(e) NULL) 
+      
+      local_hess <- hess_plk(b_pooled[!col_deg], # cch_i$coefficients, 
+                             prepare_case_cohort(ipdata_i[,-c('site','time_in')],  
                                                 method, full_cohort_size[site_id]))
       tmp = matrix(0, px, px)
       tmp[!col_deg,!col_deg] <- local_hess %*% cch_i$var %*% local_hess

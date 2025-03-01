@@ -59,13 +59,15 @@ sqrt(diag(-solve(fit.pool$hessian)))  # naive s.e. from inv hessian
 # 0.1105210         0.3184666         0.2969597         0.2831813         0.3211316 
 sqrt(diag(fit.pool$var)) # robust s.e. from sandwich 
 # 0.1358760         0.3567799         0.3109574         0.3122135         0.3692968 
+# 0.1150233         0.3576904         0.3655076         0.3193014         0.3499519  # updated...
 
-
-# precision <- 1e-4  
+# precision <- min(diff(sort(odach_cc$time)))/2 # 1e-4
 # odach_cc$time_in = 0
 # odach_cc[odach_cc$subcohort == 0, "time_in"] <- odach_cc[odach_cc$subcohort == 0, "time"] - precision
 # odach_cc$ID = 1:nrow(odach_cc)
 # fit.pool <- coxph(Surv(time_in, time, status) ~ X1+`Group (A,B,C)`+Category + strata(site)+cluster(ID), data=odach_cc, robust=T)
+# sqrt(diag(fit.pool$var))
+#  0.1153119 0.3363288 0.3260168 0.3059612 0.3590618
 
 
 # cch each site
@@ -120,21 +122,23 @@ pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confir
 # ############################  STEP 3: estimate  ###############################
 ## assume lead site1: enter "1" to allow tranferring the surrogate estimate
 pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confirm=T)
-# "btilde": [-0.51308097,0.12731543,0.24162687,-0.23790023,0.13694671]
-# "setilde": [0.13516426,0.35900645,0.31833857,0.30147712,0.37908676]
-# btilde and setilde (robust) are almost identical to pooled cch! 
- 
 
 ## all coef est:
 # pooled:                     [-0.5129684,  0.1277404, 0.2421812, -0.2374705, 0.1359541
-# meta:                       [-0.51463005, 0.18817404,0.29429989,-0.2699712,-0.03672811]
+# meta:                       [-0.51927745,0.17385216,0.25506044,-0.25316367,-0.04065175]
 # median:                     [-0.51845429, 0.23836445,0.61335488,-0.50068871,0]
 # weighted.median:            [-0.51845429, 0.23836445,0.61335488,-0.50068871,0]
 # lead:                       [-0.51845429, 0.48055952,0.89290808,-0.50068871,-0.17153903]
-# odach_cc(meta):             [-0.51308097, 0.12731543,0.24162687,-0.23790023,0.13694671]
+# odach_cc(meta):             [-0.51303977,0.12780133,0.24209696,-0.23769306,0.137274]
 # odach_cc(median):           [-0.51369825, 0.11965385,0.24015613,-0.23640535,0.13420135]
 # odach_cc(weighted.median):  [-0.51369825, 0.11965385,0.24015613,-0.23640535,0.13420135]
 # odach_cc(lead):             [-0.5158358,  0.08234449,0.21134127,-0.24025793,0.13681052]
+
+## all var est:
+# "setilde": [0.11504608,0.35832839,0.36592225,0.31974574,0.34950701]
+# cch_pooled  0.1150233, 0.3576904, 0.3655076, 0.3193014, 0.3499519 
+
+# btilde and setilde (robust) are almost identical to pooled cch! 
 
 
 # if you want to check ODACH_CC s.e. from inv-Hessian...

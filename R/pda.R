@@ -875,20 +875,6 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
           warning('some coefs are all NAs and use 0 as init est, use caution and check your X variables!!!')
         }
         
-        ## robust var est for ODACH_CC est (might also for other ODAX later?)
-        if (control$model == "ODACH_CC"){
-          px = length(control$beta_init) 
-          K = length(control$sites)
-          S_i_sum = array(NA,c(px,px, K))
-          for(i in 1:K){ 
-            site_i = control$sites[i]
-            init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-            S_i_sum[,,i] <- init_i$S_i
-          }
-          control$S_i_sum = apply(S_i_sum,c(1,2),sum,na.rm=T) 
-          # print(control$S_i_sum)
-        } 
-        
         if (control$model == "ODACATH"){
           control$bhat_eta = bhat_eta
         } 
@@ -919,7 +905,21 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
         control$estimated_hospital_effect = gamma_BLUP
       }else if(control$model == "OLGLM"){
         mymessage("You are done!")
-      }
+      } 
+      
+      ## robust var est for ODACH_CC est (might also for other ODAX later?)
+      if (control$model == "ODACH_CC"){
+        px = length(control$beta_init) 
+        K = length(control$sites)
+        S_i_sum = array(NA,c(px,px, K))
+        for(i in 1:K){ 
+          site_i = control$sites[i]
+          init_i <- pdaGet(paste0(site_i,'_derive'),config)
+          S_i_sum[,,i] <- init_i$S_i
+        }
+        control$S_i_sum = apply(S_i_sum,c(1,2),sum,na.rm=T) 
+        # print(control$S_i_sum)
+      } 
     }    
   }
   

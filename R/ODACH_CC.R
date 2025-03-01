@@ -52,10 +52,10 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
   px = ncol(ipdata) - 3
   
-  # handle data degeneration (e.g. missing categories in some site)
+  # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
   col_deg = apply(ipdata[,-c(1:3)],2,var)==0    # degenerated X columns...
   ipdata_i = ipdata[,-(which(col_deg)+3),with=F]
-  ipdata_i$ID = 1:nrow(ipdata_i) # for running cch... 
+  ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch... 
   
   # formula_i <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+")))   
   # fit_i <- tryCatch(survival::cch(formula_i, data = ipdata_i, subcoh = ~subcohort, id = ~ID, 
@@ -71,14 +71,7 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
   fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
   
-  
   if(!is.null(fit_i)){
-    ## get intermediate for robust variance est of ODACH_CC est 
-    cc_prep = prepare_case_cohort(ipdata_i[,-c('ID','time_in')], control$method, full_cohort_size) 
-    logL_D2 <- hess_plk(fit_i$coef, cc_prep)
-    S_i = matrix(0, px, px)
-    S_i[!col_deg, !col_deg] <- logL_D2 %*% fit_i$var %*% logL_D2 # Skhat in Yudong's note...
-    
     # for degenerated X, coef=0, var=Inf
     bhat_i = rep(0,px)
     Vhat_i = rep(Inf,px) 
@@ -86,15 +79,14 @@ ODACH_CC.initialize <- function(ipdata,control,config){
     Vhat_i[!col_deg] <- diag(fit_i$var) # summary(fit_i)$coef[,"SE"]^2
     
     init <- list(bhat_i = bhat_i,
-                 Vhat_i = Vhat_i,      
-                 S_i = S_i, 
+                 Vhat_i = Vhat_i,  
                  site = config$site_id,
                  site_size = nrow(ipdata),
                  full_cohort_size = full_cohort_size, 
                  method = control$method)
     # init$Vhat_i[init$Vhat_i==0] = NA # 20250106
   } else{
-    warning('survival::cch() failed!!!')
+    warning('survival::coxph() failed!!!')
     init <- list(bhat_i = NA,
                  Vhat_i = NA,  
                  S_i = NA,
@@ -122,20 +114,35 @@ ODACH_CC.initialize <- function(ipdata,control,config){
 #' @return  list(bbar=bbar, site=control$mysite, site_size = nrow(ipdata), logL_D1=logL_D1, logL_D2=logL_D2)
 #' @keywords internal
 ODACH_CC.derive <- function(ipdata,control,config){
-  # px <- ncol(ipdata) - 3
+  px <- ncol(ipdata) - 3
   
+  # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
+  col_deg = apply(ipdata[,-c(1:3)],2,var)==0    # degenerated X columns...
+  ipdata_i = ipdata[,-(which(col_deg)+3),with=F]
+  ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch...  
+  precision <- min(diff(sort(ipdata_i$time))) / 2 #  
+  ipdata_i$time_in = 0
+  ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
+  
+  formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
+  fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
+  
+  ## grad and hess
   bbar = control$beta_init
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
   cc_prep = prepare_case_cohort(ipdata, control$method, full_cohort_size)
-  # grad_plk() 
   logL_D1 <- grad_plk(bbar, cc_prep)
-  # hess_plk()
   logL_D2 <- hess_plk(bbar, cc_prep)
+  
+  ## get intermediate for robust variance est of ODACH_CC  
+  S_i = matrix(0, px, px)
+  S_i[!col_deg, !col_deg] <- logL_D2[!col_deg, !col_deg] %*% fit_i$var %*% logL_D2[!col_deg, !col_deg] # Skhat in Yudong's note...
   
   derivatives <- list(bbar=bbar, 
     site=config$site_id, site_size = nrow(ipdata), 
     full_cohort_size=full_cohort_size,
-    logL_D1=logL_D1, logL_D2=logL_D2)
+    logL_D1=logL_D1, logL_D2=logL_D2,
+    S_i = S_i)
   
   return(derivatives)
 }
