@@ -52,7 +52,19 @@ fit.pool$par
 sqrt(diag(-solve(fit.pool$hessian)))  # naive s.e. from inv hessian 
 # 0.1105210         0.3184666         0.2969597         0.2831813         0.3211316 
 sqrt(diag(fit.pool$var)) # robust s.e. from sandwich 
-# 0.1150233         0.3576904         0.3655076         0.3193014         0.3499519   
+#  0.1153119         0.3363288         0.3260169         0.3059613         0.3590618  
+
+## another approach to do pooled: Vivian's coxph trick
+precision <- min(diff(sort(odach_cc$time)))/2 # 1e-4
+odach_cc$time_in = 0
+odach_cc[odach_cc$subcohort == 0, "time_in"] <- odach_cc[odach_cc$subcohort == 0, "time"] - precision
+odach_cc$ID = 1:nrow(odach_cc)
+fit.pool1 <- coxph(Surv(time_in, time, status) ~ X1+`Group (A,B,C)`+Category + strata(site)+cluster(ID), data=odach_cc, robust=T)
+fit.pool1$coef
+# -0.5129683         0.1277399         0.2421812        -0.2374701         0.1359542
+sqrt(diag(fit.pool1$var)) # identical to the above cch_pooled
+# 0.1153119 0.3363288 0.3260168 0.3059612 0.3590618
+
 
 
 # ############################  STEP 1: initialize  ############################### 
@@ -81,8 +93,8 @@ pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confir
 pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confirm=T)
 # "beta_init":[-0.51927745,0.17385216,0.25506044,-0.25316367,-0.04065175] # (meta)
 # "btilde":   [-0.51303977,0.12780133,0.24209696,-0.23769306,0.137274],
-# "setilde":[0.11504608,0.35832839,0.36592225,0.31974574,0.34950701]
-
+# "setilde":[0.11581255,0.33459023,0.33101378,0.29710675,0.36852761]
+              
 
 ############ 20250311:  to get better robust s.e. estimate ###################### 
 # run one more round of ODACH_CC use the obtained ODACH_CC point est as initial
@@ -95,7 +107,6 @@ control$beta_init = fit.pda$btilde
 pdaPut(control,'control', config = config, upload_without_confirm = T, silent_message = F)
 
 # ###################   STEP 4: derivative again #################
-
 pda(site_id = 'site3', ipdata = data_split[[3]], dir=mydir,upload_without_confirm=T)
 
 pda(site_id = 'site2', ipdata = data_split[[2]], dir=mydir,upload_without_confirm=T)
@@ -105,8 +116,9 @@ pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confir
 # ############################  STEP 5: estimate again  ###############################
 pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confirm=T)
 # "btilde":[-0.51313047,0.12776128,0.24215611,-0.23726386,0.13630634],
-# "setilde":[0.11502241,0.35768382,0.3655027,0.31930003,0.3499533]
-
+# "setilde":[0.11531871,0.33633524,0.32601783,0.30604367,0.35900238]
+             
+             
 fit.pda = pdaGet(name = 'site1_estimate', config = config)
 
  
@@ -117,9 +129,11 @@ fit.pda = pdaGet(name = 'site1_estimate', config = config)
 # odach_cc(again):            [-0.51313047,0.12776128,0.24215611,-0.23726386,0.13630634] # second round 
 
 ## all s.e. est: 
-# cch_pooled  0.1150233, 0.3576904, 0.3655076, 0.3193014, 0.3499519 
-# "setilde": [0.11504608,0.35832839,0.36592225,0.31974574,0.34950701]  # first round
-# "setilde": [0.11502241,0.35768382,0.3655027,0.31930003,0.3499533]    # second round
+         
+# cch_pooled  0.1153119, 0.3363288, 0.3260169, 0.3059613, 0.3590618       
+# coxph_pooled 0.1153119, 0.3363288, 0.3260168, 0.3059612, 0.3590618 
+# "setilde": [0.11581255,0.33459023,0.33101378,0.29710675,0.36852761]  # first round
+# "setilde": [0.11531871,0.33633524,0.32601783,0.30604367,0.35900238]    # second round
 # btilde and setilde (robust) are almost identical to pooled cch! 
 
 
@@ -130,7 +144,7 @@ fit.pda = pdaGet(name = 'site1_estimate', config = config)
 
 
 ## the PDA ODACH_CC is now completed!
-## All the sites can still run their own surrogate estimates and broadcast them.
+#NOT TESTED!# All the sites can still run their own surrogate estimates and broadcast them.
  
 
 
@@ -142,16 +156,7 @@ fit.pda = pdaGet(name = 'site1_estimate', config = config)
 
 
 
-# ## coxph trick
-# precision <- min(diff(sort(odach_cc$time)))/2 # 1e-4
-# odach_cc$time_in = 0
-# odach_cc[odach_cc$subcohort == 0, "time_in"] <- odach_cc[odach_cc$subcohort == 0, "time"] - precision
-# odach_cc$ID = 1:nrow(odach_cc)
-# fit.pool1 <- coxph(Surv(time_in, time, status) ~ X1+`Group (A,B,C)`+Category + strata(site)+cluster(ID), data=odach_cc, robust=T)
-# fit.pool1$coef
-# # -0.5129683         0.1277399         0.2421812        -0.2374701         0.1359542 
-# sqrt(diag(fit.pool1$var))
-# # 0.1153119 0.3363288 0.3260168 0.3059612 0.3590618
+
 
 
 # cch each site

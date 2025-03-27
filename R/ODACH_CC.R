@@ -124,9 +124,6 @@ ODACH_CC.derive <- function(ipdata,control,config){
   ipdata_i$time_in = 0
   ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
   
-  formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
-  fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
-  
   ## grad and hess
   bbar = control$beta_init
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
@@ -134,9 +131,14 @@ ODACH_CC.derive <- function(ipdata,control,config){
   logL_D1 <- grad_plk(bbar, cc_prep)
   logL_D2 <- hess_plk(bbar, cc_prep)
   
-  ## get intermediate for robust variance est of ODACH_CC  
-  S_i = matrix(0, px, px)
-  S_i[!col_deg, !col_deg] <- logL_D2[!col_deg, !col_deg] %*% fit_i$var %*% logL_D2[!col_deg, !col_deg] # Skhat in Yudong's note...
+  ## get intermediate (sandwich meat) for robust variance est of ODACH_CC  
+  # fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
+  formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
+  fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick
+  score_resid <- resid(fit_i, type = "score")  # n x p matrix  
+  S_i = matrix(0, px, px)   # this is the meat in sandwich var
+  S_i[!col_deg, !col_deg] <- crossprod(score_resid)
+  # S_i[!col_deg, !col_deg] <- logL_D2[!col_deg, !col_deg] %*% fit_i$var %*% logL_D2[!col_deg, !col_deg] # Skhat in Yudong's note...
   
   derivatives <- list(bbar=bbar, 
     site=config$site_id, site_size = nrow(ipdata), 

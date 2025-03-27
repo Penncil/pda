@@ -182,14 +182,18 @@ cch_pooled <- function(formula, data, subcoh='subcohort', site='site', variables
       #                            subcoh = ~subcohort, id = ~ID, 
       #                            cohort.size = full_cohort_size[site_id], method = method)
       formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
-      cch_i <- tryCatch(coxph(formula_i, data=cbind(ID=1:nrow(ipdata_i), ipdata_i), robust=T), error=function(e) NULL) 
+      # cch_i <- tryCatch(coxph(formula_i, data=cbind(ID=1:nrow(ipdata_i), ipdata_i), robust=T), error=function(e) NULL) 
+      cch_i <- tryCatch(coxph(formula_i, data=cbind(ID=1:nrow(ipdata_i), ipdata_i), init=b_pooled[!col_deg], iter=0), error=function(e) NULL) 
+      score_resid <- resid(cch_i, type = "score")  # n x p matrix  
+      S_i = matrix(0, px, px)   # this is the meat in sandwich var
+      S_i[!col_deg, !col_deg] <- crossprod(score_resid)
       
-      local_hess <- hess_plk(b_pooled[!col_deg], # cch_i$coefficients, 
-                             prepare_case_cohort(ipdata_i[,-c('site','time_in')],  
-                                                method, full_cohort_size[site_id]))
-      tmp = matrix(0, px, px)
-      tmp[!col_deg,!col_deg] <- local_hess %*% cch_i$var %*% local_hess
-      block2[[i]] <- tmp
+      # local_hess <- hess_plk(b_pooled[!col_deg], # cch_i$coefficients, 
+      #                        prepare_case_cohort(ipdata_i[,-c('site','time_in')],  
+      #                                           method, full_cohort_size[site_id]))
+      # tmp = matrix(0, px, px)
+      # tmp[!col_deg,!col_deg] <- local_hess %*% cch_i$var %*% local_hess
+      block2[[i]] <- S_i
     }
     
     var <- solve(block1) %*% Reduce("+", block2) %*% solve(block1) 
