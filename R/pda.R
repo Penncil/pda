@@ -30,10 +30,10 @@
 #' @return NONE
 #' @seealso \code{pda}
 #' @export
-pdaPut <- function(obj,name,config,upload_without_confirm,silent_message=F){
+pdaPut <- function(obj,name,config,upload_without_confirm,silent_message=F,digits=4){
   mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
   
-  obj_Json <- jsonlite::toJSON(obj, digits = 8)
+  obj_Json <- jsonlite::toJSON(obj, digits = digits)  # RJSONIO::toJSON(tt) keep vec name?
   file_name <- paste0(name, '.json')  
   
   if(!is.null(config$uri)){
@@ -159,7 +159,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=
   } else if (pda_dir!='') {
     config$dir = pda_dir
   }else{
-    mymessage('no public or local directory supplied, use local temporary:', tempdir())
+    mymessage(paste0('no public or local directory supplied, use local temporary:', tempdir()))
     config$dir = tempdir()
   }
    
@@ -309,20 +309,26 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=
 #' @return control
 #' @export
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
-                upload_without_confirm=F, silent_message=F, 
+                upload_without_confirm=F, silent_message=F, digits=4,
                 hosdata=NULL # for dGEM
                 ){ 
   config <- getCloudConfig(site_id,dir,uri,secret,silent_message)
   mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
-  
-  #add a control if one was provided
-  if(!(is.null(control)) &&  config$site_id==control$lead_site) { # control$sites[1]
-    pdaPut(obj=control,name='control',config=config,upload_without_confirm,silent_message)
-    return(control)    # ?
-  }
-  control = pdaGet('control',config) 
+  files <- pdaList(config)
   mymessage('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): ')
-  mymessage('your site = ', config$site_id)  
+  mymessage(paste0('your site = ', config$site_id)) 
+  
+  # read in control, or lead site add a control file to the cloud if there is none
+  if('control' %in% files) {
+    control = pdaGet('control',config) 
+  } else { 
+    if(!(is.null(control)) &&  config$site_id==control$lead_site) {    
+      pdaPut(obj=control,name='control',config=config,upload_without_confirm,silent_message,digits)
+      return(control)
+    } else {
+      stop('A control file is needed from the lead site!') 
+    }
+  } 
    
   ## specify pda steps and family based on model
   if(control$model=='ODAL'){
@@ -439,7 +445,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
   #     exclude problematic variables from the protocol, or
   #     exclude the site
   svd_d = svd(model.matrix(formula, mf))$d
-  if(sum(svd_d < 1e-10)>=1) warning(site_id, ': data degeneration detected!!! Please discuss with your collaborators!')
+  if(sum(svd_d < 1e-10)>=1) warning(site_id, ': data degeneration detected!!! Proceed only if this is expected!')
   
   ## this is used in model.matrix(contrasts=...)
   # if(options()$contrasts['unordered']=="contr.treatment") options(contrasts = c("contr.treatment", "contr.poly"))
@@ -540,6 +546,12 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     }
   }
   
+  ## synchronize control file (at lead site), if lead site sees all collab sites ready
+  files<-pdaList(config) 
+  if(config$site_id==control$lead_site & all(paste0(control$sites,"_",control$step) %in% files)) {
+    control<-pdaSync(config,upload_without_confirm,silent_message,digits)
+  }
+  
   ## execute the current step function
   if(is.character(control$step)){
     step_function <- paste0(control$model,'.', gsub('[^[:alpha:]]', '',control$step)) # "derive_1" for dPQL
@@ -589,19 +601,20 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     
     ## write output to .json file
     if(!is.null(ipdata)){
-      pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm,silent_message)
+      pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm,silent_message,digits)
     }else{
       if(control$model == "dGEM"){
         if(control$step == "synthesize"){
-          pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm,silent_message)
+          pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm,silent_message,digits)
         }
       }
-    }
+    } 
     
-    ## synchronize control file (at lead site)
-    if(config$site_id==control$lead_site) {
-      control<-pdaSync(config,upload_without_confirm,silent_message)
-    }
+    ## synchronize control file (at lead site), if lead site sees all collab sites ready
+    files<-pdaList(config) 
+    if(config$site_id==control$lead_site & all(paste0(control$sites,"_",control$step) %in% files)) {
+      control<-pdaSync(config,upload_without_confirm,silent_message,digits)
+    } 
   }
   invisible(control)
 }
@@ -616,7 +629,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
 #' @return control
 #' @seealso \code{pda}
 #' @export  
-pdaSync <- function(config,upload_without_confirm,silent_message=F){  
+pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){  
   control = pdaGet('control',config)
   mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
   
@@ -950,7 +963,7 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
   }
   
   mymessage(mes)
-  pdaPut(control,'control',config,upload_without_confirm,silent_message)
+  pdaPut(control,'control',config,upload_without_confirm,silent_message,digits)
   
   control
 }

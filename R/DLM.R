@@ -39,13 +39,13 @@ DLM.family <- 'gaussian'
 #' 
 #' @references Yixin Chen, et al. (2006) Regression cubes with lossless compression and aggregation. 
 #'    IEEE Transactions on Knowledge and Data Engineering, 18(12), pp.1585-1599. \cr
-#'    (DLMM) Chongliang Luo, et al. (2020) Lossless Distributed Linear Mixed Model with Application to Integration of Heterogeneous Healthcare Data.  
-#'    medRxiv, \doi{10.1101/2020.11.16.20230730}. \cr
+#'    (DLMM) Chongliang Luo et al. DLMM as a lossless one-shot algorithm for collaborative multi-site distributed linear mixed models. 
+#'    Nat Commun. 2022 Mar 30;13(1):1678. \doi{10.1038/s41467-022-29160-4}. \cr
 #' @return init
 #' @keywords internal
 DLM.initialize <- function(ipdata,control,config){
   y = ipdata$outcome
-  X = as.matrix(ipdata[,-'outcome']) # the first col is intercept?
+  X = as.matrix(ipdata[,-'outcome']) # the first col of X is intercept 
   
   init = list(SiX = t(X) %*% X,
               SiXY = t(X) %*% y,
@@ -157,18 +157,19 @@ DLM.estimate <- function(ipdata=NULL,control,config) {
     
     bhat <- c(fit1$b)
     sebhat <- fit1$b.sd               # sd of fixed effect est
-    uhat <- as.matrix(sapply(fit1$ui, function(a) a) )          # BLUP of random effects
-    seuhat <- as.matrix(sqrt(sapply(fit1$varui_post, diag)))   # se of BLUPs
+    
+    uhat <- matrix(sapply(fit1$ui, function(a) a), K, length(control$risk_factor_heterogeneity), byrow=T)  # BLUP of random effects
+    seuhat <- matrix(sqrt(sapply(fit1$varui_post, diag)), K, length(control$risk_factor_heterogeneity), byrow=T)   # se of BLUPs
     sigmahat <- sqrt(fit1$s2)         # se of common error
     Vhat <- fit1$V                    # variance components: Var(ui)
-
+    
     names(sebhat) <- names(bhat) <- control$risk_factor
     row.names(uhat) <- row.names(seuhat) <- control$sites
     colnames(uhat) <- colnames(seuhat) <- control$risk_factor_heterogeneity
     colnames(Vhat) <- row.names(Vhat) <- control$risk_factor_heterogeneity
    
     res <- list(risk_factor=control$risk_factor, risk_factor_heterogeneity=control$risk_factor_heterogeneity, 
-                bhat=bhat, sebhat=sebhat, sigmahat=sigmahat, uhat=uhat, seuhat=seuhat, Vhat=Vhat)
+                bhat=bhat, sebhat=sebhat, sigmahat=sigmahat, uhat=uhat, seuhat=seuhat, Vhat=Vhat, lik=fit1$res.profile$lp)
     # res <- lapply(res, function(a) as.data.frame(a))
     # RJSONIO::fromJSON(RJSONIO::toJSON(res))
     # jsonlite::

@@ -35,11 +35,30 @@ ODAL.family <- 'binomial'
 #' @return init
 #' @keywords internal
 ODAL.initialize <- function(ipdata,control,config){
-    fit_i <- glm(status ~ 0+., data=ipdata,family = "binomial"(link = "logit"))  
-    init <- list(site = config$site_id,
-                 site_size = nrow(ipdata),
-                 bhat_i = fit_i$coef,
-                 Vhat_i = diag(vcov(fit_i)))  # glm summary(fit_i)$coef[,2]^2 may omit NA's
+  # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
+  px = ncol(ipdata) - 1
+  col_deg = apply(ipdata[,1],2,var)==0    # degenerated X columns...
+  ipdata_i = ipdata[,-(which(col_deg)+1),with=F]
+  
+  fit_i <- tryCatch(glm(status ~ 0+., data=ipdata_i, family = "binomial"(link = "logit")), error=function(e) NULL)
+  # fit_i <- glm(status ~ 0+., data=ipdata,family = "binomial"(link = "logit"))  
+  
+  if(!is.null(fit_i)){
+    # for degenerated X, coef=0, var=Inf
+    bhat_i = rep(0,px)
+    Vhat_i = rep(Inf,px) 
+    bhat_i[!col_deg] <- fit_i$coef
+    Vhat_i[!col_deg] <- diag(vcov(fit_i)) # summary(fit_i)$coef[,2]^2 may omit NA's
+    init <- list(bhat_i = bhat_i,
+                 Vhat_i = Vhat_i,
+                 site = config$site_id,
+                 site_size = nrow(ipdata))   
+  } else{
+    init <- list(bhat_i = NA,
+                 Vhat_i = NA,   
+                 site = config$site_id,
+                 site_size = nrow(ipdata))
+  }
   return(init)
 }
 
@@ -55,8 +74,7 @@ ODAL.initialize <- function(ipdata,control,config){
 #' @keywords internal
 ODAL.derive <- function(ipdata,control,config){
   # data sanity check ...
-    px <- ncol(ipdata) - 1  # X includes intercept
-    # get b_meta as initial bbar
+    px <- ncol(ipdata) - 1  # X includes intercept 
     
     ## Comment out by Jessie -- assume that only lead site has the access to aggregated data (xxx.json)
     # bhat <- rep(0, px)
@@ -69,18 +87,13 @@ ODAL.derive <- function(ipdata,control,config){
     # bhat = bhat[-1,]
     # vbhat = vbhat[-1,]
     
-    #estimate from meta-analysis
-    # betameta = apply(bhat/vbhat,2,function(x){sum(x, na.rm = T)})/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
-    # vmeta = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = T)})
-    
-    # b_meta <- betameta
-    # bbar <- betameta #b_meta
-    bbar <- control$beta_init
+    # get b_meta as initial bbar
+    bbar <- control$beta_init 
     
     # 1st and 2nd derivatives
     status <- ipdata$status
     X <- as.matrix(ipdata[,-1])
-
+ 
     expit = function(x){1/(1+exp(-x))}
     
     #first order gradient
@@ -176,10 +189,11 @@ ODAL.estimate <- function(ipdata,control,config) {
                    fn = logL_tilde,
                    # gr = logL_tilde_D1,
                    hessian = TRUE,
+                   method = control$optim_method,
                    control = list(maxit=control$optim_maxit))
       
-    
-    surr <- list(btilde = sol$par, Htilde = sol$hessian, site=config$site_id, site_size=nrow(ipdata))
+    # Htilde = sol$hessian, 
+    surr <- list(btilde = sol$par, setilde=sqrt(diag(solve(sol$hessian))/N), site=config$site_id, site_size=nrow(ipdata))
     ######################################################
     
   return(surr)

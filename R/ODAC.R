@@ -35,8 +35,7 @@
 #' 
 #' @references  Rui Duan, et al. "Learning from local to global: An efficient distributed algorithm for modeling time-to-event data". 
 #'               Journal of the American Medical Informatics Association, 2020, https://doi.org/10.1093/jamia/ocaa044
-#'              Chongliang Luo, et al. "ODACH: A One-shot Distributed Algorithm for Cox model with Heterogeneous Multi-center Data".
-#'               medRxiv, 2021, https://doi.org/10.1101/2021.04.18.21255694
+#'              Chongliang Luo, et al. ODACH: a one-shot distributed algorithm for Cox model with heterogeneous multi-center data. Sci Rep. 2022 Apr 22;12(1):6627. \doi{10.1038/s41598-022-09069-0}. 
 #' @return  list(T_i = T_i, bhat_i = fit_i$coef, Vhat_i = summary(fit_i)$coef[,2]^2, site=control$mysite, site_size= nrow(ipdata))
 #' @keywords internal
 ODAC.initialize <- function(ipdata,control,config){
@@ -45,12 +44,25 @@ ODAC.initialize <- function(ipdata,control,config){
   }else{
     T_i <- NA
   }
+  
+  # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
+  px = ncol(ipdata) - 2
+  col_deg = apply(ipdata[,-c(1:2)],2,var)==0    # degenerated X columns...
+  ipdata_i = ipdata[,-(which(col_deg)+2),with=F]
+  
+  # formula_i <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+")) ) 
   fit_i <- tryCatch(survival::coxph(survival::Surv(time, status) ~ ., data=ipdata), error=function(e) NULL)
   
   if(!is.null(fit_i)){
+    # for degenerated X, coef=0, var=Inf
+    bhat_i = rep(0,px)
+    Vhat_i = rep(Inf,px) 
+    bhat_i[!col_deg] <- fit_i$coef
+    Vhat_i[!col_deg] <- summary(fit_i)$coef[,"se(coef)"]^2 # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
+    
     init <- list(T_i = T_i,
-                 bhat_i = fit_i$coef,
-                 Vhat_i = summary(fit_i)$coef[,"se(coef)"]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
+                 bhat_i = bhat_i,
+                 Vhat_i = Vhat_i,   #   
                  site = config$site_id,
                  site_size = nrow(ipdata))
     init$Vhat_i[init$Vhat_i==0] = NA
