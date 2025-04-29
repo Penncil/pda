@@ -30,7 +30,7 @@
 #' @return NONE
 #' @seealso \code{pda}
 #' @export
-pdaPut <- function(obj,name,config,upload_without_confirm,silent_message=F,digits=4){
+pdaPut <- function(obj,name,config,upload_without_confirm=F,silent_message=F,digits=4){
   mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
   
   obj_Json <- jsonlite::toJSON(obj, digits = digits)  # RJSONIO::toJSON(tt) keep vec name?
@@ -624,7 +624,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
 #' @title pda control synchronize 
 #' 
 #' @description  update pda control if ready (run by lead)
-#' @usage pdaSync(config)
+#' @usage pdaSync(config,upload_without_confirm,silent_message, digits)
 #' @param config cloud configuration
 #' @return control
 #' @seealso \code{pda}

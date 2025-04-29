@@ -216,20 +216,21 @@ ODAL.estimate <- function(ipdata,control,config) {
 ODAL.synthesize <- function(ipdata,control,config) {
   px <- length(control$risk_factor)
   K <- length(control$sites)
-  btilde_wt_sum <- rep(0, px)
-  wt_sum <- rep(0, px)     # cov matrix?
+  btilde = rep(0, px)
+  setilde = rep(0, px) # cov matrix? 
   
   for(site_i in control$sites){
     surr_i <- pdaGet(paste0(site_i,'_estimate'),config)
-    btilde_wt_sum <- btilde_wt_sum + surr_i$Htilde %*% surr_i$btilde
-    wt_sum <- wt_sum + surr_i$Htilde
+    btilde = cbind(btilde, surr_i$btilde)
+    setilde = cbind(setilde, surr_i$setilde) 
   }
+  b_wt_sum <- rowSums(btilde / (setilde^2), na.rm=T)  
+  wt_sum <- rowSums(1 / (setilde^2), na.rm=T) 
   
   # inv-Var weighted average est, and final Var = average Var-tilde
-  btilde <- solve(wt_sum, btilde_wt_sum)
-  Vtilde <- solve(wt_sum) * K
+  btilde <- b_wt_sum / wt_sum  
+  setilde <- sqrt(K / wt_sum)  
   
   message("all surrogate estimates synthesized, no need to broadcast! ")
-  return(list(btilde=btilde, 
-              Vtilde=Vtilde))
+  return(list(btilde=btilde, setilde=setilde))
 }

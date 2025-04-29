@@ -46,7 +46,7 @@ DLM.family <- 'gaussian'
 DLM.initialize <- function(ipdata,control,config){
   y = ipdata$outcome
   X = as.matrix(ipdata[,-'outcome']) # the first col of X is intercept 
-  
+  print(names(X))
   init = list(SiX = t(X) %*% X,
               SiXY = t(X) %*% y,
               SiY = sum(y^2),
