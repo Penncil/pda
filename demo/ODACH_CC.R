@@ -3,8 +3,8 @@ require(data.table)
 # require(pda) 
 require(spatstat) # for using weighted.median() as init
 
-# load('/Users/chongliangluo/Dropbox/PDA-git/pda/data/odach_cc.rda')
-# setwd('/Users/chongliangluo/Dropbox/PDA_test/CL/')
+# load('/Users/chongliang/Dropbox/PDA-git/pda/data/odach_cc.rda')
+# setwd('/Users/chongliang/Dropbox/PDA_test/CL/')
 
 ## In the toy example below we aim to analyze the association of survival {time} 
 ##  with X1, Category, and Group using Cox reg with case-cohort design,
@@ -49,8 +49,6 @@ fit.pool <- cch_pooled(Surv(time, status) ~ X1+`Group (A,B,C)`+Category, data=od
 fit.pool$par
 #          X1   `Group (A,B,C)`B  `Group (A,B,C)`C CategoryY (X,Y,Z) CategoryZ (X,Y,Z) 
 # -0.5129684         0.1277404         0.2421812        -0.2374705         0.1359541 
-sqrt(diag(-solve(fit.pool$hessian)))  # naive s.e. from inv hessian 
-# 0.1105210         0.3184666         0.2969597         0.2831813         0.3211316 
 sqrt(diag(fit.pool$var)) # robust s.e. from sandwich 
 #  0.1153119         0.3363288         0.3260169         0.3059613         0.3590618  
 
@@ -64,7 +62,8 @@ fit.pool1$coef
 # -0.5129683         0.1277399         0.2421812        -0.2374701         0.1359542
 sqrt(diag(fit.pool1$var)) # identical to the above cch_pooled
 # 0.1153119 0.3363288 0.3260168 0.3059612 0.3590618
-
+# summary(fit.pool1)$coef[,'se(coef)']
+# 0.1105210         0.3184666         0.2969596         0.2831813         0.3211316
 
 
 # ############################  STEP 1: initialize  ############################### 
@@ -73,6 +72,8 @@ control$init_method = 'meta' # 'lead' # 'weighted.median' #  'median'
 ## run the example in local directory:
 ## specify your working directory, default is the tempdir
 mydir <- getwd()   # tempdir()
+file.remove(list.files(mydir,full.names = T)[grepl('.json', list.files(mydir))])
+
 pda(site_id = 'site1', control = control, dir = mydir, upload_without_confirm = T,silent_message =F)
 
 pda(site_id = 'site3', ipdata = data_split[[3]], dir=mydir, upload_without_confirm = T)
@@ -91,9 +92,9 @@ pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confir
 
 # ############################  STEP 3: estimate  ###############################
 pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confirm=T)
-# "beta_init":[-0.51927745,0.17385216,0.25506044,-0.25316367,-0.04065175] # (meta)
-# "btilde":   [-0.51303977,0.12780133,0.24209696,-0.23769306,0.137274],
-# "setilde":[0.11581255,0.33459023,0.33101378,0.29710675,0.36852761]
+# "beta_init":[-0.5169,0.1755,0.2722,-0.2516,-0.0453] # (meta)
+# "btilde":   [-0.5131,0.1275,0.2419,-0.2377,0.1373],
+# "setilde":  [ 0.1156,0.3363,0.3312, 0.2970,0.3688]
               
 
 ############ 20250311:  to get better robust s.e. estimate ###################### 
@@ -115,25 +116,21 @@ pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confir
 
 # ############################  STEP 5: estimate again  ###############################
 pda(site_id = 'site1', ipdata = data_split[[1]], dir=mydir,upload_without_confirm=T)
-# "btilde":[-0.51313047,0.12776128,0.24215611,-0.23726386,0.13630634],
-# "setilde":[0.11531871,0.33633524,0.32601783,0.30604367,0.35900238]
-             
+# "btilde": [-0.5086,0.1178,0.2315,-0.2312,0.2533]
+# "setilde":[ 0.1155,0.3364,0.3278, 0.3004,0.3645]
              
 fit.pda = pdaGet(name = 'site1_estimate', config = config)
 
- 
 ## all coef est:
-# pooled:                     [-0.5129684,  0.1277404, 0.2421812, -0.2374705, 0.1359541
-# meta:                       [-0.51927745,0.17385216,0.25506044,-0.25316367,-0.04065175]
-# odach_cc(meta):             [-0.51303977,0.12780133,0.24209696,-0.23769306,0.137274]   # first round 
-# odach_cc(again):            [-0.51313047,0.12776128,0.24215611,-0.23726386,0.13630634] # second round 
+# pooled:                     [-0.5130,0.1277,0.2422,-0.2375, 0.1360] 
+# meta:                       [-0.5169,0.1755,0.2722,-0.2516,-0.0453]
+# odach_cc(meta):             [-0.5131,0.1275,0.2419,-0.2377, 0.1373] # first round 
+# odach_cc(again):            [-0.5086,0.1178,0.2315,-0.2312, 0.2533] # second round 
 
 ## all s.e. est: 
-         
-# cch_pooled  0.1153119, 0.3363288, 0.3260169, 0.3059613, 0.3590618       
-# coxph_pooled 0.1153119, 0.3363288, 0.3260168, 0.3059612, 0.3590618 
-# "setilde": [0.11581255,0.33459023,0.33101378,0.29710675,0.36852761]  # first round
-# "setilde": [0.11531871,0.33633524,0.32601783,0.30604367,0.35900238]    # second round
+# cch_pooled  0.1153 0.3363 0.3260 0.3060 0.3591      
+# "setilde": [0.1156,0.3363,0.3312, 0.2970,0.3688]  # first round
+# "setilde": [0.1155,0.3364,0.3278, 0.3004,0.3645]    # second round
 # btilde and setilde (robust) are almost identical to pooled cch! 
 
 

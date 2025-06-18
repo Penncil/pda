@@ -76,7 +76,7 @@ ODACH_CC.initialize <- function(ipdata,control,config){
     bhat_i = rep(0,px)
     Vhat_i = rep(Inf,px) 
     bhat_i[!col_deg] <- fit_i$coef
-    Vhat_i[!col_deg] <- diag(fit_i$var) # summary(fit_i)$coef[,"SE"]^2
+    Vhat_i[!col_deg] <- summary(fit_i)$coef[,"se(coef)"]^2 # dont's use robust var diag(fit_i$var)
     
     init <- list(bhat_i = bhat_i,
                  Vhat_i = Vhat_i,  
@@ -127,9 +127,21 @@ ODACH_CC.derive <- function(ipdata,control,config){
   ## grad and hess
   bbar = control$beta_init
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  cc_prep = prepare_case_cohort(ipdata, control$method, full_cohort_size)
-  logL_D1 <- grad_plk(bbar, cc_prep)
-  logL_D2 <- hess_plk(bbar, cc_prep)
+  cc_prep = prepare_case_cohort(list(ipdata), control$method, full_cohort_size)
+  # logL_D1 <- grad_plk(bbar, cc_prep)
+  # logL_D2 <- hess_plk(bbar, cc_prep)
+  logL_D1 <- rcpp_cc_grad_plk(beta = bbar, site_num = 1, 
+               covariate_list = cc_prep$covariate_list,
+               failure_position = cc_prep$failure_position,
+               failure_num = cc_prep$failure_num,
+               risk_sets = cc_prep$risk_sets,
+               risk_set_weights = cc_prep$risk_set_weights)
+  logL_D2 <- rcpp_cc_hess_plk(beta = bbar, site_num = 1,
+                covariate_list = cc_prep$covariate_list,
+                failure_position = cc_prep$failure_position,
+                failure_num = cc_prep$failure_num,
+                risk_sets = cc_prep$risk_sets,
+                risk_set_weights = cc_prep$risk_set_weights)
   
   ## get intermediate (sandwich meat) for robust variance est of ODACH_CC  
   # fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
@@ -189,12 +201,30 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   # bbar <- derivatives_i$b_meta
   bbar <- control$beta_init
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  cc_prep = prepare_case_cohort(ipdata, control$method, full_cohort_size) 
+  cc_prep = prepare_case_cohort(list(ipdata), control$method, full_cohort_size) 
   
   # logL at local site
-  logL_local <- function(beta) log_plk(beta, cc_prep)
-  logL_local_D1 <- function(beta) grad_plk(beta, cc_prep)
-  logL_local_D2 <- function(beta) hess_plk(beta, cc_prep)
+  # logL_local <- function(beta) log_plk(beta, cc_prep)
+  # logL_local_D1 <- function(beta) grad_plk(beta, cc_prep)
+  # logL_local_D2 <- function(beta) hess_plk(beta, cc_prep)
+  logL_local <- function(beta) rcpp_cc_log_plk(beta, site_num = 1, 
+                             covariate_list = cc_prep$covariate_list,
+                             failure_position = cc_prep$failure_position,
+                             failure_num = cc_prep$failure_num,
+                             risk_sets = cc_prep$risk_sets,
+                             risk_set_weights = cc_prep$risk_set_weights)
+  logL_local_D1 <- function(beta) rcpp_cc_grad_plk(beta, site_num = 1, 
+                              covariate_list = cc_prep$covariate_list,
+                              failure_position = cc_prep$failure_position,
+                              failure_num = cc_prep$failure_num,
+                              risk_sets = cc_prep$risk_sets,
+                              risk_set_weights = cc_prep$risk_set_weights)
+  logL_local_D2 <- function(beta) rcpp_cc_hess_plk(beta, site_num = 1,
+                              covariate_list = cc_prep$covariate_list,
+                              failure_position = cc_prep$failure_position,
+                              failure_num = cc_prep$failure_num,
+                              risk_sets = cc_prep$risk_sets,
+                              risk_set_weights = cc_prep$risk_set_weights)
   
   # surrogate log-L and its gradient
   logL_diff_D1 <- logL_all_D1 - logL_local_D1(bbar)  # / N / n
