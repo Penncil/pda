@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // rcpp_coxph_logL
 double rcpp_coxph_logL(const arma::vec& beta, const arma::vec& time, const arma::vec& event, const arma::mat& z);
 RcppExport SEXP _pda_rcpp_coxph_logL(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
@@ -108,6 +113,74 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rcpp_cc_log_plk
+double rcpp_cc_log_plk(NumericVector beta, List covariate_list, List failure_position, IntegerVector failure_num, List risk_sets, List risk_set_weights, int site_num);
+RcppExport SEXP _pda_rcpp_cc_log_plk(SEXP betaSEXP, SEXP covariate_listSEXP, SEXP failure_positionSEXP, SEXP failure_numSEXP, SEXP risk_setsSEXP, SEXP risk_set_weightsSEXP, SEXP site_numSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< List >::type covariate_list(covariate_listSEXP);
+    Rcpp::traits::input_parameter< List >::type failure_position(failure_positionSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type failure_num(failure_numSEXP);
+    Rcpp::traits::input_parameter< List >::type risk_sets(risk_setsSEXP);
+    Rcpp::traits::input_parameter< List >::type risk_set_weights(risk_set_weightsSEXP);
+    Rcpp::traits::input_parameter< int >::type site_num(site_numSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_cc_log_plk(beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, site_num));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rcpp_cc_pool_fun
+double rcpp_cc_pool_fun(NumericVector beta, List covariate_list, List failure_position, IntegerVector failure_num, List risk_sets, List risk_set_weights, int K);
+RcppExport SEXP _pda_rcpp_cc_pool_fun(SEXP betaSEXP, SEXP covariate_listSEXP, SEXP failure_positionSEXP, SEXP failure_numSEXP, SEXP risk_setsSEXP, SEXP risk_set_weightsSEXP, SEXP KSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< List >::type covariate_list(covariate_listSEXP);
+    Rcpp::traits::input_parameter< List >::type failure_position(failure_positionSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type failure_num(failure_numSEXP);
+    Rcpp::traits::input_parameter< List >::type risk_sets(risk_setsSEXP);
+    Rcpp::traits::input_parameter< List >::type risk_set_weights(risk_set_weightsSEXP);
+    Rcpp::traits::input_parameter< int >::type K(KSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_cc_pool_fun(beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, K));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rcpp_cc_grad_plk
+NumericVector rcpp_cc_grad_plk(NumericVector beta, List covariate_list, List failure_position, IntegerVector failure_num, List risk_sets, List risk_set_weights, int site_num);
+RcppExport SEXP _pda_rcpp_cc_grad_plk(SEXP betaSEXP, SEXP covariate_listSEXP, SEXP failure_positionSEXP, SEXP failure_numSEXP, SEXP risk_setsSEXP, SEXP risk_set_weightsSEXP, SEXP site_numSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< List >::type covariate_list(covariate_listSEXP);
+    Rcpp::traits::input_parameter< List >::type failure_position(failure_positionSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type failure_num(failure_numSEXP);
+    Rcpp::traits::input_parameter< List >::type risk_sets(risk_setsSEXP);
+    Rcpp::traits::input_parameter< List >::type risk_set_weights(risk_set_weightsSEXP);
+    Rcpp::traits::input_parameter< int >::type site_num(site_numSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_cc_grad_plk(beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, site_num));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rcpp_cc_hess_plk
+NumericMatrix rcpp_cc_hess_plk(NumericVector beta, List covariate_list, List failure_position, IntegerVector failure_num, List risk_sets, List risk_set_weights, int site_num);
+RcppExport SEXP _pda_rcpp_cc_hess_plk(SEXP betaSEXP, SEXP covariate_listSEXP, SEXP failure_positionSEXP, SEXP failure_numSEXP, SEXP risk_setsSEXP, SEXP risk_set_weightsSEXP, SEXP site_numSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< List >::type covariate_list(covariate_listSEXP);
+    Rcpp::traits::input_parameter< List >::type failure_position(failure_positionSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type failure_num(failure_numSEXP);
+    Rcpp::traits::input_parameter< List >::type risk_sets(risk_setsSEXP);
+    Rcpp::traits::input_parameter< List >::type risk_set_weights(risk_set_weightsSEXP);
+    Rcpp::traits::input_parameter< int >::type site_num(site_numSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_cc_hess_plk(beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, site_num));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_pda_rcpp_coxph_logL", (DL_FUNC) &_pda_rcpp_coxph_logL, 4},
@@ -117,6 +190,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_pda_rcpp_coxph_logL_gradient_efron", (DL_FUNC) &_pda_rcpp_coxph_logL_gradient_efron, 4},
     {"_pda_rcpp_coxph_logL_gradient_efron_dist", (DL_FUNC) &_pda_rcpp_coxph_logL_gradient_efron_dist, 7},
     {"_pda_rcpp_aggregate", (DL_FUNC) &_pda_rcpp_aggregate, 5},
+    {"_pda_rcpp_cc_log_plk", (DL_FUNC) &_pda_rcpp_cc_log_plk, 7},
+    {"_pda_rcpp_cc_pool_fun", (DL_FUNC) &_pda_rcpp_cc_pool_fun, 7},
+    {"_pda_rcpp_cc_grad_plk", (DL_FUNC) &_pda_rcpp_cc_grad_plk, 7},
+    {"_pda_rcpp_cc_hess_plk", (DL_FUNC) &_pda_rcpp_cc_hess_plk, 7},
     {NULL, NULL, 0}
 };
 

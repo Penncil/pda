@@ -29,3 +29,19 @@ rcpp_aggregate <- function(x, indices, simplify = TRUE, cumulative = FALSE, reve
     .Call('_pda_rcpp_aggregate', PACKAGE = 'pda', x, indices, simplify, cumulative, reversely)
 }
 
+rcpp_cc_log_plk <- function(beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, site_num) {
+    .Call('_pda_rcpp_cc_log_plk', PACKAGE = 'pda', beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, site_num)
+}
+
+rcpp_cc_pool_fun <- function(beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, K) {
+    .Call('_pda_rcpp_cc_pool_fun', PACKAGE = 'pda', beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, K)
+}
+
+rcpp_cc_grad_plk <- function(beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, site_num) {
+    .Call('_pda_rcpp_cc_grad_plk', PACKAGE = 'pda', beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, site_num)
+}
+
+rcpp_cc_hess_plk <- function(beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, site_num) {
+    .Call('_pda_rcpp_cc_hess_plk', PACKAGE = 'pda', beta, covariate_list, failure_position, failure_num, risk_sets, risk_set_weights, site_num)
+}
+
