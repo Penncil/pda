@@ -103,3 +103,19 @@
 #'   \item{Group}{the fourth covariate, categorical} 
 #' } 
 "odach_cc"
+
+
+#' DisC2o simulated data 
+#'
+#' A simulated long-covid data set for Distributed causal inference with covariates shift (DisC2o)  
+#'
+#' @format A data frame with 900 rows and 53 variables:
+#' \describe{
+#'   \item{PASC_features}{number of Post Acute Sequelae of COVID (PASC, or long covid) features} 
+#'   \item{covid_vaccination}{treatment of covid vaccination, 1=vaccinated}
+#'   \item{site}{site id, 300 participants each for 'site1', 'site2', and 'site3'} 
+#'   \item{X1-X5}{5 binary covariates}
+#'   \item{X6-X50}{45 continuous covariates}  
+#' } 
+"long_covid"
+ 

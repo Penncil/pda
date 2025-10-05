@@ -162,10 +162,166 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=
     mymessage(paste0('no public or local directory supplied, use local temporary:', tempdir()))
     config$dir = tempdir()
   }
-   
+  
   config;
 }
 
+
+# install.packages("data.tree")
+
+#' @useDynLib pda
+#' @title use this function to guide end-users step-by-step to identify best pda models for their tasks, and set up control.  
+#' @usage pdaCatalog()
+#' @param task user-specified task, c('Regression', 'Survival', 'Trial_emulation', 'Causal_inference', 'Design_analysis', 'Clustering', 'Transfer_learning'). If no specify, display all models
+#' @param write_json_file_path directory path to write the control file to
+#' @param optim_maxit option in the control file for the optimization in pda, default 100
+#' @param optim_method option in the control file for the optimization in pda, default "BFGS"
+#' @param init_method option in the control file for calculating the initial estimate in pda, default "meta"
+#' @return pda control 
+#' @seealso \code{pda}
+#' @export
+pdaCatalog <- function(task=c('Regression', 
+                              'Survival', 
+                              'Trial_emulation', 
+                              'Causal_inference', 
+                              'Design_analysis', 
+                              'Clustering', 
+                              'Transfer_learning'),
+                       write_json_file_path=getwd(), 
+                       optim_maxit,
+                       optim_method,
+                       init_method){
+  # a = Hmisc::list.tree(object, fill = " | ", attr.print = F, size = F, maxlen = 1)     
+  library(data.tree)
+  library(jsonlite)
+  library(dplyr)
+  S=readline(prompt="We here present the Catalog for all pda models. \nPlease choose the best pda model based on your Task and specifications. \nType  <Return>   to continue : ")  
+  
+  # Tree structure Catalog: Task - heterogeneity - heterogeneity_effect(0=fixed 1=random) or other specifications...
+  catalog <- data.frame(
+    pathString = c( 
+      "Task",
+      "Task/Regression, by outcome type",
+      "Task/Regression, by outcome type/Continuous: DLM",
+      "Task/Regression, by outcome type/Continuous: DLM/heterogeneity=No: DLM_0",
+      "Task/Regression, by outcome type/Continuous: DLM/heterogeneity=Yes",
+      "Task/Regression, by outcome type/Continuous: DLM/heterogeneity=Yes/heterogeneity_effect=fixed: DLM_1_0",
+      "Task/Regression, by outcome type/Continuous: DLM/heterogeneity=Yes/heterogeneity_effect=random: DLM_1_1",
+      "Task/Regression, by outcome type/Dichotomous",
+      "Task/Regression, by outcome type/Dichotomous/# covariates > 30: ADAP",
+      "Task/Regression, by outcome type/Dichotomous/counterfactual prediction: dGEM", # not involve dPQL
+      # All covariates are categorical
+      # "data fully stratified" -> "need one-shot lossless"? (need explanation... guideline book) 
+      "Task/Regression, by outcome type/Dichotomous/data fully stratified", # Bingyu 
+      "Task/Regression, by outcome type/Dichotomous/data fully stratified/heterogeneity=No: COLA_0_b",
+      "Task/Regression, by outcome type/Dichotomous/data fully stratified/heterogeneity=Yes",
+      "Task/Regression, by outcome type/Dichotomous/data fully stratified/heterogeneity=Yes/heterogeneity_effect=fixed: COLA_1_0_b",
+      "Task/Regression, by outcome type/Dichotomous/data fully stratified/heterogeneity=Yes/heterogeneity_effect=random: COLA_1_1_b",
+      "Task/Regression, by outcome type/Dichotomous/heterogeneity=No", # set ODAL-R as built-in: if hessian has outlier then do median 
+      "Task/Regression, by outcome type/Dichotomous/heterogeneity=No/need odds ratio: ODAL", 
+      "Task/Regression, by outcome type/Dichotomous/heterogeneity=No/need risk ratio: ODAPB", 
+      "Task/Regression, by outcome type/Dichotomous/heterogeneity=Yes: DPQL_b", 
+      "Task/Regression, by outcome type/Count/excessive 0s: ODAH", 
+      # "Task/Regression, by outcome type/count/non-zero counts: ODAPT",  # + truncated Pois? 
+      "Task/Regression, by outcome type/Count/excessive variation: DPLR", # Chongliang  
+      "Task/Regression, by outcome type/Count/data fully stratified",     # the same as dichotomous
+      "Task/Regression, by outcome type/Count/data fully stratified/heterogeneity=No: COLA_0_c",
+      "Task/Regression, by outcome type/Count/data fully stratified/heterogeneity=Yes",
+      "Task/Regression, by outcome type/Count/data fully stratified/heterogeneity=Yes/heterogeneity_effect=fixed: COLA_1_0_c",
+      "Task/Regression, by outcome type/Count/data fully stratified/heterogeneity=Yes/heterogeneity_effect=random: COLA_1_1_c",
+      "Task/Regression, by outcome type/Count/heterogeneity=No: ODAP",
+      "Task/Regression, by outcome type/Count/heterogeneity=Yes: DPQL_c",
+      "Task/Regression, by outcome type/Multi-category", 
+      "Task/Regression, by outcome type/Multi-category/heterogeneity=No: ODACAT_0",
+      "Task/Regression, by outcome type/Multi-category/heterogeneity=Yes: ODACAT_1", # ODACATH
+      "Task/Survival",
+      "Task/Survival/heterogeneity=No: ODAC_0",  
+      "Task/Survival/heterogeneity=Yes: ODAC_1",  # ODACH
+      "Task/Survival/time-varying effects: ODACT", # ODACT-H? 
+      "Task/Survival/competing risk",         # Dazheng  
+      "Task/Survival/competing risk/heterogeneity=No: ODACoR_0", #  
+      "Task/Survival/competing risk/heterogeneity=Yes: ODACoR_1", #  
+      "Task/Trial_emulation",      # will add LATTE T2E?
+      "Task/Trial_emulation/propensity score stratificaion: LATTE_1",       # Lu   
+      "Task/Trial_emulation/propensity score inverse weighting: LATTE_2",
+      "Task/Trial_emulation/propensity score overlap weighting: LATTE_3",
+      "Task/Causal_inference/Disc2o", # Jie TBA 
+      "Task/Design_analysis/DRAFT", # Design-informed Regression Algorithm for Federated-learning Toolbox # ODACH-CC
+      "Task/Clustering/ODEM",  # One-shot EM (Yudong)  
+      "Task/Clustering/ODMM",  # 
+      "Task/Clustering/DMLCA",  # Distributed EM (Xiaokang)
+      "Task/Transfer_learning"  # Jie TBA 
+    ) # , value = LETTERS[1:16] # Optional: Add values to nodes
+  ) 
+  catalog_tree <- as.Node(catalog)
+  print(catalog_tree) # how to change "levelName" to 'pda model'?
+  
+  # read in the model name, as identified by the pda Catalog
+  model = readline(prompt='\nPlease provide the pda model as identified by the Catalog, \nif specfication (e.g. _1_1 after DLM) is not provided, default will be used: ')
+  
+  ## Start generate pda control
+  control = list()
+  
+  # read in model as selected from the Catalog
+  model = unlist(strsplit(model, '_'))
+  tt=as.character(model[2])
+  control$model = model[1]
+  control$heterogeneity = ifelse(model[2]==0, F, T)
+  control$heterogeneity_effect = ifelse(model[3]==0, 'fixed', 'random')
+  if(model[1]=='LATTE') control$propensity_score = case_when(model[2]==1 ~ 'stratificaion',
+                                                             model[2]==2 ~ 'inverse weighting',
+                                                             model[2]==3 ~ 'overlap weighting')
+  
+  # family from model
+  fml = case_when(model[1]%in%c('DLM') ~ 'gaussian',
+                  model[1]%in%c('ODAL','dGEM','ODAPB') ~ 'binomial',
+                  model[1]%in%c('ODAP','DPLR') ~ 'poisson',
+                  model[1]%in%c('ODACAT') ~ 'multicategory',
+                  model[1]%in%c('ODAC','ODACT','ODACoR') ~ 'cox',
+                  model[1]%in%c('ADAP') ~ 'lasso',
+                  model[1]%in%c('ODAH') ~ 'hurdle')
+  if(model[1] %in%c('DPQL', 'COLA') ) fml = case_when(model[length(model)]=='b' ~ 'binomial',
+                                                      model[length(model)]=='c' ~ 'poisson' )
+  control$family = fml
+  
+  # read in project_name
+  control$project_name = readline(prompt="\nPlease name your project: ")
+  
+  # read in site names
+  sites = readline(prompt='\nPlease list the participating sites separated by blanks, \nwith the first site as lead/coordinating site, \ntype <Return> to skip if you want to specify it later: ')
+  control$sites = unlist(strsplit(sites, ' ', fixed = T))
+  control$lead_site = control$sites[1]
+  
+  # read in variable names: 
+  # outcome variable
+  outcome = readline(prompt='\nPlease provide your outcome variable name, \nif your Task is Survival, provide both variables for time-to-event and censor status separated by blank, \ntype <Return> to skip if Task is Clustering: ') 
+  if(grepl('ODAC', model[1])){
+    outcome = unlist(strsplit(outcome, ' ', fixed = T))
+    control$outcome = paste0('Surv(', outcome[1], ', ', outcome[2], ')' )
+  } 
+  
+  # covariate variables
+  variables = readline(prompt='\nPlease provide your covariate variable names separated by blanks, \nthe variables need to be harmonized properly between sites (see Harminization guidelines xxx), \ntype <Return> to skip if you want to provide it later: ')
+  control$variables = unlist(strsplit(variables, ' ', fixed = T))
+  
+  # levels of all categorical X's, with the first being the reference
+  variables_lev = readline(prompt="\nPlease provide the levels of all categorical covariates, with the first being the reference, \n example input: age=c('young', 'old'), sex=c('M','F') \ntype <Return> to skip if you want to provide it later: ")
+  control$variables_lev = eval(parse(text=paste0('list(', variables_lev, ')')))
+  
+  # other defaults
+  control$step = 'initialize'
+  # control$family = ''  # from model?...
+  # ask for input if user is statistician?
+  control$optim_maxit = 100
+  control$optim_method = "BFGS"
+  control$init_method = 'meta' 
+  control$upload_date = Sys.time()
+  
+  write_json_file = menu(c("Yes", "No"), title="\nDo you want to write control into a json file at your specified folder? ")  
+  if(write_json_file==1) write(toJSON(control, digits = 4), file=paste0(write_json_file_path, '/control.json'))
+  
+  return(control) 
+}
 
 
 #' @useDynLib pda
@@ -311,13 +467,14 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
                 upload_without_confirm=F, silent_message=F, digits=4,
                 hosdata=NULL # for dGEM
-                ){ 
+){ 
   config <- getCloudConfig(site_id,dir,uri,secret,silent_message)
   mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
   files <- pdaList(config)
   mymessage('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): ')
   mymessage(paste0('your site = ', config$site_id)) 
   
+  data_now<-ipdata
   # read in control, or lead site add a control file to the cloud if there is none
   if('control' %in% files) {
     control = pdaGet('control',config) 
@@ -329,7 +486,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       stop('A control file is needed from the lead site!') 
     }
   } 
-   
+  
   ## specify pda steps and family based on model
   if(control$model=='ODAL'){
     ODAL.steps<-c('initialize','derive','estimate','synthesize')
@@ -409,15 +566,27 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     dGEM.steps<-c('initialize','derive','estimate','synthesize')
     dGEM.family<-'binomial'
     variables_site_level <- control$variables_site_level
-  }else if(control$model == 'OLGLM'){
-    OLGLM.steps<-c('initialize')
-    OLGLM.family<-'binomial'
-  }else if(control$model == 'OLGLMM'){
-    OLGLMM.steps<-c('initialize')
-    OLGLMM.family<-'binomial'
+  }else if(control$model == 'COLA'){
+    COLA.steps<-c('initialize', 'estimate')
+    COLA.family <- control$family
+    if (control$mixed_effects==TRUE){
+      mymessage('You are setting the existence of mixed effects (mixed_effects = TRUE) and assuming to implement COLA-GLMM.')
+    }
+    # COLA.family<-'binomial'
+    # }else if(control$model == 'OLGLM'){
+    #   OLGLM.steps<-c('initialize')
+    #   OLGLM.family<-'binomial'
+    # }else if(control$model == 'OLGLMM'){
+    #   OLGLMM.steps<-c('initialize')
+    #   OLGLMM.family<-'binomial'
   }else if(control$model == 'ODACH_CC'){ 
     ODACH_CC.steps<-c('initialize','derive', 'estimate','synthesize')
     ODACH_CC.family<-'cox'
+  }else if(control$model=='DisC2o'){
+    DisC2o.steps<-c('PSinitialize','PSderive','PSestimate',
+                    'OMinitialize','OMderive','OMestimate',
+                    'AIPWestimate','synthesize')
+    DisC2o.family<-control$family
   }
   
   family = get(paste0(control$model,'.family'))
@@ -435,6 +604,10 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       variables <- control$variables_hurdle_count
     }else{
       variables <- control$variables
+    }
+    if(control$model=="DisC2o"){
+      treatment_name <- control$treatment
+      treatment_col <- ipdata[[treatment_name]]
     }
     formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
     mf <- model.frame(formula, ipdata, xlev=control$variables_lev)
@@ -514,25 +687,33 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
                                       model.matrix(formula, mf))
       control$risk_factor = colnames(ipdata)[-1]
     }
-  }else if(control$model=='OLGLM'){
+    # }else if(control$model=='OLGLM'){
+    #   if(control$step == "initialize"){
+    #     ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
+    #                                     model.matrix(formula, mf))
+    #     control$risk_factor = colnames(ipdata)[-1]
+    #   }else{
+    #     control$risk_factor = colnames(ipdata)[-1]
+    #   }
+    # } else if(control$model=='OLGLMM'){
+    #   if (!is.null(ipdata)){
+    #     if(control$step == "initialize"){
+    #       ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
+    #                                       model.matrix(formula, mf))
+    #       control$risk_factor = colnames(ipdata)[-1]
+    #     }else{
+    #       control$risk_factor = colnames(ipdata)[-1]
+    #     }
+    #   }
+  }else if (control$model == 'COLA'){
     if(control$step == "initialize"){
-      ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
+      ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),
                                       model.matrix(formula, mf))
       control$risk_factor = colnames(ipdata)[-1]
     }else{
       control$risk_factor = colnames(ipdata)[-1]
     }
-  } else if(control$model=='OLGLMM'){
-    if (!is.null(ipdata)){
-      if(control$step == "initialize"){
-        ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
-                                        model.matrix(formula, mf))
-        control$risk_factor = colnames(ipdata)[-1]
-      }else{
-        control$risk_factor = colnames(ipdata)[-1]
-      }
-    }
-  } else if(control$model=='ODACH_CC'){
+  }else if(control$model=='ODACH_CC'){
     if (!is.null(ipdata)){
       ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
                                       status=as.numeric(model.response(mf))[-c(1:n)],
@@ -544,6 +725,11 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       ipdata = data.table(data.frame(ipdata)) 
       control$risk_factor = colnames(ipdata)[-c(1:3)] 
     }
+  }else if(control$model=='DisC2o'){
+    ipdata = data.table::data.table(treatment = treatment_col,
+                                    status=as.numeric(model.response(mf)), 
+                                    model.matrix(formula, mf))
+    control$risk_factor = colnames(ipdata)[-c(1,2)]
   }
   
   ## synchronize control file (at lead site), if lead site sees all collab sites ready
@@ -573,12 +759,12 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
           step_obj <- get(step_function)(control, config)
         }
       }
-    }else if(control$model == "OLGLMM"){
-      if(is.null(ipdata) & (config$site_id == control$lead_site)){
-        print("As the leading site, you are going to produce the final results")
-      }else{
-        step_obj <- get(step_function)(ipdata, control, config)
-      }
+      # }else if(control$model == "OLGLMM"){ # do we still need this? 
+      #   if(is.null(ipdata) & (config$site_id == control$lead_site)){
+      #     print("As the leading site, you are going to produce the final results")
+      # }else{
+      #   step_obj <- get(step_function)(ipdata, control, config)
+      # }
     }
     else{
       step_obj <- get(step_function)(ipdata, control, config)
@@ -610,11 +796,36 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       }
     } 
     
+    # if((control$step=="PSinitialize" & site_id==control$lead_site) |
+    #    (control$step=="OMinitialize" & site_id==control$lead_site ) |
+    #    control$step=="PSestimate" | 
+    #    control$step=="OMestimate" ) {
+    #    control<-pdaSync(config,upload_without_confirm,silent_message,digits)
+    # }
+    
+    if((control$step=="PSinitialize" & site_id==control$lead_site) |
+       (control$step=="OMinitialize" & site_id==control$lead_site )) {
+      control<-pdaSync(config,upload_without_confirm,silent_message,digits)
+    }
+    
+    if(control$step=="PSestimate" | control$step=="OMestimate" ){
+      control<-pdaSync(config,upload_without_confirm,silent_message,digits)
+      pda(site_id = site_id, ipdata = data_now, dir=dir)
+    }
+    
+    
     ## synchronize control file (at lead site), if lead site sees all collab sites ready
     files<-pdaList(config) 
     if(config$site_id==control$lead_site & all(paste0(control$sites,"_",control$step) %in% files)) {
-      control<-pdaSync(config,upload_without_confirm,silent_message,digits)
+      if(control$model=='DisC2o'& site_id==control$lead_site){
+        control<-pdaSync(config,upload_without_confirm,silent_message,digits)
+        pda(site_id = site_id, ipdata = data_now, dir=dir)
+      }else{
+        control<-pdaSync(config,upload_without_confirm,silent_message,digits)
+      }
     } 
+    
+    
   }
   invisible(control)
 }
@@ -673,15 +884,23 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){
   } else if(control$model=='dGEM'){
     dGEM.steps<-c('initialize','derive','estimate','synthesize')
     dGEM.family<-'binomial'
-  }else if(control$model == 'OLGLM'){
-    OLGLM.steps<-c('initialize')
-    OLGLM.family<-'binomial'
-  }else if(control$model == 'OLGLMM'){
-    OLGLMM.steps<-c('initialize')
-    OLGLMM.family<-'binomial'
+    # }else if(control$model == 'OLGLM'){
+    #   OLGLM.steps<-c('initialize')
+    #   OLGLM.family<-'binomial'
+    # }else if(control$model == 'OLGLMM'){
+    #   OLGLMM.steps<-c('initialize')
+    #   OLGLMM.family<-'binomial'
+  }else if(control$model == 'COLA'){
+    COLA.steps <- c('initialize','estimate')
+    COLA.family <- control$family
   }else if(control$model=='ODACH_CC'){  # ODACH with case-cohort design
     ODACH_CC.steps<-c('initialize','derive', 'estimate','synthesize') 
     ODACH_CC.family<-'cox'
+  }else if(control$model=='DisC2o'){
+    DisC2o.steps<-c('PSinitialize','PSderive','PSestimate',
+                    'OMinitialize','OMderive','OMestimate',
+                    'AIPWestimate','synthesize')
+    DisC2o.family<-control$family
   }
   
   files<-pdaList(config) 
@@ -735,102 +954,104 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){
         mymessage('sample size weighted average result:')
         #print(res)
         control$beta_init = bmeta
-      }else if(control$model == "OLGLM"){ 
-        K <- length(control$sites)
-        if(control$heterogeneity == FALSE){
-          read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
-          # print(read_AD$SXY) 
-          SXY <- read_AD$SXY
-          Xtable <- as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
-          colnames(Xtable) <- c("intercept", control$variables, "n") 
-          Xcat <- Xtable[,colnames(Xtable)!='n']
-          Xcat <- as.matrix(Xcat)
-          counts <- Xtable$n
-          for(site_i in control$sites[-1]){
-            KSiteAD <- pdaGet(paste0(site_i,'_initialize'),config)
-            SXY <- SXY+KSiteAD$SXY 
-            Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
-            colnames(Xtable) <- c("intercept", control$variables, "n")
-            counts <- counts + Xtable$n
-          }
-        }else{
-          read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config) 
-          SXY.intercept <- read_AD$SXY[1]
-          SXY.cov <- read_AD$SXY[-1]
-          Xtable <-as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
-          colnames(Xtable) <- c("intercept", control$variables, "n") 
-          Xcat0 <- Xtable[,colnames(Xtable)!='n']
-          Xcat <- Xcat0[,-1]
-          counts <- Xtable$n
-          
-          for(site_i in control$sites[-1]){
-            KSiteAD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
-            SXY.intercept <- c(SXY.intercept,KSiteAD$SXY[1])
-            SXY.cov <- SXY.cov+KSiteAD$SXY[-1] 
-            Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
-            colnames(Xtable) <- c("intercept", control$variables, "n") 
-            Xcat0 <- Xtable[,colnames(Xtable)!='n']
-            Xcat_tmp <- Xcat0[,-1]
-            Xcat <- rbind(Xcat,Xcat_tmp)
-            counts <- c(counts, Xtable$n)
-          }
-          
-          SXY <- c(SXY.intercept,SXY.cov)
-          SiteID <- rep(1:K, each = nrow(Xcat0))
-          new.siteID <- sapply(1:K,function(i) ifelse(SiteID==i,1,0))
-          colnames(new.siteID) <- paste0("Site", 1:K)
-          Xcat <- cbind(new.siteID,Xcat)
-          Xcat <- as.matrix(Xcat)
-        } 
-        logLik_AD <- function(beta){
-          -(sum(SXY*beta)-sum(log(1+exp(Xcat%*%c(beta)))*counts))/sum(counts)
-        } 
-        fit.AD <- optim(par = rep(0, ncol(Xcat)), logLik_AD, method = "BFGS") 
-        se <- sqrt(diag(solve(hessian(func = function(x) logLik_AD(x)*sum(counts), x = fit.AD$par))))
-        res <- data.frame(est = fit.AD$par, se = se)
-        rownames(res) <- colnames(Xcat) 
-        control$final_output = res 
-      }else if(control$model == "OLGLMM"){
-        for(site_i in control$site[1]){
-          AD = pdaGet(paste0(site_i,'_initialize'),config)
-          Xtable <- AD$Xtable
-          SY <- Xtable$SY
-          count <- Xtable$n
-          new_Xtable <- Xtable[,1:(1+length(control$variables))] 
-          new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
-          generate_Y <- function(Y_count, overall_count){
-            sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
-          }
-          new_Y <- unlist(mapply(generate_Y,SY,overall_count = count)) 
-          output_0 = cbind(new_Y, new_X)
-          colnames(output_0) = c(control$outcome,"intercept",control$variables)
-          output_0$site <- site_i
-        }
-        
-        for(site_i in control$sites[-1]){
-          AD = pdaGet(paste0(site_i,'_initialize'),config)
-          Xtable <- AD$Xtable
-          SY <- Xtable$SY
-          count <- Xtable$n
-          new_Xtable <- Xtable[,1:(1+length(control$variables))] 
-          new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
-          generate_Y <- function(Y_count, overall_count){
-            sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
-          }
-          new_Y <- unlist(mapply(generate_Y,SY,overall_count = count)) 
-          output = cbind(new_Y, new_X)
-          colnames(output) = c(control$outcome,"intercept",control$variables)
-          output$site <- site_i
-          output_0 <- rbind(output_0, output)
-        } 
-        
-        fit.pool.recons <- MASS::glmmPQL(as.formula(paste(control$outcome, paste(control$variables, collapse = "+"), sep = '~')), 
-                                   ~1|site, 
-                                   data = output_0,
-                                   family='binomial')
-        control$est <- fit.pool.recons$coefficients
-        control$varFix <- fit.pool.recons$varFix
-        control$rand_se <- fit.pool.recons$sigma 
+        # }else if(control$model == "OLGLM"){ 
+        #   K <- length(control$sites)
+        #   if(control$heterogeneity == FALSE){
+        #     read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
+        #     # print(read_AD$SXY) 
+        #     SXY <- read_AD$SXY
+        #     Xtable <- as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
+        #     colnames(Xtable) <- c("intercept", control$variables, "n") 
+        #     Xcat <- Xtable[,colnames(Xtable)!='n']
+        #     Xcat <- as.matrix(Xcat)
+        #     counts <- Xtable$n
+        #     for(site_i in control$sites[-1]){
+        #       KSiteAD <- pdaGet(paste0(site_i,'_initialize'),config)
+        #       SXY <- SXY+KSiteAD$SXY 
+        #       Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
+        #       colnames(Xtable) <- c("intercept", control$variables, "n")
+        #       counts <- counts + Xtable$n
+        #     }
+        #   }else{
+        #     read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config) 
+        #     SXY.intercept <- read_AD$SXY[1]
+        #     SXY.cov <- read_AD$SXY[-1]
+        #     Xtable <-as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
+        #     colnames(Xtable) <- c("intercept", control$variables, "n") 
+        #     Xcat0 <- Xtable[,colnames(Xtable)!='n']
+        #     Xcat <- Xcat0[,-1]
+        #     counts <- Xtable$n
+        #     
+        #     for(site_i in control$sites[-1]){
+        #       KSiteAD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
+        #       SXY.intercept <- c(SXY.intercept,KSiteAD$SXY[1])
+        #       SXY.cov <- SXY.cov+KSiteAD$SXY[-1] 
+        #       Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
+        #       colnames(Xtable) <- c("intercept", control$variables, "n") 
+        #       Xcat0 <- Xtable[,colnames(Xtable)!='n']
+        #       Xcat_tmp <- Xcat0[,-1]
+        #       Xcat <- rbind(Xcat,Xcat_tmp)
+        #       counts <- c(counts, Xtable$n)
+        #     }
+        #     
+        #     SXY <- c(SXY.intercept,SXY.cov)
+        #     SiteID <- rep(1:K, each = nrow(Xcat0))
+        #     new.siteID <- sapply(1:K,function(i) ifelse(SiteID==i,1,0))
+        #     colnames(new.siteID) <- paste0("Site", 1:K)
+        #     Xcat <- cbind(new.siteID,Xcat)
+        #     Xcat <- as.matrix(Xcat)
+        #   } 
+        #   logLik_AD <- function(beta){
+        #     -(sum(SXY*beta)-sum(log(1+exp(Xcat%*%c(beta)))*counts))/sum(counts)
+        #   } 
+        #   fit.AD <- optim(par = rep(0, ncol(Xcat)), logLik_AD, method = "BFGS") 
+        #   se <- sqrt(diag(solve(hessian(func = function(x) logLik_AD(x)*sum(counts), x = fit.AD$par))))
+        #   res <- data.frame(est = fit.AD$par, se = se)
+        #   rownames(res) <- colnames(Xcat) 
+        #   control$final_output = res 
+        # }else if(control$model == "OLGLMM"){
+        #   for(site_i in control$site[1]){
+        #     AD = pdaGet(paste0(site_i,'_initialize'),config)
+        #     Xtable <- AD$Xtable
+        #     SY <- Xtable$SY
+        #     count <- Xtable$n
+        #     new_Xtable <- Xtable[,1:(1+length(control$variables))] 
+        #     new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
+        #     generate_Y <- function(Y_count, overall_count){
+        #       sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
+        #     }
+        #     new_Y <- unlist(mapply(generate_Y,SY,overall_count = count)) 
+        #     output_0 = cbind(new_Y, new_X)
+        #     colnames(output_0) = c(control$outcome,"intercept",control$variables)
+        #     output_0$site <- site_i
+        #   }
+        #   
+        #   for(site_i in control$sites[-1]){
+        #     AD = pdaGet(paste0(site_i,'_initialize'),config)
+        #     Xtable <- AD$Xtable
+        #     SY <- Xtable$SY
+        #     count <- Xtable$n
+        #     new_Xtable <- Xtable[,1:(1+length(control$variables))] 
+        #     new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
+        #     generate_Y <- function(Y_count, overall_count){
+        #       sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
+        #     }
+        #     new_Y <- unlist(mapply(generate_Y,SY,overall_count = count)) 
+        #     output = cbind(new_Y, new_X)
+        #     colnames(output) = c(control$outcome,"intercept",control$variables)
+        #     output$site <- site_i
+        #     output_0 <- rbind(output_0, output)
+        #   } 
+        #   
+        #   fit.pool.recons <- MASS::glmmPQL(as.formula(paste(control$outcome, paste(control$variables, collapse = "+"), sep = '~')), 
+        #                              ~1|site, 
+        #                              data = output_0,
+        #                              family='binomial')
+        #   control$est <- fit.pool.recons$coefficients
+        #   control$varFix <- fit.pool.recons$varFix
+        #   control$rand_se <- fit.pool.recons$sigma 
+      }else if(control$model=='COLA'){
+        # COLA does not need derivative, thus estimate after initialize...
       }else{ 
         if(control$lead_site %in% control$sites){
           bhat <-init_i$bhat_i 
