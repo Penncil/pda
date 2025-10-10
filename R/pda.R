@@ -1,5 +1,5 @@
 # Copyright 2021 Penn Computing Inference Learning (PennCIL) lab
-#       https://penncil.med.upenn.edu/team/
+#       https://penncil.med.upenn.edu/
 # This file is part of pda
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -129,6 +129,7 @@ pdaGet <- function(name,config){
 #' @param dir shared directory path if flat files
 #' @param uri web uri if web service
 #' @param secret web token if web service
+#' @param silent_message logical, if the message will be muted
 #' @return A list of cloud parameters: site_id, secret and uri
 #' @seealso \code{pda}
 #' @export
