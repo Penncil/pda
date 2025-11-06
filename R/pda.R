@@ -412,6 +412,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
   }else if(control$model == 'ODACH_CC'){ 
     ODACH_CC.steps<-c('initialize','derive', 'estimate','synthesize')
     ODACH_CC.family<-'cox'
+  }else if(control$model=='LATTE'){  
+    LATTE.steps<-c('initialize','estimate')
+    LATTE.family<-'binomial'
   }
   
   family = get(paste0(control$model,'.family'))
@@ -576,7 +579,23 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     if(control$step=='estimate'){
       if(control$model=='DLM'){
         mymessage("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
-      }else{
+      }else if(control$model=='LATTE'){
+      if(config$site_id==control$lead_site) {
+        print("test")
+        analyze_results <- LATTE.estimate(
+          init_data = list(
+            prepared_data = control$prepared_data,
+            ps_model = control$ps_model,
+            xvars = control$xvars
+          ),
+          control = control,
+          config = config
+        )
+        
+        control$latte_results <- analyze_results
+        mymessage('LATTE analysis completed')
+      }
+    }else{
         if(control$model=='dGEM'){
           mymessage("Congratulations, this the final step: you are transfering the counterfactural event rate. The lead site or coordinating center will broadcast the final results")
         }else{
@@ -669,15 +688,23 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
   }else if(control$model=='ODACH_CC'){  # ODACH with case-cohort design
     ODACH_CC.steps<-c('initialize','derive', 'estimate','synthesize') 
     ODACH_CC.family<-'cox'
+  }else if (control$model == "LATTE") {
+    LATTE.steps <- c("initialize", "estimate")
+    LATTE.family <- "binomial"
   }
   
-  files<-pdaList(config) 
+  files <- pdaList(config)
+  print("======================")
+  print(files)
+  print(all(paste0(control$sites,"_",control$step) %in% files))
   if(all(paste0(control$sites,"_",control$step) %in% files)){ # all init are ready
     if(control$step=="initialize"){
       if(control$lead_site %in% control$sites){
         init_i <- pdaGet(paste0(control$lead_site,'_initialize'),config)
       }
       if(control$model=='DLM'){
+        # DLM does not need derivative, thus estimate after initialize...
+      }else if(control$model=='LATTE'){
         # DLM does not need derivative, thus estimate after initialize...
       }else if(control$model=='ODAH'){
         bhat_zero <-init_i$bhat_zero_i
@@ -854,6 +881,7 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
         # print(site_size)
         
         ## estimate for pda init: meta, or median, or lead est?...
+        print(control$init_method)
         if(control$init_method == 'meta'){
           binit = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
           # vinit = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)}) 
@@ -896,31 +924,52 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
       mes <- 'beta_init added, step=2 (derivatives)! \n'
     } 
     
-    if(control$step=='derive'){
-      if(control$model == "dGEM"){
+    if (control$step == "derive") {
+      if (control$model == "dGEM") {
         # get b_meta as initial bbar
         ghat <- c()
         vghat <- c()
         hosdata <- c()
-        for(site_i in control$sites){
+        for (site_i in control$sites) {
           i = 1
-          init_i <- pdaGet(paste0(site_i,'_derive'),config)
+          init_i <- pdaGet(paste0(site_i, "_derive"), config)
           ghat = rbind(ghat, init_i$gammahat_i)
           vghat = rbind(vghat, init_i$Vgammahat_i)
           hosdata = rbind(hosdata, init_i$hosdata)
           i = i + 1
         }
-        
+
         # meta-regression
         colnames(hosdata) = control$variables_site_level
-        formula <- as.formula(paste("", paste(control$variables_site_level, collapse = "+"), sep = '~'))
+        formula <- as.formula(paste("", paste(control$variables_site_level, collapse = "+"), sep = "~"))
         gamma_meta_reg_new = rma.uni(ghat, vghat, mods = formula, data = hosdata)
-        gamma_BLUP <- blup(gamma_meta_reg_new)$pred 
+        gamma_BLUP <- blup(gamma_meta_reg_new)$pred
         control$estimated_hospital_effect = gamma_BLUP
-      }else if(control$model == "OLGLM"){
+      } else if (control$model == "OLGLM") {
         mymessage("You are done!")
       }
-    }    
+    }
+     if(control$step=='analyze'){ 
+        print("test")
+        print("==========================================================================================")
+      if(control$model=='LATTE'){
+        if(config$site_id==control$lead_site) {
+          print("test")
+          analyze_results <- LATTE.analyze(
+            init_data = list(
+              prepared_data = control$prepared_data,
+              ps_model = control$ps_model,
+              xvars = control$xvars
+            ),
+            control = control,
+            config = config
+          )
+          
+          control$latte_results <- analyze_results
+          mymessage('LATTE analysis completed')
+        }
+      }
+    }
   }
   
   if(control$step=='synthesize'){
@@ -938,7 +987,9 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
   
   ## update control with next step
   steps = get(paste0(control$model,'.steps'))
-  current_index <-  which(steps==control$step)
+  current_index <- which(steps == control$step)
+  print("current index")
+  print(current_index)
   if(current_index < length(steps)) {
     next_index <- current_index + 1
     next_step <- steps[next_index]
