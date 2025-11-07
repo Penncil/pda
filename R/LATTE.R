@@ -32,44 +32,63 @@ LATTE.family <- 'binomial'
 LATTE.initialize <- function(ipdata, control, config) {
   # Extract variables for PS model
   xvars <- colnames(ipdata)[!grepl("^outcome_", colnames(ipdata)) & 
-                           !colnames(ipdata) %in% c("ID", "treatment", "index_date","site", "group")]
+                          !colnames(ipdata) %in% c("ID", "treatment", "index_date","site", "group")]
   xvars <- xvars[colSums(ipdata[xvars]) > 30]
   
   # Create PS model formula
   ps_formula <- as.formula(paste("treatment ~", paste(xvars, collapse = "+")))
   
   # Prepare data for PS model
-  mydata_ps <- ipdata[, colnames(ipdata) %in% c(xvars, "treatment", control$outcome)]
+  if (control$outcome_model == "poisson"){
+    mydata_ps <- ipdata[, colnames(ipdata) %in% c(xvars, "treatment", control$outcome, control$outcome_time)]    
+  } else {
+    mydata_ps <- ipdata[, colnames(ipdata) %in% c(xvars, "treatment", control$outcome)]
+  }
   # Xmat <- model.matrix(ps_formula, data = mydata_ps)[,-1] # Remove intercept
   Xmat <- grab_design_matrix(data = mydata_ps, rhs_formula = ps_formula)
   Y <- mydata_ps$treatment
   
   # Fit PS model using cv.glmnet
   nfolds <- 10
-  foldid <- sample(rep(seq(nfolds), length.out = length(Y)))
   set.seed(42)
+  foldid <- sample(rep(seq(nfolds), length.out = length(Y)))
+  
   ps_fit_cv <- cv.glmnet(Xmat, Y, alpha = 1, family = "binomial", 
                         nfolds = nfolds, foldid = foldid)
   ps_fit <- glmnet(Xmat, Y, alpha = 1, family = "binomial", 
-                   lambda = ps_fit_cv$lambda.min)
+                  lambda = ps_fit_cv$lambda.min)
   
   # Calculate propensity scores
   propensityScore <- predict(ps_fit, Xmat, type = "response")
+  print(propensityScore[1:10])
   mydata_ps$propensityScore <- propensityScore
-  
-  # Find optimal number of strata
-  best_strata <- optimize_strata(mydata_ps, xvars)
-  stratifiedPop <- get_stratified_pop(mydata_ps, nstrata = best_strata$n_strata)
-  ADdata <- create_2x2_tables(
-    stratifiedPop$treatment, 
-    stratifiedPop[[control$outcome]], 
-    stratifiedPop$stratumId
-  )
+  if (control$balancing_method == "stratification"){
+    # Find optimal number of strata
+    best_strata <- optimize_strata(mydata_ps, xvars)
+    stratifiedPop <- get_stratified_pop(mydata_ps, nstrata = best_strata$n_strata)
+    if (control$outcome_model == "logistic"){
+      ADdata <- create_2x2_tables(
+        stratifiedPop$treatment, 
+        stratifiedPop[[control$outcome]], 
+        stratifiedPop$stratumId
+      )
+    } else if (control$outcome_model == "poisson"){
+      ADdata <- create_2x2_tables_poisson(
+        stratifiedPop, 
+        outcome_id = control$outcome,
+        outcome_time = control$outcome_time
+      )
+    }
+  } else if (control$balancing_method == "matching"){
+    stop("LATTE currently only supports stratification method for PS adjustment.")
+  } else if (control$balancing_method == "IPTW"){
+    stop("LATTE currently only supports stratification method for PS adjustment.")
+  } else {
+    stop("Unknown PS method specified in config.")
+  }
   # Return initialization results
   return(list(
     prepared_data = ADdata
-    # ps_model = ps_fit,
-    # xvars = xvars
   ))
 }
 
@@ -84,7 +103,7 @@ LATTE.initialize <- function(ipdata, control, config) {
 #' 
 #' @return analysis results
 #' @keywords internal
-LATTE.estimate<- function(init_data, control, config) { 
+LATTE.estimate <- function(init_data, control, config) { 
   K <- length(control$sites)
   ADdata <- list()
   for (site_i in control$sites) {
@@ -95,13 +114,16 @@ LATTE.estimate<- function(init_data, control, config) {
   }
 
   # Fit conditional logistic regression
-  results <- optimize_conditional_logistic_2x2(ADdata)
-   
+  if (control$outcome_model == "logistic") {
+    results <- optimize_conditional_logistic_2x2(ADdata)
+  } else if (control$outcome_model == "poisson") {
+    results <- optimize_conditional_poisson_2x2(ADdata)
+  }
   # Return results
   return(list(
     coefficients = results$coefficients,
     se = results$se,
-    odds_ratio = results$odds_ratios,
+    effect_size = results$effect_size,
     ci_lower = results$ci_lower,
     ci_upper = results$ci_upper,
     convergence = results$convergence

@@ -1,5 +1,17 @@
+# Install devtools if not installed
+# install.packages("devtools")
+
+# Install vscDebugger from GitHub
+# devtools::install_github("ManuelHentschel/vscDebugger")
+library(cli)
+# install.packages(c("pillar","rlang","lifecycle"))
+# install.packages("remotes", repos = "https://cloud.r-project.org")
+# remotes::install_version("cli", version = "3.6.5", repos = "https://cloud.r-project.org")
+# packageVersion("cli")
+
 # Demo script for LATTE 
 # Load required packages
+require(vscDebugger)
 require(survival)
 require(data.table)
 require(pda)
@@ -53,13 +65,18 @@ for (site_id in 1:n_sites) {
   if (!(outcome_var %in% colnames(mydata_ps)) && outcome_var %in% colnames(site_data)) {
     mydata_ps[[outcome_var]] <- site_data[[outcome_var]]
   }
+  time_var <- paste0("outcome_", outcome_id, "_time")
+  if (!(outcome_var %in% colnames(mydata_ps)) && outcome_var %in% colnames(site_data)) {
+    mydata_ps[[outcome_var]] <- site_data[[time_var]]
+  }
   
   Xmat <- grab_design_matrix(data = mydata_ps, rhs_formula = form)
   Y <- mydata_ps$treatment
   
   nfolds <- 10
-  foldid <- sample(rep(seq(nfolds), length.out = length(Y)))
   set.seed(42)
+  foldid <- sample(rep(seq(nfolds), length.out = length(Y)))
+  
   Fit_ps_cv <- tryCatch({
     cv.glmnet(Xmat, Y, alpha = 1, family = "binomial", nfolds = nfolds, foldid = foldid)
   }, error = function(e) {
@@ -67,7 +84,6 @@ for (site_id in 1:n_sites) {
     message("CV failed for site ", site_id, ". Using fixed lambda.")
     list(lambda.min = 0.01)
   })
-  
   Fit_ps <- glmnet(Xmat, Y, alpha = 1, family = "binomial", lambda = Fit_ps_cv$lambda.min)
   propensityScore <- predict(Fit_ps, (Xmat), type = "response")
   mydata_ps$propensityScore <- propensityScore
@@ -92,39 +108,6 @@ for (site_id in 1:n_sites) {
       stratifiedPop[, common_cols]
     )
   }
-  # Create 2x2 tables for this site for conditional logistic regression
-    for (strat in unique(stratifiedPop$stratumId)) {
-      strat_data <- stratifiedPop[stratifiedPop$stratumId == strat, ]
-      
-      # Only include strata with variation in treatment and outcome
-      if (length(unique(strat_data$treatment)) > 1 && 
-          length(unique(strat_data[[paste0("outcome_", outcome_id, "_value")]])) > 1) {
-        
-        # Create the 2x2 contingency table
-        table_2x2 <- matrix(0, nrow = 2, ncol = 2)
-        
-        # Exposed cases (treatment=1, outcome=1)
-        table_2x2[1,1] <- sum(strat_data$treatment == 1 & 
-                               strat_data[[paste0("outcome_", outcome_id, "_value")]] == 1)
-        
-        # Unexposed cases (treatment=0, outcome=1)
-        table_2x2[1,2] <- sum(strat_data$treatment == 0 & 
-                               strat_data[[paste0("outcome_", outcome_id, "_value")]] == 1)
-        
-        # Exposed controls (treatment=1, outcome=0)
-        table_2x2[2,1] <- sum(strat_data$treatment == 1 & 
-                               strat_data[[paste0("outcome_", outcome_id, "_value")]] == 0)
-        
-        # Unexposed controls (treatment=0, outcome=0)
-        table_2x2[2,2] <- sum(strat_data$treatment == 0 & 
-                               strat_data[[paste0("outcome_", outcome_id, "_value")]] == 0)
-        
-        # Only add tables that are informative
-        if (sum(table_2x2) > 0 && min(rowSums(table_2x2)) > 0 && min(colSums(table_2x2)) > 0) {
-          KSiteAD_uf[[length(KSiteAD_uf) + 1]] <- table_2x2
-        }
-      }
-    }
 }
 # Method 1: Standard stratified logistic regression with site and stratum as fixed effects
 outcome_formula <- as.formula(paste0("outcome_", outcome_id, "_value ~ treatment + factor(global_stratumId)"))
@@ -133,47 +116,37 @@ required_cols <- c(paste0("outcome_", outcome_id, "_value"), "treatment", "globa
 missing_cols <- setdiff(required_cols, colnames(all_stratified_data))
 
 if (length(missing_cols) > 0) {
-  stop("Missing required columns: ", paste(missing_cols, collapse=", "))
+  stop("Missing required columns: ", paste(missing_cols, collapse = ", "))
 }
-unique(all_stratified_data$global_stratumId)
+
 # Run the standard logistic regression
-fit <- tryCatch({
-  glm(outcome_formula, data = all_stratified_data, family = binomial(link = "logit"))
-}, error = function(e) {
-  message("Error in standard logistic regression: ", e$message)
-  # Return a dummy model with NA coefficients
-  structure(list(
-    coefficients = c("(Intercept)" = NA, "treatment" = NA),
-    rank = 2,
-    family = binomial(link = "logit"),
-    linear.predictors = rep(NA, nrow(all_stratified_data)),
-    fitted.values = rep(NA, nrow(all_stratified_data)),
-    residuals = rep(NA, nrow(all_stratified_data)),
-    df.residual = nrow(all_stratified_data) - 2,
-    converged = FALSE
-  ), class = "glm")
-})
+fit <- glm(outcome_formula, data = all_stratified_data, family = binomial(link = "logit"))
+
+# Method 2: Standard stratified Poisson regression with site and stratum as fixed effects
+outcome_formula_poisson <- as.formula(paste0("outcome_", outcome_id, "_value ~ treatment + factor(global_stratumId) + offset(offset_term)"))
+offset_term <- log(all_stratified_data[[time_var]])
+fit_poisson <- glm(outcome_formula_poisson, data = all_stratified_data, family = poisson(link = "log"))
 
 # Extract standard logistic regression results
 if (!is.na(fit$coefficients["treatment"])) {
   normal_est <- summary(fit)$coefficients["treatment", "Estimate"]
   normal_se <- summary(fit)$coefficients["treatment", "Std. Error"]
   normal_pval <- summary(fit)$coefficients["treatment", "Pr(>|z|)"]
-} 
-
-ResAD <- optimize_conditional_logistic_2x2(KSiteAD_uf)
-cond_est <- ResAD$coefficients
-cond_se <- ResAD$se
-cond_pval <- 2 * (1 - pnorm(abs(cond_est / cond_se)))
-
-
+}
+# Extract standard Poisson regression results
+if (!is.na(fit_poisson$coefficients["treatment"])) {
+  normal_est_poisson <- summary(fit_poisson)$coefficients["treatment", "Estimate"]
+  normal_se_poisson <- summary(fit_poisson)$coefficients["treatment", "Std. Error"]
+  normal_pval_poisson <- summary(fit_poisson)$coefficients["treatment", "Pr(>|z|)"]
+}
+ 
+# Prepare data for LATTE analysis
 site_data <- list(
   site1 = cohort[cohort$site == 1, ],
   site2 = cohort[cohort$site == 2, ],
   site3 = cohort[cohort$site == 3, ]
 ) 
 
-  
 # Initialize LATTE analysis
 control <- list(
   project_name = "LATTE Demo Study",
@@ -190,17 +163,30 @@ control <- list(
   max_strata = 6,
   start_beta = 0.1,
   ### option for choosing method
-  balancing_method = "stratification" # overlapping, IPTW
+  balancing_method = "stratification", # overlapping, IPTW
+  ### option for outcome model 
+  outcome_model = "poisson", # logistic, poisson
+  outcome_time = "outcome_ADRD_time" # only needed if outcome_model is poisson
 )
-set.seed(42)
+
 setwd("/Users/luli/pda2/pda/test")
 # Step 1: Initialize at each site (each site computes their 2x2 tables)
+menu <- function(choices, title = NULL) 1
+
 pda(site_id = 'site1', control = control, ipdata = site_data$site1, dir = getwd())
 
-pda(site_id = 'site2', ipdata = site_data$site2, dir = getwd())
-pda(site_id = 'site3', ipdata = site_data$site3, dir = getwd())
+menu <- function(choices, title = NULL) 1
 
-# auto change to estimate 
+pda(site_id = 'site2', ipdata = site_data$site2, dir = getwd())
+menu <- function(choices, title = NULL) 1
+
+pda(site_id = 'site3', ipdata = site_data$site3, dir = getwd())
+menu <- function(choices, title = NULL) 1
+
+pda(site_id = "site1", ipdata = site_data$site1, dir = getwd())
+# auto change to estimate
+menu <- function(choices, title = NULL) 1
+
 pda(site_id = "site1", ipdata = site_data$site1, dir = getwd())
 
 
@@ -215,24 +201,23 @@ latte_results <- pdaGet('site1_estimate', config)
 
 # Print comparison of results
 cat("\nComparison of Results:\n")
-cat("\nTrue treatment effect: 0.3\n")
-
-
-
-
 
 cat("\nPooled Analysis (Traditional):\n")
-print(summary(fit.pool)$coefficients["treatment", ])
-exp(summary(fit.pool)$coefficients["treatment", ])
+cat("Coefficient:", round(normal_est, 2), "\n")
+cat("Standard Error:", round(normal_se, 2), "\n")
+cat("Odds Ratio:", round(exp(normal_est), 2), "\n")
+cat("95% CI:", sprintf("[%.2f, %.2f]", exp(normal_est - 1.96 * normal_se), exp(normal_est + 1.96 * normal_se)), "\n")
+
+
 
 cat("\nLATTE Analysis:\n")
-cat("Coefficient:", latte_results$coefficients, "\n")
-cat("Standard Error:", latte_results$se, "\n")
-cat("Odds Ratio:", latte_results$odds_ratio, "\n")
-cat("95% CI:", sprintf("[%f, %f]", latte_results$ci_lower, latte_results$ci_upper), "\n")
+cat("Coefficient:", round(latte_results$coefficients, 2), "\n")
+cat("Standard Error:", round(latte_results$se, 2), "\n")
+cat("Odds Ratio:", round(latte_results$effect_size, 2), "\n")
+cat("95% CI:", sprintf("[%.2f, %.2f]", latte_results$ci_lower, latte_results$ci_upper), "\n")
 
-# Optional: Print convergence information
-cat("\nConvergence Information:\n")
-cat("Convergence status:", latte_results$convergence, "\n")
-cat("Message:", latte_results$message, "\n")
-
+# # Optional: Print convergence information
+# cat("\nConvergence Information:\n")
+# cat("Convergence status:", latte_results$convergence, "\n")
+# cat("Message:", latte_results$message, "\n")
+ 
