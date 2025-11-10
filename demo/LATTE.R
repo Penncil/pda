@@ -11,9 +11,9 @@ require(tibble)
 library(cobalt)
 library(geex)
 library(numDeriv)
-source("/Users/luli/pda2/pda/R/pda.R")
-source("/Users/luli/pda2/pda/R/LATTE.R")
-source("/Users/luli/pda2/pda/LATTE_codes/latte_codes.R")
+source("R/pda.R")
+source("R/LATTE.R")
+source("R/LATTE_helper.R")
 library(EmpiricalCalibration)
 
 ## In the toy example below we aim to analyze the treatment effects of acetaminophen on ADRD using logistic regression, and propensity score stratification,
