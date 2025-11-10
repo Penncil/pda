@@ -1,14 +1,3 @@
-# Install devtools if not installed
-# install.packages("devtools")
-
-# Install vscDebugger from GitHub
-# devtools::install_github("ManuelHentschel/vscDebugger")
-library(cli)
-# install.packages(c("pillar","rlang","lifecycle"))
-# install.packages("remotes", repos = "https://cloud.r-project.org")
-# remotes::install_version("cli", version = "3.6.5", repos = "https://cloud.r-project.org")
-# packageVersion("cli")
-
 # Demo script for LATTE 
 # Load required packages
 require(vscDebugger)
@@ -21,31 +10,46 @@ require(Matrix)
 require(tibble)
 library(cobalt)
 library(geex)
+library(numDeriv)
 source("/Users/luli/pda2/pda/R/pda.R")
 source("/Users/luli/pda2/pda/R/LATTE.R")
 source("/Users/luli/pda2/pda/LATTE_codes/latte_codes.R")
+library(EmpiricalCalibration)
 
-# Create sample data
+## In the toy example below we aim to analyze the treatment effects of acetaminophen on ADRD using logistic regression, and propensity score stratification,
+## data: latte_synthetic_data.rda, we randomly assign to 3 sites: 'site1', 'site2', 'site3'
+## we demonstrate using PDA LATTE can obtain a surrogate estimator that is close to the pooled estimate.
+## We run the example in local directory. In actual collaboration, account/password for pda server
+## will be assigned to the sites at the server https://pda.one.
+## Each site can access via web browser to check the communication of the summary stats.
+
+# define variables and load data
 set.seed(42)
-outcome_id = "ADRD"
-n <- 8000  # total sample size 
+
+outcome_id = "outcome_ADRD_value"
+nco_outcomes = c(
+  "acute_conjunctivitis", "acute_tonsillitis", "adhesive_capsulitis_of_shoulder", "allergic_rhinitis", "blepharitis",
+  "carpal_tunnel_syndrome", "chalazion", "contact_dermatitis", "dental_caries", "deviated_nasal_septum", "foreign_body_in_ear",
+  "gout", "hemorrhoids", "impacted_cerumen", "influenza", "ingrowing_nail", "low_back_pain", "menieres_disease", "osteoarthritis_of_knee",
+  "osteoporosis", "foot_drop", "hearing_problem", "intra_abdominal_and_pelvic_swelling_mass_and_lump", "irritability_and_anger",
+  "wristdrop"
+)
+nco_outcomes_time = paste0("outcome_", nco_outcomes, "_time")
+
+nco_outcomes <- paste0("outcome_", nco_outcomes, "_value")
+outcome_time = "outcome_ADRD_time"
+outcome_times = c(outcome_time, nco_outcomes_time)
 sites <- c("site1", "site2", "site3")
 n_sites = length(sites)
-cohort = read.csv("/Users/luli/pda2/pda/161all_data_sim.csv")
-cohort <- cohort %>% select(-X)
-cohort <- cohort %>%
-    mutate(across(ends_with("_value"), ~ replace(., . == -1, 0)))
 
-cohort <- cohort %>%
-    mutate(site = sample(1:n_sites, n(), replace = TRUE))
+load("/Users/luli/pda2/pda/data/latte_synthetic_data.rda")
+ 
 
-xvars <- colnames(cohort)[!grepl("^outcome_", colnames(cohort)) & 
-                               !colnames(cohort) %in% c("ID", "treatment", "index_date", "site", "group")]
 # Arrays to store data for standard logistic regression
 all_stratified_data <- NULL
 KSiteAD_uf <- list()
 
-# Process each simulated site
+# # Process each simulated site
 for (site_id in 1:n_sites) {
   # Extract data for this site
   site_data <- cohort[cohort$site == site_id, ]
@@ -61,13 +65,13 @@ for (site_id in 1:n_sites) {
   mydata_ps <- site_data[, colnames(site_data) %in% c(xvars, "treatment", yvars)]
   
   # Add the outcome variable if not already included
-  outcome_var <- paste0("outcome_", outcome_id, "_value")
+  outcome_var <- outcome_id
   if (!(outcome_var %in% colnames(mydata_ps)) && outcome_var %in% colnames(site_data)) {
     mydata_ps[[outcome_var]] <- site_data[[outcome_var]]
   }
-  time_var <- paste0("outcome_", outcome_id, "_time")
-  if (!(outcome_var %in% colnames(mydata_ps)) && outcome_var %in% colnames(site_data)) {
-    mydata_ps[[outcome_var]] <- site_data[[time_var]]
+  time_var <- outcome_time
+  if (!(time_var %in% colnames(mydata_ps)) && time_var %in% colnames(site_data)) {
+    mydata_ps[[time_var]] <- site_data[[time_var]]
   }
   
   Xmat <- grab_design_matrix(data = mydata_ps, rhs_formula = form)
@@ -110,9 +114,9 @@ for (site_id in 1:n_sites) {
   }
 }
 # Method 1: Standard stratified logistic regression with site and stratum as fixed effects
-outcome_formula <- as.formula(paste0("outcome_", outcome_id, "_value ~ treatment + factor(global_stratumId)"))
+outcome_formula <- as.formula(paste0(outcome_id, "~ treatment + factor(global_stratumId)"))
 # Check if we have the necessary columns
-required_cols <- c(paste0("outcome_", outcome_id, "_value"), "treatment", "global_stratumId")
+required_cols <- c(paste0( outcome_id ), "treatment", "global_stratumId")
 missing_cols <- setdiff(required_cols, colnames(all_stratified_data))
 
 if (length(missing_cols) > 0) {
@@ -123,7 +127,7 @@ if (length(missing_cols) > 0) {
 fit <- glm(outcome_formula, data = all_stratified_data, family = binomial(link = "logit"))
 
 # Method 2: Standard stratified Poisson regression with site and stratum as fixed effects
-outcome_formula_poisson <- as.formula(paste0("outcome_", outcome_id, "_value ~ treatment + factor(global_stratumId) + offset(offset_term)"))
+outcome_formula_poisson <- as.formula(paste0(outcome_id, " ~ treatment + factor(global_stratumId) + offset(offset_term)"))
 offset_term <- log(all_stratified_data[[time_var]])
 fit_poisson <- glm(outcome_formula_poisson, data = all_stratified_data, family = poisson(link = "log"))
 
@@ -154,7 +158,8 @@ control <- list(
   sites = sites,
   model = "LATTE",
   family = "binomial",
-  outcome = "outcome_ADRD_value",
+  outcome = outcome_id,
+  nco_outcomes = nco_outcomes,
   variables = xvars,
   lead_site = "site1",
   min_count = 5,
@@ -163,10 +168,10 @@ control <- list(
   max_strata = 6,
   start_beta = 0.1,
   ### option for choosing method
-  balancing_method = "stratification", # overlapping, IPTW
+  balancing_method = "stratification", # matching, IPTW, stratification
   ### option for outcome model 
-  outcome_model = "poisson", # logistic, poisson
-  outcome_time = "outcome_ADRD_time" # only needed if outcome_model is poisson
+  outcome_model = "logistic", # logistic, poisson
+  nco_outcome_times = outcome_times# only needed if outcome_model is poisson
 )
 
 setwd("/Users/luli/pda2/pda/test")
@@ -211,13 +216,21 @@ cat("95% CI:", sprintf("[%.2f, %.2f]", exp(normal_est - 1.96 * normal_se), exp(n
 
 
 cat("\nLATTE Analysis:\n")
-cat("Coefficient:", round(latte_results$coefficients, 2), "\n")
-cat("Standard Error:", round(latte_results$se, 2), "\n")
-cat("Odds Ratio:", round(latte_results$effect_size, 2), "\n")
-cat("95% CI:", sprintf("[%.2f, %.2f]", latte_results$ci_lower, latte_results$ci_upper), "\n")
+cat("Coefficient:", round(latte_results$by_outcome[[outcome_id]]$coefficients, 2), "\n")
+cat("Standard Error:", round(latte_results$by_outcome[[outcome_id]]$se, 2), "\n")
+cat("Odds Ratio:", round(latte_results$by_outcome[[outcome_id]]$effect_size, 2), "\n")
+cat("95% CI:", sprintf("[%.2f, %.2f]", latte_results$by_outcome[[outcome_id]]$ci_lower,latte_results$by_outcome[[outcome_id]]$ci_upper), "\n")
+ 
+ 
+######################################################################
+############ NCO calibrated results ##################################
+######################################################################
 
-# # Optional: Print convergence information
-# cat("\nConvergence Information:\n")
-# cat("Convergence status:", latte_results$convergence, "\n")
-# cat("Message:", latte_results$message, "\n")
+
+
+cat("\nLATTE calibrated Analysis:\n")
+cat("Coefficient:", round(latte_results$by_outcome[[outcome_id]]$calibrated$est, 2), "\n")
+cat("Standard Error:", round(latte_results$by_outcome[[outcome_id]]$calibrated$se, 2), "\n")
+cat("Odds Ratio:", round(latte_results$by_outcome[[outcome_id]]$calibrated$effect_size, 2), "\n")
+cat("95% CI:", sprintf("[%.2f, %.2f]", latte_results$by_outcome[[outcome_id]]$calibrated$ci_lower, latte_results$by_outcome[[outcome_id]]$calibrated$ci_upper), "\n")
  
