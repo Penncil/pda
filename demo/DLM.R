@@ -30,7 +30,6 @@ control <- list(project_name = 'Length of stay study',
                 outcome = "los",
                 variables = c('age', 'sex', 'lab'),
                 # xlev = list(sex=c('F', 'M')),  #levels of all categorical X's, with the first being the reference
-                # variables_heterogeneity = c('Intercept'),
                 optim_maxit = 100,
                 lead_site = 'site1',
                 upload_date = as.character(Sys.time()) )
@@ -40,8 +39,8 @@ control <- list(project_name = 'Length of stay study',
 ## specify your working directory, default is the tempdir
 mydir <- getwd()  # tempdir()
 ## assume lead site1: enter "1" to allow transferring the control file 
-pda(site_id = 'site1', control = control, dir = mydir)
- 
+pda(site_id = 'site1', ipdata = LOS_split[[1]], control = control, dir = mydir)
+
 
 ## in actual collaboration, account/password for pda server will be assigned, thus:
 # pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')
@@ -52,22 +51,22 @@ pda(site_id = 'site1', control = control, dir = mydir)
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site3: enter "1" to allow tranferring your local estimate 
 pda(site_id = 'site3', ipdata = LOS_split[[3]], dir=mydir)
- 
+
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site2: enter "1" to allow tranferring your local estimate  
 pda(site_id = 'site2', ipdata = LOS_split[[2]], dir=mydir)
- 
+
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume lead site1: enter "1" to allow tranferring your local estimate  
 ## control.json is also automatically updated
 pda(site_id = 'site1', ipdata = LOS_split[[1]], dir=mydir)
- 
+
 
 S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 2: estimate  ###############################
 ## assume lead site1: enter "1" to allow tranferring the surrogate estimate  
 pda(site_id = 'site1', ipdata = LOS_split[[1]], dir=mydir)
- 
+
 ## the PDA DLM is now completed!
 
 S=readline(prompt="Type  <Return>   to continue : ")
@@ -81,11 +80,10 @@ cbind(b.pool=fit.pool$coef,
       sd.pool=summary(fit.pool)$coef[,2],
       sd.dlm=fit.dlm$sebhat)
 
- 
+
 S=readline(prompt="Type  <Return>   to continue : ")
 # # ########################  DLM with fixed site-effect  ###################### 
 # reset control to re-fit DLM with fixed site-effect, no extra AD communication is needed 
-# Jessie, please double check the below demo to make sure it works
 control <- list(project_name = 'Length of stay study',
                 step = 'estimate',
                 sites = sites,
@@ -95,12 +93,11 @@ control <- list(project_name = 'Length of stay study',
                 family = 'gaussian',
                 outcome = "los",
                 variables = c('age', 'sex', 'lab'),
-                # variables_heterogeneity = c('Intercept'),
+                variables_heterogeneity = c('Intercept'),
                 optim_maxit = 100,
                 lead_site = 'site1',
                 upload_date = as.character(Sys.time()) )
-pda(site_id = 'site1', control = control, dir = mydir)
-pda(site_id = 'site1', ipdata = LOS_split[[1]], dir=mydir)
+pda(site_id = 'site1', ipdata = LOS_split[[1]], control = control, dir=mydir)
 
 ## fit LM using pooled data, assuming fixed site effect
 fit.pool <- lm(los~age+sex+lab+site, data=LOS)
@@ -116,6 +113,7 @@ cbind(b.pool=fit.pool$coef,
 
 # # ########################  DLM with random site-effect (DLMM) ###################### 
 # reset control to re-fit DLMM, no extra AD communication is needed 
+file.remove(paste0(mydir, '/control.json'))
 control <- list(project_name = 'Length of stay study',
                 step = 'estimate',
                 sites = sites,
@@ -130,7 +128,8 @@ control <- list(project_name = 'Length of stay study',
                 lead_site = 'site1',
                 upload_date = as.character(Sys.time()) )
 pda(site_id = 'site1', control = control, dir = mydir)
-pda(site_id = 'site1', ipdata = LOS_split[[1]], dir=mydir)
+pda(site_id = 'site1', ipdata = LOS_split[[1]], control = control, dir=mydir)
+
 
 ## fit LM using pooled data, assuming fixed site effect
 fit.pool <- lme4::lmer(los~age+sex+lab+(1|site), REML = F, data=LOS)

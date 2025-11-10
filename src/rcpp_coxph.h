@@ -365,7 +365,7 @@ inline arma::vec RcppCoxph::gradient_efron_dist(const arma::vec& beta,
       int j = d_z.n_rows - jj - 1;
       if(delta_n(j) > 0) {                      // no contribution to gradient if tj has no event  
         if(any( uni_timek == uni_time(j) )){    // the jth uni_time  exist in machine k, def num1k, num2k, denom2k
-          jk = arma::as_scalar(arma::find( uni_timek == uni_time(j), 1)); // 9/23/2025 cran warning due to RcppArmadillo update // replace conv_to<int>::from(X) with as_scalar(X) 
+          jk = arma::as_scalar(arma::find( uni_timek == uni_time(j), 1));
           djk = delta_nk(jk);
           num1k = RZeZbk.row(jk).t();
           num2k = DZeZbk.row(jk).t();

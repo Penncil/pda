@@ -3,7 +3,7 @@
 \docType{data}
 \name{ODACAT_ordinal}
 \alias{ODACAT_ordinal}
-\title{ODACAT simulated data}
+\title{ODACAT simulated data  with ordinal outcome}
 \format{
 A data frame with 300 rows and 5 variables:
 \describe{

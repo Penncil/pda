@@ -4,11 +4,9 @@
 \alias{dGEM.synthesize}
 \title{PDA dGEM synthesize}
 \usage{
-dGEM.synthesize(ipdata,control,config)
+dGEM.synthesize(control,config)
 }
 \arguments{
-\item{ipdata}{local data in data frame}
-
 \item{control}{pda control}
 
 \item{config}{pda cloud configuration}

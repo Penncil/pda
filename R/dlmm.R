@@ -936,3 +936,60 @@ myglmmPQL <- function(formula.glm, formula, offset=NULL, family, data,
 #       sd.pool=c(fit.pool$b.sd, sqrt(unlist(fit.pool$varui_post))),
 #       sd.dpql=c(fit.dpql$sebhat, fit.dpql$seuhat))
 # c(fit.pool$V, fit.dpql$Vhat)
+
+
+#' @useDynLib pda
+#' @title Pooled estimation for COLA-GLM and COLA-GLM-H
+#' 
+#' @description
+#' Performs pooled estimation for Generalized Linear Models (GLMs) using either the standard COLA-GLM approach 
+#' or the heterogeneous intercept extension (COLA-GLM-H). This function supports binary and Poisson outcomes.
+#'
+#' @usage estimatePool(KSiteIPD, formula, family = "binomial", outcome_name, heter_intercept = FALSE)
+#' @param KSiteIPD \code{glm} data
+#' @param formula \code{glm} formula
+#' @param family \code{glm} family
+#' @param outcome_name outcome name
+#' @param heter_intercept Logical; if \code{TRUE}, includes site-specific intercepts to model heterogeneity across sites.
+#' 
+#' @return  A data frame with point estimates and standard errors for each coefficient
+#' 
+#' @keywords internal
+estimatePool <- function(KSiteIPD, formula, family = "binomial", outcome_name, heter_intercept = FALSE){
+  if(heter_intercept == FALSE){ # COLA-GLM
+    pool.KSiteIPD <- KSiteIPD
+    pool.Xmat <- geex::grab_design_matrix(data = pool.KSiteIPD, 
+                                    rhs_formula = formula)
+    pool.Y <- pool.KSiteIPD[,outcome_name]
+    
+  }else{ # COLA-GLM-H
+    K <- length(KSiteIPD)
+    for(i in 1:K) KSiteIPD[[i]]$site <- rep(i)
+    pool.KSiteIPD <- do.call(rbind, KSiteIPD)
+    new.siteID <- sapply(1:max(pool.KSiteIPD$site),function(i) ifelse(pool.KSiteIPD$site==i,1,0))
+    colnames(new.siteID) <- paste0("Site", 1:K)
+    pool.Xmat <- geex::grab_design_matrix(data = pool.KSiteIPD, rhs_formula = formula)
+    pool.Xmat <- pool.Xmat[,-1]
+    pool.Xmat <- cbind(new.siteID,pool.Xmat)
+    pool.Y <- as.data.frame(pool.KSiteIPD)[,outcome_name]
+  }
+  
+  logLik_pool <- function(beta){
+    if(family=="binomial"){
+      loglik <- sum(-pool.Y*log(1 + exp(-(pool.Xmat%*%beta))) - (1-pool.Y)*log(1 + exp(pool.Xmat%*%beta)))
+      return(-loglik/length(pool.Y))
+    }else if(family=="poisson"){
+      loglik <- sum(pool.Y*pool.Xmat%*%beta - exp(pool.Xmat%*%beta) - lfactorial(pool.Y))
+      return(-loglik/length(pool.Y))
+    }
+  }
+  
+  fit.pool<- optim(par = rep(0, ncol(pool.Xmat)), logLik_pool, method = "BFGS")
+  se <- sqrt(diag(solve(hessian(func = function(x) logLik_pool(x)*length(pool.Y), x = fit.pool$par))))
+  res <- data.frame(est = fit.pool$par, se = se)
+  rownames(res) <- colnames(pool.Xmat)
+  
+  return(res)
+}
+
+

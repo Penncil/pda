@@ -14,9 +14,13 @@ library(numDeriv)
 library(glmnet)
 
  
-Rcpp::sourceCpp("pda/src/DisC2o.cpp")
+# Rcpp::sourceCpp("pda/src/DisC2o.cpp")
 # load("~/Dropbox/PDA-git/pda/data/long_covid.rda")
 data(long_covid)   
+# add 45 noisy covariates
+Xadd = data.table(round(matrix(rnorm(nrow(long_covid) * 45), nrow(long_covid), 45),2))
+names(Xadd) = paste0('X', 6:50)
+long_covid = cbind(long_covid, Xadd)
 long_covid_split <- split(long_covid, long_covid$site)
  
 
@@ -25,8 +29,8 @@ long_covid_split <- split(long_covid, long_covid$site)
 #############################################
 
 # ############################  STEP 1: initialize  ###############################
-variables <- names(DisC2o_data)[4:53]
-sites <- unique(DisC2o_data$site)
+variables <- names(long_covid)[4:53]
+sites <- unique(long_covid$site)
 control <- list(project_name = 'PASC_vaccination',
                 sites = sites,
                 lead_site = 'site1', 

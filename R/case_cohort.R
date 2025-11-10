@@ -5,6 +5,7 @@
 # currently, we only provide Prentice weight; more options will be provided later
 ## this is Yudong's weight_CC() in functions_CC_1.R, can take multi-site data, or single-site as a list of length 1
 ## data_list contains list of ipdata, with columns: time, status, subcohort, and covariates
+#' @keywords internal
 prepare_case_cohort <- function(data_list, method, full_cohort_size){
   # for each site, pre-calculate the failure time points, the risk sets, and the respective weights
   # also, remove those sites with zero events
@@ -126,6 +127,7 @@ prepare_case_cohort <- function(data_list, method, full_cohort_size){
 
 # this function calculate the log pseudo-likelihood for ONE site
 # cc_prep is the output of prepare_case_cohort()
+#' @keywords internal
 log_plk <- function(beta, cc_prep, site_num) {
   eta <- cc_prep$covariate_list[[site_num]] %*% beta
   exp_eta <- exp(eta)
@@ -141,6 +143,7 @@ log_plk <- function(beta, cc_prep, site_num) {
 
 # this function calculate the gradient of log pseudo-likelihood for ONE site
 # cc_prep is the output of prepare_case_cohort()
+#' @keywords internal
 grad_plk <- function(beta, cc_prep, site_num) {
   X <- cc_prep$covariate_list[[site_num]]
   eta <- X %*% beta
@@ -163,6 +166,7 @@ grad_plk <- function(beta, cc_prep, site_num) {
 
 # this function calculate the Hessian of log pseudo-likelihood for ONE site
 # cc_prep is the output of prepare_case_cohort()
+#' @keywords internal
 hess_plk <- function(beta, cc_prep, site_num) {
   X <- cc_prep$covariate_list[[site_num]]
   eta <- X %*% beta
@@ -192,7 +196,7 @@ hess_plk <- function(beta, cc_prep, site_num) {
 # this function fits Cox PH to case-cohort (survival::cch) with the pooled multi-site data
 # notice this assumes varying baseline hazard functions across sites
 # cc_prep is the output of prepare_case_cohort()
-#' @export
+#' @keywords internal
 cch_pooled <- function(formula, data, subcoh='subcohort', site='site', variables_lev,
                        full_cohort_size, method = "Prentice", optim_method = "BFGS",
                        var_sandwich=T){

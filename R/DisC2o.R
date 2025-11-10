@@ -47,9 +47,9 @@ DisC2o.PSinitialize <- function(ipdata,control,config){
   x_mat <- as.matrix(ipdata_i[, -c(1:3), with = FALSE])  # predictors
   y_vec <- ipdata_i[["treatment"]]                     # response as a vector
   
-  fit0 <- cv.glmnet(x_mat, y_vec,  family = "binomial")
-  lambda<-fit0$lambda.min
-  fit_i <- glmnet(x_mat, y_vec,  family = "binomial",lambda=lambda)
+  fit0 <- glmnet::cv.glmnet(x_mat, y_vec,  family = "binomial")
+  lambda <- fit0$lambda.min
+  fit_i <- glmnet::glmnet(x_mat, y_vec,  family = "binomial",lambda=lambda)
   
   if(!is.null(fit_i)){
     # for degenerated X, coef=0, var=Inf
@@ -162,9 +162,7 @@ DisC2o.PSestimate <- function(ipdata,control,config) {
                              Treat, 
                              L1all, 
                              L2all=NULL,
-                             nlambda=20,
-                             nfolds=5,
-                             method=c("CV","BIC")){
+                             nlambda=20){
       n<-length(Treat)
       fit1<-GH_bio_ho(betabar, X1, Treat)
       fit<-GH_bio_ho(betainit, X1, Treat)
@@ -181,32 +179,6 @@ DisC2o.PSestimate <- function(ipdata,control,config) {
       lam.min <- 0.02*lam.max
       lam.seq <- exp(seq(log(lam.min), log(lam.max), length =nlambda ))
       
-      if(method=="CV"){
-        folds=cv.folds(n,nfolds)
-        re<-NULL
-        for (lambda in lam.seq) {
-          se<-0
-          for (k in 1:nfolds) {
-            Treat.train=Treat[as.vector(unlist(folds[-k]))]
-            X1.train=X1[as.vector(unlist(folds[-k])),]
-            
-            Treat.test=Treat[as.vector(unlist(folds[k]))]
-            X1.test=X1[as.vector(unlist(folds[k])),]
-            
-            fit<-adap_bio_ho(betainit, betabar,  X1.train,  Treat.train,
-                             L1all, L2all,lambda)
-            beta<-fit$Beta_est_adap
-            se=se+Lik_bio(beta, X1.test, Treat.test)
-          }
-          re<-c(re,se)
-        }
-        lambda<-lam.seq[which.min(re)]
-        fit<-adap_bio_ho(betainit, betabar,  X1,  Treat, L1all, L2all,lambda)
-        beta<-fit$Beta_est_adap
-        msg<-fit$msg
-      }
-      
-      if(method=="BIC"){
         re<-NULL
         for(lambda in lam.seq){
           fit <- adap_bio_ho(betainit, betabar,  X1,  Treat, L1all, L2all,lambda)
@@ -218,7 +190,7 @@ DisC2o.PSestimate <- function(ipdata,control,config) {
                          L1all, L2all,lambda)
         beta<-fit$Beta_est_adap
         msg<-fit$msg
-      }
+
       if(msg==0){
         cat("Successful converge!", "\n")
       }else{
@@ -312,9 +284,7 @@ DisC2o.PSestimate <- function(ipdata,control,config) {
                           Treat=treat, 
                           logL_all_D1, 
                           logL_all_D2,
-                          nlambda=20,
-                          nfolds=5,
-                          method="BIC")
+                          nlambda=20)
       
     # Htilde = sol$hessian, 
     surr <- list(thetatilde = fit$coeff, 
@@ -362,9 +332,9 @@ DisC2o.OMinitialize <- function(ipdata,control,config){
   ipw_weight<-weight_treat_ho(cbind(1,x_mat), thetahat, treat)
   
   
-  fit0 <- cv.glmnet(x_mat, y_vec, weights = ipw_weight, family = "gaussian")
+  fit0 <- glmnet::cv.glmnet(x_mat, y_vec, weights = ipw_weight, family = "gaussian")
   lambda<-fit0$lambda.min
-  fit_i <- glmnet(x_mat, y_vec, lambda=lambda, weights = ipw_weight, family = "gaussian")
+  fit_i <- glmnet::glmnet(x_mat, y_vec, lambda=lambda, weights = ipw_weight, family = "gaussian")
   
   
   if(!is.null(fit_i)){
@@ -513,9 +483,7 @@ DisC2o.OMestimate <- function(ipdata,control,config) {
                           L1all, 
                           L2all=NULL,
                           nlambda=20,
-                          weight,
-                          nfolds=5,
-                          method=c("CV","BIC")){
+                          weight){
     n<-length(Y)
     fit1<-GH_ls_ho(betabar, X1, weight,Y)
     g1<-t(weight*X1)%*%(weight*Y)/n
@@ -533,46 +501,6 @@ DisC2o.OMestimate <- function(ipdata,control,config) {
     lam.min <- 0.01*lam.max
     lam.seq <- exp(seq(log(lam.min), log(lam.max), length =nlambda )) 
     
-    if(method=="CV"){
-      folds=cv.folds(n,nfolds)
-      re<-NULL
-      for (lambda in lam.seq) {
-        se<-0
-        for (k in 1:nfolds) {
-          train<-as.vector(unlist(folds[-k]))
-          Y.train<-Y[train]
-          X1.train<-X1[train,]
-          weight.train<-weight[train]
-          
-          test<-as.vector(unlist(folds[k]))
-          Y.test<-Y[test]
-          X1.test<-X1[test,]
-          weight.test<-weight[test]
-          
-          fit<-adap_ls_ho(betainit, 
-                          betabar, 
-                          X1=X1.train,Y=Y.train,
-                          L1all, L2all, 
-                          weight = weight.train,
-                          lambda)
-          
-          beta<-fit$Beta_est_adap
-          se=se+sum((weight.test*(Y.test-X1.test%*%beta))^2)
-        }
-        re<-c(re,se)
-      }
-      lambda<-lam.seq[which.min(re)]
-      fit<-adap_ls_ho(betainit, 
-                      betabar, 
-                      X1=X1,Y=Y,
-                      L1all, L2all, 
-                      weight = weight,
-                      lambda)
-      beta<-fit$Beta_est_adap
-      msg<-fit$msg
-    }
-    
-    if(method=="BIC"){
       re<-NULL
       for(lambda in lam.seq){
         fit<-adap_ls_ho(betainit, 
@@ -593,7 +521,7 @@ DisC2o.OMestimate <- function(ipdata,control,config) {
                       lambda)
       beta<-fit$Beta_est_adap
       msg<-fit$msg
-    }
+      
     if(msg==0){
       cat("Successful converge!", "\n")
     }else{
@@ -667,9 +595,7 @@ DisC2o.OMestimate <- function(ipdata,control,config) {
                       logL_all_D1, 
                       logL_all_D2,
                       nlambda=20,
-                      weight = ipw_weight,
-                      nfolds=5,
-                      method="BIC")
+                      weight = ipw_weight)
   
   # Htilde = sol$hessian, 
   surr <- list(btilde = fit$coeff, 

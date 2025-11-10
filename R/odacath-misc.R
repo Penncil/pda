@@ -5,18 +5,20 @@
 #UPDATE2: 10/18/2022 Instead of using newton raphson to find roots of score equation with multiroot, we instead aim to minimize the L2 norm of S(theta) and estimate
 #coefficients with optim
 #UPDATE3: 12/16/2022 Included a new meta analysis meta_analysis_v3 that calculates the site-specific intercepts on the original scale
-library(numDeriv)
-library(rootSolve)
-library(minqa)
-library(ordinal)
-library(plyr)
-#library(brglm2)
-#library(UPG)
-
+# library(numDeriv)
+# library(rootSolve)
+# library(minqa)
+# library(ordinal)
+# library(plyr)
+## library(brglm2)
+## library(UPG)
+#' @import minqa ordinal plyr
+#' @keywords internal
 expit=function(a) 1/(1+exp(-a))
 
 #Likelihood-Used for estimation of parameters within each site (All parameters are estimated
 #x and y (within site)
+#' @keywords internal
 Lik2=function(g,x,y,model=NULL){
   #Model Types=mlr (Multinomial Logistic Regression), polr (Proportional Odds Logistic Regression), lr (Logistic Regression)
   x <- as.matrix(x)
@@ -64,6 +66,7 @@ Lik2=function(g,x,y,model=NULL){
 
 #Vector of parameter assignments given beta and eta,for use in all model types. g is a general vector of parameters to be able
 #to run code for all model types
+#' @keywords internal
 g_assignment=function(beta,eta,eta_indices){
   if(is.null(eta)==FALSE){ #Is there site specific parameters (Heterogeneity?)
     l_beta=length(beta)
@@ -82,6 +85,7 @@ g_assignment=function(beta,eta,eta_indices){
 
 #Likelihood-Used for estimation of efficient score function (Only beta is estimated) (Also can be used to update eta given a beta when T>1)
 #x and y (within site)
+#' @keywords internal
 Lik=function(beta,eta=NULL,x,y,model=NULL,eta_indices=NULL){
   #Model Types=mlr (Multinomial Logistic Regression), polr (Proportional Odds Logistic Regression), lr (Logistic Regression)
   #eta_indices=indices of g which are considered eta parameters (site specific)
@@ -135,6 +139,7 @@ Lik=function(beta,eta=NULL,x,y,model=NULL,eta_indices=NULL){
 
 #pdfs
 #x and y (within site)
+#' @keywords internal
 pdf=function(beta,eta=NULL,x,y,model=NULL,eta_indices=NULL){
   x <- as.matrix(x)
   n <- nrow(x)
@@ -181,6 +186,7 @@ pdf=function(beta,eta=NULL,x,y,model=NULL,eta_indices=NULL){
 
 #Likelihood-Tilting Ratio
 #x and y (within site)
+#' @keywords internal
 Lik_tilt=function(g,x,y,model=NULL,tilt_ratio){
   #Model Types=mlr (Multinomial Logistic Regression), polr (Proportional Odds Logistic Regression), lr (Logistic Regression)
   #eta_indices=indices of g which are considered eta parameters (site specific)
@@ -232,6 +238,7 @@ Lik_tilt=function(g,x,y,model=NULL,tilt_ratio){
 
 #Likelihood-Tilting Ratio
 #x and y (within site)
+#' @keywords internal
 Lik_tilt_es=function(g,x,y,model=NULL,tilt_ratio){ 
   #Model Types=mlr (Multinomial Logistic Regression), polr (Proportional Odds Logistic Regression), lr (Logistic Regression)
   #eta_indices=indices of g which are considered eta parameters (site specific)
@@ -285,6 +292,7 @@ Lik_tilt_es=function(g,x,y,model=NULL,tilt_ratio){
 
 
 #x and y (within site)
+#' @keywords internal
 tilt_I=function(betabar,etaj,eta1,x,y,eta_indices,model){ #Calculating the tilted information matrix for all individuals contributions at site j
   
   pdf_j=pdf(beta=betabar,eta=etaj,x=x,y=y,model=model,eta_indices=eta_indices)
@@ -302,6 +310,7 @@ tilt_I=function(betabar,etaj,eta1,x,y,eta_indices,model){ #Calculating the tilte
 }
 
 #x and y (within site)
+#' @keywords internal
 regular_S=function(beta,eta, x, y,eta_indices,model){ #Score for logistic regression for current model parameterization, used to calculate fisher information within each site (No tilting ratio)
   #Assignment of beta and eta to parameter vector
   g_list=g_assignment(beta=beta,eta=eta,eta_indices=eta_indices)
@@ -313,6 +322,7 @@ regular_S=function(beta,eta, x, y,eta_indices,model){ #Score for logistic regres
   return(matrix(-1*n*S,ncol=1,nrow=length(g))) #remember log likelihood is divided by n and multiplied by -1
 }
 #x and y (within site)
+#' @keywords internal
 regular_I=function(beta,eta, x, y,eta_indices,model){ #Fisher information for logistic regression for current model parameterization, used to calculate fisher information within each site (No tilting ratio)
   #Assignment of beta and eta to parameter vector
   g_list=g_assignment(beta=beta,eta=eta,eta_indices=eta_indices)
@@ -325,6 +335,7 @@ regular_I=function(beta,eta, x, y,eta_indices,model){ #Fisher information for lo
   return(n*I) #remember log likelihood is divided by n and multiplied by -1: Information is negative inverse hessian
 }
 #x and y (within site)
+#' @keywords internal
 regular_es = function(beta,eta,x,y,eta_indices,model){ #Efficient Score Function that is calculated at each site j, S_j(\bar{\beta},\bar{\gamma}_j), (Calculates Fisher Information and partitions out into blocks)
   l_beta = length(beta)
   l_eta=length(eta)
@@ -349,6 +360,7 @@ regular_es = function(beta,eta,x,y,eta_indices,model){ #Efficient Score Function
 }
 
 #x and y within site
+#' @keywords internal
 tilt_es = function(beta,betabar,etaj,eta1,x,y,eta_indices,model){ #Calculates the tilted score function at the local site for site j #Gamma1 (Site j), Gamma2 (Site 1)
   pdf_j=pdf(beta=betabar,eta=etaj,x=x,y=y,model=model,eta_indices=eta_indices)
   pdf_1=pdf(beta=betabar,eta=eta1,x=x,y=y,model=model,eta_indices=eta_indices)
@@ -389,6 +401,7 @@ tilt_es = function(beta,betabar,etaj,eta1,x,y,eta_indices,model){ #Calculates th
 }
 
 #x and y within site
+#' @keywords internal
 check_U = function(beta, betabar, eta_mat, site, x,y,k,eta_indices,model){#Calculates the sum over the tilted score functions across all sites j=1,...,K
   #print(beta)
   #k is the local site?
@@ -406,7 +419,8 @@ check_U = function(beta, betabar, eta_mat, site, x,y,k,eta_indices,model){#Calcu
 }
 
 
-
+#' @import plyr
+#' @keywords internal
 S= function(beta,eta_mat, x, y,eta_indices,model,site){ #Total sum over all S_j(\bar{\beta},\bar{\gamma}_j)
   K = nrow(eta_mat)
   unique_site=sort(unique(site))
@@ -444,4 +458,3 @@ repar <- function(g, g.covar, px){
   return(list(beta = beta, theta = theta, zeta = zeta, 
               beta.var = beta.var, theta.var=theta.var, zeta.var = zeta.var))
 }
-

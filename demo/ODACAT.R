@@ -33,6 +33,7 @@ control <- list(project_name = 'ODACAT Example',
                 # xlev = list(sex=c('F', 'M')),  #levels of all categorical X's, with the first being the reference
                 optim_maxit = 100,
                 lead_site = 'site1',
+                init_method = 'meta',
                 upload_date = as.character(Sys.time()) )
 
 ## fit polr reg using pooled data

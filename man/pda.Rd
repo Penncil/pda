@@ -4,7 +4,11 @@
 \alias{pda}
 \title{PDA: Privacy-preserving Distributed Algorithm}
 \usage{
-pda(ipdata,site_id,control,dir,uri,secret)
+pda(ipdata=NULL,site_id,control=NULL,
+    dir=NULL,uri=NULL,secret=NULL,
+    upload_without_confirm=F, 
+    silent_message=F, 
+    digits=4,hosdata=NULL)
 }
 \arguments{
 \item{ipdata}{Local IPD data in data frame, should include at least one column for the outcome and one column for the covariates}
@@ -18,6 +22,14 @@ pda(ipdata,site_id,control,dir,uri,secret)
 \item{uri}{Universal Resource Identifier for this run}
 
 \item{secret}{password to authenticate as site_id on uri}
+
+\item{upload_without_confirm}{logical. TRUE if want silent upload, no interactive confirm}
+
+\item{silent_message}{logical. TRUE if want to mute message}
+
+\item{digits}{digits after decimal points in the output json files}
+
+\item{hosdata}{(for dGEM) hospital-level data, should include the same name as defined in the control file}
 }
 \value{
 control
@@ -27,103 +39,6 @@ control
 \description{
 Fit Privacy-preserving Distributed Algorithms for linear, logistic, 
                Poisson and Cox PH regression with possible heterogeneous data across sites.
-}
-\examples{
-require(survival)
-require(data.table)
-require(pda)
-data(lung)
-
-## In the toy example below we aim to analyze the association of lung status with 
-## age and sex using logistic regression, data(lung) from 'survival', we randomly 
-## assign to 3 sites: 'site1', 'site2', 'site3'. we demonstrate using PDA ODAL can 
-## obtain a surrogate estimator that is close to the pooled estimate. We run the 
-## example in local directory. In actual collaboration, account/password for pda server 
-## will be assigned to the sites at the server https://pda.one.
-## Each site can access via web browser to check the communication of the summary stats.
-
-## for more examples, see demo(ODAC) and demo(ODAP)
-
-# Create 3 sites, split the lung data amongst them
-sites = c('site1', 'site2', 'site3')
-set.seed(42)
-lung2 <- lung[,c('status', 'age', 'sex')]
-lung2$sex <- lung2$sex - 1
-lung2$status <- ifelse(lung2$status == 2, 1, 0)
-lung_split <- split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
-## fit logistic reg using pooled data
-fit.pool <- glm(status ~ age + sex, family = 'binomial', data = lung2)
-
-
-# ############################  STEP 1: initialize  ###############################
-control <- list(project_name = 'Lung cancer study',
-                step = 'initialize',
-                sites = sites,
-                heterogeneity = FALSE,
-                model = 'ODAL',
-                family = 'binomial',
-                outcome = "status",
-                variables = c('age', 'sex'),
-                optim_maxit = 100,
-                lead_site = 'site1',
-                upload_date = as.character(Sys.time()) )
-
-
-## run the example in local directory:
-## specify your working directory, default is the tempdir
-mydir <- tempdir()
-## assume lead site1: enter "1" to allow transferring the control file  
-pda(site_id = 'site1', control = control, dir = mydir)
-## in actual collaboration, account/password for pda server will be assigned, thus:
-\dontrun{pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')}
-## you can also set your environment variables, and no need to specify them in pda:
-\dontrun{Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'abc123', PDA_URI = 'https://pda.one')}
-\dontrun{pda(site_id = 'site1', control = control)}
-
-##' assume remote site3: enter "1" to allow tranferring your local estimate 
-pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
-
-##' assume remote site2: enter "1" to allow tranferring your local estimate  
-pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
-
-##' assume lead site1: enter "1" to allow tranferring your local estimate  
-##' control.json is also automatically updated
-pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
-
-##' if lead site1 initialized before other sites,
-##' lead site1: uncomment to sync the control before STEP 2
-\dontrun{pda(site_id = 'site1', control = control)}
-\dontrun{config <- getCloudConfig(site_id = 'site1')}
-\dontrun{pdaSync(config)}
-
-#' ############################'  STEP 2: derivative  ############################ 
-##' assume remote site3: enter "1" to allow tranferring your derivatives  
-pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
-
-##' assume remote site2: enter "1" to allow tranferring your derivatives  
-pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
-
-##' assume lead site1: enter "1" to allow tranferring your derivatives  
-pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
-
-
-#' ############################'  STEP 3: estimate  ############################ 
-##' assume lead site1: enter "1" to allow tranferring the surrogate estimate  
-pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
-
-##' the PDA ODAL is now completed!
-##' All the sites can still run their own surrogate estimates and broadcast them.
-
-##' compare the surrogate estimate with the pooled estimate 
-config <- getCloudConfig(site_id = 'site1', dir=mydir)
-fit.odal <- pdaGet(name = 'site1_estimate', config = config)
-cbind(b.pool=fit.pool$coef,
-      b.odal=fit.odal$btilde,
-      sd.pool=summary(fit.pool)$coef[,2],
-      sd.odal=sqrt(diag(solve(fit.odal$Htilde)/nrow(lung2))))
-      
-## see demo(ODAL) for more optional steps
-
 }
 \references{
 Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distributed Statistical Inference, \cr
@@ -148,6 +63,10 @@ Michael I. Jordan, Jason D. Lee & Yun Yang (2019) Communication-Efficient Distri
    medRxiv, pp.2020-12. \cr
    \doi{10.1101/2020.12.17.20248194}. \cr
 (ADAP) Xiaokang Liu, et al. (2021) ADAP: multisite learning with high-dimensional heterogeneous data via A Distributed Algorithm for Penalized regression. \cr
+(dGEM) Jiayi Tong, et al. (2022) dGEM: Decentralized Generalized Linear Mixed Effects Model \cr
+(COLA) Wu, Q., Reps, J.M., Li, L. et al. COLA-GLM: collaborative one-shot and lossless algorithms of generalized linear models for decentralized observational healthcare data. npj Digit. Med. 8, 442 (2025). https://doi.org/10.1038/s41746-025-01781-1. \cr
+(ODACT) Liang CJ, Luo C, Kranzler HR, Bian J, Chen Y. Communication-efficient federated learning of temporal effects on opioid use disorder with data from distributed research networks. J Am Med Inform Assoc. 2025 Apr 1;32(4):656-664. doi: 10.1093/jamia/ocae313. PMID: 39864407; PMCID: PMC12005629. \cr
+(DisC2o) Tong J, et al. 2025. DisC2o-HD: Distributed causal inference with covariates shift for analyzing real-world high-dimensional data. Journal of Machine Learning Research. 2025;26(3):1-50. \cr
 }
 \seealso{
 \code{pdaPut}, \code{pdaList}, \code{pdaGet}, \code{getCloudConfig} and \code{pdaSync}.

@@ -79,8 +79,8 @@ DPQL.derive <- function(ipdata,control,config){
   
   Y <- ipdata$outcome
   X <- as.matrix(ipdata[,-'outcome'])  
-  idx <- match(control$risk_factor_heterogeneity, control$risk_factor)
-  Z <- as.matrix(X[,idx])
+  idx <- match(control$variables_heterogeneity, colnames(X))
+  Z <- as.matrix(X[,idx,drop=FALSE])
   # if(is.null(weights)) weights <- rep(1, length(Y)) 
   # if(is.null(offset)) offset <- rep(0, length(Y))
   
@@ -89,7 +89,15 @@ DPQL.derive <- function(ipdata,control,config){
   # if(is.null(ranef.init)) ranef.init=rep(0,qz)
   # if(is.null(fixef.init)) fixef.init=rep(0,px)
   if(is.null(control$bhat)) fixef.init <- rep(0,ncol(X)) else fixef.init <- control$bhat
-  if(is.null(control$uhat)) ranef.init <- rep(0,ncol(Z)) else ranef.init <- control$uhat[control$sites==config$site_id,] 
+  if(is.null(control$uhat)) {
+    ranef.init <- rep(0, ncol(Z))
+  } else {
+    # Convert uhat from list to matrix if needed (from JSON)
+    if(is.list(control$uhat)) {
+      control$uhat <- matrix(unlist(control$uhat), ncol=1)
+    }
+    ranef.init <- as.numeric(control$uhat[control$sites == config$site_id, ])
+  }
  
   # # get b_meta as initial bbar
   # bhat <- rep(0, px)

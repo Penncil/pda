@@ -73,7 +73,7 @@
 #' } 
 "ADAP_data"
 
-#' ODACAT simulated data 
+#' ODACAT simulated data  with ordinal outcome
 #'
 #' A simulated data set for ODACAT demonstration
 #'
@@ -86,6 +86,46 @@
 #'   \item{X3}{the third covariate, binary}
 #' } 
 "ODACAT_ordinal"
+
+#' ODACAT simulated data with nominal outcome
+#'
+#' A simulated data set for ODACAT demonstration
+#'
+#' @format A list containing the following elements:
+#' \describe{
+#'   \item{id.site}{site id, 100 'site1', 100 'site2', 100 'site3'}
+#'   \item{outcome}{nominal outcome taking values 1,2,3}
+#'   \item{X1}{a continuous covariate} 
+#'   \item{X2}{a binary covariate} 
+#'   \item{X3}{a binary covariate}
+#' } 
+"ODACAT_nominal"
+
+#' ODACATH simulated data with ordinal outcome
+#'
+#' A simulated data set for ODACATH demonstration
+#'
+#' @format A list containing the following elements:
+#' \describe{
+#'   \item{id.site}{site id, 100 'site1', 100 'site2', 100 'site3'}
+#'   \item{y}{ordinal outcome taking values 1,2,3}
+#'   \item{X1_cont}{a continuous covariate} 
+#'   \item{X2_bin}{a binary covariate} 
+#' } 
+"ordinal_data"
+
+#' ODACATH simulated data with nominal outcome
+#'
+#' A simulated data set for ODACATH demonstration
+#'
+#' @format A list containing the following elements:
+#' \describe{
+#'   \item{id.site}{site id, 100 'site1', 100 'site2', 100 'site3'}
+#'   \item{y}{nominal outcome taking values 1,2,3}
+#'   \item{X1_cont}{a continuous covariate} 
+#'   \item{X2_bin}{a binary covariate} 
+#' } 
+"nominal_data_hetero"
 
 #' ODACH_CC simulated data 
 #'
@@ -107,15 +147,36 @@
 
 #' DisC2o simulated data 
 #'
-#' A simulated long-covid data set for Distributed causal inference with covariates shift (DisC2o)  
+#' A simulated long-covid data set for Distributed causal inference with covariates shift (DisC2o). This only contains 5 covariates and more noisy covariates can be added when running demo example. 
 #'
 #' @format A data frame with 900 rows and 53 variables:
 #' \describe{
 #'   \item{PASC_features}{number of Post Acute Sequelae of COVID (PASC, or long covid) features} 
 #'   \item{covid_vaccination}{treatment of covid vaccination, 1=vaccinated}
 #'   \item{site}{site id, 300 participants each for 'site1', 'site2', and 'site3'} 
-#'   \item{X1-X5}{5 binary covariates}
-#'   \item{X6-X50}{45 continuous covariates}  
+#'   \item{X1}{a binary covariate}
+#'   \item{X2}{a binary covariate}
+#'   \item{X3}{a continuous covariate}  
+#'   \item{X4}{a continuous covariate} 
+#'   \item{X5}{a continuous covariate} 
 #' } 
 "long_covid"
+
+
+
+#' COLA simulated data
+#' 
+#' A simulated COVID-19 data set for Collaborative One-shot and Lossless Algorithms of generalized linear models (COLA-GLM) 
+#' 
+#' @format A data frame with 1500 rows and 6 variables:
+#' \describe{
+#' \item{site}{site, 600 'site1', 500 'site2', 400 'site3'}
+#' \item{age}{binary age}
+#' \item{sex}{binary sex}
+#' \item{medical_condition}{binary medical condition}
+#' \item{status}{binary outcome, COVID-19 status. This is the binary outcome for COLA logistic regression}
+#' \item{visits}{poisson outcome, number of visits. This is the count outcome for COLA Poisson regression}
+#' }
+"COLA_covid" 
+
  

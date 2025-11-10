@@ -17,15 +17,18 @@
 # https://style.tidyverse.org/functions.html#naming
 # https://ohdsi.github.io/Hades/codeStyle.html#OHDSI_code_style_for_R
 
+# rootSolve, prodlim,
 
 #' @useDynLib pda
 #' @title Function to upload object to cloud as json
 #' 
-#' @usage pdaPut(obj,name,config,upload_without_confirm)
+#' @usage pdaPut(obj,name,config,upload_without_confirm=F,silent_message=F,digits=4)
 #' @param obj R object to encode as json and uploaded to cloud
 #' @param name of file
 #' @param config a list of variables for cloud configuration
 #' @param upload_without_confirm logical. TRUE if want silent upload, no interactive confirm 
+#' @param silent_message logical. TRUE if want to mute message
+#' @param digits digits after decimal points in the output json files
 #' @importFrom utils menu
 #' @return NONE
 #' @seealso \code{pda}
@@ -124,7 +127,7 @@ pdaGet <- function(name,config){
 
 #' @useDynLib pda
 #' @title gather cloud settings into a list
-#' @usage getCloudConfig(site_id,dir,uri,secret)
+#' @usage getCloudConfig(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=T)
 #' @param site_id site identifier
 #' @param dir shared directory path if flat files
 #' @param uri web uri if web service
@@ -172,8 +175,8 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=
 
 #' @useDynLib pda
 #' @title use this function to guide end-users step-by-step to identify best pda models for their tasks, and set up control.  
-#' @usage pdaCatalog()
-#' @param task user-specified task, c('Regression', 'Survival', 'Trial_emulation', 'Causal_inference', 'Design_analysis', 'Clustering', 'Transfer_learning'). If no specify, display all models
+#' @usage pdaCatalog(task=c('Regression', 'Survival', 'Trial_emulation', 'Causal_inference', 'Design_analysis', 'Clustering'), write_json_file_path=getwd(), optim_maxit,optim_method,init_method)
+#' @param task user-specified task, c('Regression', 'Survival', 'Trial_emulation', 'Causal_inference', 'Design_analysis', 'Clustering'). If no specify, display all models
 #' @param write_json_file_path directory path to write the control file to
 #' @param optim_maxit option in the control file for the optimization in pda, default 100
 #' @param optim_method option in the control file for the optimization in pda, default "BFGS"
@@ -186,17 +189,16 @@ pdaCatalog <- function(task=c('Regression',
                               'Trial_emulation', 
                               'Causal_inference', 
                               'Design_analysis', 
-                              'Clustering', 
-                              'Transfer_learning'),
+                              'Clustering' ), # 'Transfer_learning'
                        write_json_file_path=getwd(), 
                        optim_maxit,
                        optim_method,
                        init_method){
   # a = Hmisc::list.tree(object, fill = " | ", attr.print = F, size = F, maxlen = 1)     
-  library(data.tree)
-  library(jsonlite)
-  library(dplyr)
-  S=readline(prompt="We here present the Catalog for all pda models. \nPlease choose the best pda model based on your Task and specifications. \nType  <Return>   to continue : ")  
+  # library(data.tree)
+  # library(jsonlite)
+  # library(dplyr)
+  S=readline(prompt="Here is the Catalog for all pda models. \nPlease choose the best pda model based on your Task and specifications. \nType  <Return>   to continue : ")  
   
   # Tree structure Catalog: Task - heterogeneity - heterogeneity_effect(0=fixed 1=random) or other specifications...
   catalog <- data.frame(
@@ -218,13 +220,13 @@ pdaCatalog <- function(task=c('Regression',
       "Task/Regression, by outcome type/Dichotomous/data fully stratified/heterogeneity=Yes",
       "Task/Regression, by outcome type/Dichotomous/data fully stratified/heterogeneity=Yes/heterogeneity_effect=fixed: COLA_1_0_b",
       "Task/Regression, by outcome type/Dichotomous/data fully stratified/heterogeneity=Yes/heterogeneity_effect=random: COLA_1_1_b",
-      "Task/Regression, by outcome type/Dichotomous/heterogeneity=No", # set ODAL-R as built-in: if hessian has outlier then do median 
+      # "Task/Regression, by outcome type/Dichotomous/heterogeneity=No", # set ODAL-R as built-in: if hessian has outlier then do median 
       "Task/Regression, by outcome type/Dichotomous/heterogeneity=No/need odds ratio: ODAL", 
       "Task/Regression, by outcome type/Dichotomous/heterogeneity=No/need risk ratio: ODAPB", 
       "Task/Regression, by outcome type/Dichotomous/heterogeneity=Yes: DPQL_b", 
       "Task/Regression, by outcome type/Count/excessive 0s: ODAH", 
       # "Task/Regression, by outcome type/count/non-zero counts: ODAPT",  # + truncated Pois? 
-      "Task/Regression, by outcome type/Count/excessive variation: DPLR", # Chongliang  
+      # "Task/Regression, by outcome type/Count/excessive variation: DPLR", # Chongliang  
       "Task/Regression, by outcome type/Count/data fully stratified",     # the same as dichotomous
       "Task/Regression, by outcome type/Count/data fully stratified/heterogeneity=No: COLA_0_c",
       "Task/Regression, by outcome type/Count/data fully stratified/heterogeneity=Yes",
@@ -250,11 +252,11 @@ pdaCatalog <- function(task=c('Regression',
       "Task/Design_analysis/DRAFT", # Design-informed Regression Algorithm for Federated-learning Toolbox # ODACH-CC
       "Task/Clustering/ODEM",  # One-shot EM (Yudong)  
       "Task/Clustering/ODMM",  # 
-      "Task/Clustering/DMLCA",  # Distributed EM (Xiaokang)
-      "Task/Transfer_learning"  # Jie TBA 
+      "Task/Clustering/DMLCA"  # Distributed EM (Xiaokang)
+      # "Task/Transfer_learning"  # Jie TBA
     ) # , value = LETTERS[1:16] # Optional: Add values to nodes
   ) 
-  catalog_tree <- as.Node(catalog)
+  catalog_tree <- data.tree::as.Node(catalog)
   print(catalog_tree) # how to change "levelName" to 'pda model'?
   
   # read in the model name, as identified by the pda Catalog
@@ -269,19 +271,20 @@ pdaCatalog <- function(task=c('Regression',
   control$model = model[1]
   control$heterogeneity = ifelse(model[2]==0, F, T)
   control$heterogeneity_effect = ifelse(model[3]==0, 'fixed', 'random')
-  if(model[1]=='LATTE') control$propensity_score = case_when(model[2]==1 ~ 'stratificaion',
+  if(model[1]=='LATTE') control$propensity_score = dplyr::case_when(model[2]==1 ~ 'stratificaion',
                                                              model[2]==2 ~ 'inverse weighting',
                                                              model[2]==3 ~ 'overlap weighting')
   
   # family from model
-  fml = case_when(model[1]%in%c('DLM') ~ 'gaussian',
+  fml = dplyr::case_when(model[1]%in%c('DLM') ~ 'gaussian',
                   model[1]%in%c('ODAL','dGEM','ODAPB') ~ 'binomial',
                   model[1]%in%c('ODAP','DPLR') ~ 'poisson',
                   model[1]%in%c('ODACAT') ~ 'multicategory',
                   model[1]%in%c('ODAC','ODACT','ODACoR') ~ 'cox',
                   model[1]%in%c('ADAP') ~ 'lasso',
                   model[1]%in%c('ODAH') ~ 'hurdle')
-  if(model[1] %in%c('DPQL', 'COLA') ) fml = case_when(model[length(model)]=='b' ~ 'binomial',
+  # for COLA: control$mixed_effects?
+  if(model[1] %in%c('DPQL', 'COLA') ) fml = dplyr::case_when(model[length(model)]=='b' ~ 'binomial',
                                                       model[length(model)]=='c' ~ 'poisson' )
   control$family = fml
   
@@ -330,7 +333,7 @@ pdaCatalog <- function(task=c('Regression',
 #' 
 #' @description  Fit Privacy-preserving Distributed Algorithms for linear, logistic, 
 #'                Poisson and Cox PH regression with possible heterogeneous data across sites.
-#' @usage pda(ipdata,site_id,control,dir,uri,secret)
+#' @usage pda(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,upload_without_confirm=F, silent_message=F, digits=4,hosdata=NULL)
 #' @param ipdata  Local IPD data in data frame, should include at least one column for the outcome and one column for the covariates 
 #' @param site_id Character site name
 #' @param control pda control data
@@ -338,6 +341,8 @@ pdaCatalog <- function(task=c('Regression',
 #' @param uri Universal Resource Identifier for this run
 #' @param secret password to authenticate as site_id on uri
 #' @param upload_without_confirm logical. TRUE if want silent upload, no interactive confirm 
+#' @param silent_message logical. TRUE if want to mute message
+#' @param digits digits after decimal points in the output json files
 #' @param hosdata (for dGEM) hospital-level data, should include the same name as defined in the control file
 #' @return control
 #' @seealso \code{pdaPut}, \code{pdaList}, \code{pdaGet}, \code{getCloudConfig} and \code{pdaSync}.
@@ -367,102 +372,9 @@ pdaCatalog <- function(task=c('Regression',
 #'    \doi{10.1101/2020.12.17.20248194}. \cr
 #' (ADAP) Xiaokang Liu, et al. (2021) ADAP: multisite learning with high-dimensional heterogeneous data via A Distributed Algorithm for Penalized regression. \cr
 #' (dGEM) Jiayi Tong, et al. (2022) dGEM: Decentralized Generalized Linear Mixed Effects Model \cr
-#' @examples
-#' require(survival)
-#' require(data.table)
-#' require(pda)
-#' data(lung)
-#' 
-#' ## In the toy example below we aim to analyze the association of lung status with 
-#' ## age and sex using logistic regression, data(lung) from 'survival', we randomly 
-#' ## assign to 3 sites: 'site1', 'site2', 'site3'. we demonstrate using PDA ODAL can 
-#' ## obtain a surrogate estimator that is close to the pooled estimate. We run the 
-#' ## example in local directory. In actual collaboration, account/password for pda server 
-#' ## will be assigned to the sites at the server https://pda.one.
-#' ## Each site can access via web browser to check the communication of the summary stats.
-#' 
-#' ## for more examples, see demo(ODAC) and demo(ODAP)
-#' 
-#' # Create 3 sites, split the lung data amongst them
-#' sites = c('site1', 'site2', 'site3')
-#' set.seed(42)
-#' lung2 <- lung[,c('status', 'age', 'sex')]
-#' lung2$sex <- lung2$sex - 1
-#' lung2$status <- ifelse(lung2$status == 2, 1, 0)
-#' lung_split <- split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
-#' ## fit logistic reg using pooled data
-#' fit.pool <- glm(status ~ age + sex, family = 'binomial', data = lung2)
-#' 
-#' 
-#' # ############################  STEP 1: initialize  ###############################
-#' control <- list(project_name = 'Lung cancer study',
-#'                 step = 'initialize',
-#'                 sites = sites,
-#'                 heterogeneity = FALSE,
-#'                 model = 'ODAL',
-#'                 family = 'binomial',
-#'                 outcome = "status",
-#'                 variables = c('age', 'sex'),
-#'                 optim_maxit = 100,
-#'                 lead_site = 'site1',
-#'                 upload_date = as.character(Sys.time()) )
-#' 
-#' 
-#' ## run the example in local directory:
-#' ## specify your working directory, default is the tempdir
-#' mydir <- tempdir()
-#' ## assume lead site1: enter "1" to allow transferring the control file  
-#' pda(site_id = 'site1', control = control, dir = mydir)
-#' ## in actual collaboration, account/password for pda server will be assigned, thus:
-#' \dontrun{pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')}
-#' ## you can also set your environment variables, and no need to specify them in pda:
-#' \dontrun{Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'abc123', PDA_URI = 'https://pda.one')}
-#' \dontrun{pda(site_id = 'site1', control = control)}
-#' 
-#' ##' assume remote site3: enter "1" to allow tranferring your local estimate 
-#' pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
-#' 
-#' ##' assume remote site2: enter "1" to allow tranferring your local estimate  
-#' pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
-#' 
-#' ##' assume lead site1: enter "1" to allow tranferring your local estimate  
-#' ##' control.json is also automatically updated
-#' pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
-#' 
-#' ##' if lead site1 initialized before other sites,
-#' ##' lead site1: uncomment to sync the control before STEP 2
-#' \dontrun{pda(site_id = 'site1', control = control)}
-#' \dontrun{config <- getCloudConfig(site_id = 'site1')}
-#' \dontrun{pdaSync(config)}
-#' 
-#' #' ############################'  STEP 2: derivative  ############################ 
-#' ##' assume remote site3: enter "1" to allow tranferring your derivatives  
-#' pda(site_id = 'site3', ipdata = lung_split[[3]], dir=mydir)
-#' 
-#' ##' assume remote site2: enter "1" to allow tranferring your derivatives  
-#' pda(site_id = 'site2', ipdata = lung_split[[2]], dir=mydir)
-#' 
-#' ##' assume lead site1: enter "1" to allow tranferring your derivatives  
-#' pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
-#' 
-#' 
-#' #' ############################'  STEP 3: estimate  ############################ 
-#' ##' assume lead site1: enter "1" to allow tranferring the surrogate estimate  
-#' pda(site_id = 'site1', ipdata = lung_split[[1]], dir=mydir)
-#' 
-#' ##' the PDA ODAL is now completed!
-#' ##' All the sites can still run their own surrogate estimates and broadcast them.
-#' 
-#' ##' compare the surrogate estimate with the pooled estimate 
-#' config <- getCloudConfig(site_id = 'site1', dir=mydir)
-#' fit.odal <- pdaGet(name = 'site1_estimate', config = config)
-#' cbind(b.pool=fit.pool$coef,
-#'       b.odal=fit.odal$btilde,
-#'       sd.pool=summary(fit.pool)$coef[,2],
-#'       sd.odal=sqrt(diag(solve(fit.odal$Htilde)/nrow(lung2))))
-#'       
-#' ## see demo(ODAL) for more optional steps
-#' 
+#' (COLA) Wu, Q., Reps, J.M., Li, L. et al. COLA-GLM: collaborative one-shot and lossless algorithms of generalized linear models for decentralized observational healthcare data. npj Digit. Med. 8, 442 (2025). https://doi.org/10.1038/s41746-025-01781-1. \cr
+#' (ODACT) Liang CJ, Luo C, Kranzler HR, Bian J, Chen Y. Communication-efficient federated learning of temporal effects on opioid use disorder with data from distributed research networks. J Am Med Inform Assoc. 2025 Apr 1;32(4):656-664. doi: 10.1093/jamia/ocae313. PMID: 39864407; PMCID: PMC12005629. \cr
+#' (DisC2o) Tong J, et al. 2025. DisC2o-HD: Distributed causal inference with covariates shift for analyzing real-world high-dimensional data. Journal of Machine Learning Research. 2025;26(3):1-50. \cr
 #' @return control
 #' @export
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
@@ -561,33 +473,28 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       mymessage('No control$variables_heterogeneity, use "Intercept" as default!')
       # message('You specified control$heterogeneity = T, but no control$variables_heterogeneity, use "Intercept" as default!')
       control$variables_heterogeneity <- 'Intercept'      
-    }
-    # }
+    } 
   }else if(control$model == 'dGEM'){
     dGEM.steps<-c('initialize','derive','estimate','synthesize')
     dGEM.family<-'binomial'
     variables_site_level <- control$variables_site_level
   }else if(control$model == 'COLA'){
-    COLA.steps<-c('initialize', 'estimate')
+    COLA.steps <- c('initialize', 'estimate')
     COLA.family <- control$family
     if (control$mixed_effects==TRUE){
       mymessage('You are setting the existence of mixed effects (mixed_effects = TRUE) and assuming to implement COLA-GLMM.')
-    }
-    # COLA.family<-'binomial'
-    # }else if(control$model == 'OLGLM'){
-    #   OLGLM.steps<-c('initialize')
-    #   OLGLM.family<-'binomial'
-    # }else if(control$model == 'OLGLMM'){
-    #   OLGLMM.steps<-c('initialize')
-    #   OLGLMM.family<-'binomial'
+    } 
   }else if(control$model == 'ODACH_CC'){ 
-    ODACH_CC.steps<-c('initialize','derive', 'estimate','synthesize')
-    ODACH_CC.family<-'cox'
+    ODACH_CC.steps <- c('initialize','derive', 'estimate','synthesize')
+    ODACH_CC.family <- 'cox'
   }else if(control$model=='DisC2o'){
-    DisC2o.steps<-c('PSinitialize','PSderive','PSestimate',
-                    'OMinitialize','OMderive','OMestimate',
-                    'AIPWestimate','synthesize')
-    DisC2o.family<-control$family
+    DisC2o.steps <- c('PSinitialize','PSderive','PSestimate',
+                      'OMinitialize','OMderive','OMestimate',
+                      'AIPWestimate','synthesize')
+    DisC2o.family <- control$family
+  } else if(control$model=='ODACT'){ # ODACH with time-varying effects
+    ODACT.steps <- c('initialize','derive', 'estimate','synthesize')
+    ODACT.family <- 'cox'
   }
   
   family = get(paste0(control$model,'.family'))
@@ -635,10 +542,12 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
   }else if(control$model=='ODAL'){
     ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
                                     model.matrix(formula, mf))
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='ADAP'){
     ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
                                     model.matrix(formula, mf))
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='ODAH'){  # count and zero parts for hurdle
     X_count = data.table::data.table(model.matrix(formula, mf))
@@ -656,63 +565,74 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
   }else if(control$model=='ODAP'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
                                     offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
-                                    model.matrix(formula, mf))
-    
+                                    model.matrix(formula, mf)) 
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else if(control$model=='ODAPB'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),
                                     offset=ifelse(is.character(control$offset), ipdata[,control$offset], 0),
                                     model.matrix(formula, mf))
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }else if(control$model=='ODACAT'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),  ## multi-category y is 1:q
                                     model.matrix(formula, mf))[,-2] # remove the intercept column. ODACAT does not need that column. 
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='ODACATH'){ # added by Jessie & Ken on Feb 24, 2023
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),  ## multi-category y is 1:q
                                     model.matrix(formula, mf))[,-2] # remove the intercept column. ODACATH does not need that column. 
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-1]
   }else if(control$model=='DLM'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
                                     model.matrix(formula, mf))
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-1] 
     control$risk_factor_heterogeneity = control$risk_factor[grepl(paste0(control$variables_heterogeneity, collapse='|'), control$risk_factor)]
   }else if(control$model=='DPQL'){
     ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)), 
                                     model.matrix(formula, mf))
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-1]           # may induce more cols for dummy vars
     control$risk_factor_heterogeneity = control$risk_factor[grepl(paste0(control$variables_heterogeneity, collapse='|'), control$risk_factor)]
   }else if(control$model=='dGEM'){
     if (!is.null(ipdata)){
       ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
                                       model.matrix(formula, mf))
+      ipdata = data.table(data.frame(ipdata)) 
       control$risk_factor = colnames(ipdata)[-1]
-    }
-    # }else if(control$model=='OLGLM'){
-    #   if(control$step == "initialize"){
-    #     ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
-    #                                     model.matrix(formula, mf))
-    #     control$risk_factor = colnames(ipdata)[-1]
-    #   }else{
-    #     control$risk_factor = colnames(ipdata)[-1]
-    #   }
-    # } else if(control$model=='OLGLMM'){
-    #   if (!is.null(ipdata)){
-    #     if(control$step == "initialize"){
-    #       ipdata = data.table::data.table(status=as.numeric(model.response(mf)), 
-    #                                       model.matrix(formula, mf))
-    #       control$risk_factor = colnames(ipdata)[-1]
-    #     }else{
-    #       control$risk_factor = colnames(ipdata)[-1]
-    #     }
-    #   }
+    } 
   }else if (control$model == 'COLA'){
-    if(control$step == "initialize"){
-      ipdata = data.table::data.table(outcome=as.numeric(model.response(mf)),
-                                      model.matrix(formula, mf))
-      control$risk_factor = colnames(ipdata)[-1]
-    }else{
-      control$risk_factor = colnames(ipdata)[-1]
+    if (isTRUE(control$mixed_effects)) {
+      # --- COLA-GLMM ---
+      keep <- c(control$variables, control$outcome)
+      # missing <- setdiff(keep, names(ipdata))
+      # if (length(missing)) stop("Missing columns for COLA-GLMM: ", paste(missing, collapse = ", "))
+      
+      # ensure data.table and select using ..keep
+      ipdata <- data.table::as.data.table(ipdata)[, ..keep]
+      
+      # standardize outcome name for COLA.initialize() expectations
+      setnames(ipdata, control$outcome, control$outcome, skip_absent = TRUE)
+      
+      # (optional) coerce outcome to numeric (either binary or counts)
+      if (!is.numeric(ipdata[[control$outcome]])) {
+        ipdata[,(control$outcome) := as.numeric(get(control$outcome))]
+      }
+      
+      # Do NOT set control$risk_factor here; COLA.initialize builds x_names/X0 itself.
+    } else {
+      # --- COLA-GLM / COLA-GLM-H path for design-matrix ---
+      if (control$step == "initialize") {
+        ipdata <- data.table::data.table(
+          outcome = as.numeric(model.response(mf)),
+          model.matrix(formula, mf)
+        )
+        control$risk_factor <- colnames(ipdata)[-1]
+      } else {
+        control$risk_factor <- colnames(ipdata)[-1]
+      }
     }
   }else if(control$model=='ODACH_CC'){
     if (!is.null(ipdata)){
@@ -730,7 +650,14 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     ipdata = data.table::data.table(treatment = treatment_col,
                                     status=as.numeric(model.response(mf)), 
                                     model.matrix(formula, mf))
+    ipdata = data.table(data.frame(ipdata)) 
     control$risk_factor = colnames(ipdata)[-c(1,2)]
+  }else if(control$model=='ODACT'){  
+    ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
+                                    status=as.numeric(model.response(mf))[-c(1:n)], 
+                                    model.matrix(formula, mf)[,-1])
+    ipdata = data.table(data.frame(ipdata)) 
+    control$risk_factor = colnames(ipdata)[-c(1:2)]
   }
   
   ## synchronize control file (at lead site), if lead site sees all collab sites ready
@@ -759,13 +686,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
         if (control$step == 'synthesize'){
           step_obj <- get(step_function)(control, config)
         }
-      }
-      # }else if(control$model == "OLGLMM"){ # do we still need this? 
-      #   if(is.null(ipdata) & (config$site_id == control$lead_site)){
-      #     print("As the leading site, you are going to produce the final results")
-      # }else{
-      #   step_obj <- get(step_function)(ipdata, control, config)
-      # }
+      } 
     }
     else{
       step_obj <- get(step_function)(ipdata, control, config)
@@ -795,14 +716,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
           pdaPut(step_obj,paste0(config$site_id,'_',control$step),config,upload_without_confirm,silent_message,digits)
         }
       }
-    } 
-    
-    # if((control$step=="PSinitialize" & site_id==control$lead_site) |
-    #    (control$step=="OMinitialize" & site_id==control$lead_site ) |
-    #    control$step=="PSestimate" | 
-    #    control$step=="OMestimate" ) {
-    #    control<-pdaSync(config,upload_without_confirm,silent_message,digits)
-    # }
+    }  
     
     if((control$step=="PSinitialize" & site_id==control$lead_site) |
        (control$step=="OMinitialize" & site_id==control$lead_site )) {
@@ -824,8 +738,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       }else{
         control<-pdaSync(config,upload_without_confirm,silent_message,digits)
       }
-    } 
-    
+    }     
     
   }
   invisible(control)
@@ -838,6 +751,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
 #' @description  update pda control if ready (run by lead)
 #' @usage pdaSync(config,upload_without_confirm,silent_message, digits)
 #' @param config cloud configuration
+#' @param upload_without_confirm logical. TRUE if want silent upload, no interactive confirm 
+#' @param silent_message logical. TRUE if want to mute message
+#' @param digits digits after decimal points in the output json files
 #' @return control
 #' @seealso \code{pda}
 #' @export  
@@ -884,24 +800,21 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){
     DPQL.family<-control$family
   } else if(control$model=='dGEM'){
     dGEM.steps<-c('initialize','derive','estimate','synthesize')
-    dGEM.family<-'binomial'
-    # }else if(control$model == 'OLGLM'){
-    #   OLGLM.steps<-c('initialize')
-    #   OLGLM.family<-'binomial'
-    # }else if(control$model == 'OLGLMM'){
-    #   OLGLMM.steps<-c('initialize')
-    #   OLGLMM.family<-'binomial'
+    dGEM.family<-'binomial' 
   }else if(control$model == 'COLA'){
     COLA.steps <- c('initialize','estimate')
     COLA.family <- control$family
   }else if(control$model=='ODACH_CC'){  # ODACH with case-cohort design
-    ODACH_CC.steps<-c('initialize','derive', 'estimate','synthesize') 
-    ODACH_CC.family<-'cox'
+    ODACH_CC.steps <- c('initialize','derive', 'estimate','synthesize') 
+    ODACH_CC.family <- 'cox'
   }else if(control$model=='DisC2o'){
-    DisC2o.steps<-c('PSinitialize','PSderive','PSestimate',
-                    'OMinitialize','OMderive','OMestimate',
-                    'AIPWestimate','synthesize')
-    DisC2o.family<-control$family
+    DisC2o.steps <- c('PSinitialize','PSderive','PSestimate',
+                      'OMinitialize','OMderive','OMestimate',
+                      'AIPWestimate','synthesize')
+    DisC2o.family <- control$family
+  }else if(control$model=='ODACT'){
+    ODACT.steps <- c('initialize','derive', 'estimate','synthesize') 
+    ODACT.family <- 'cox'
   }
   
   files<-pdaList(config) 
@@ -1096,9 +1009,9 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){
         } else if(control$init_method == 'median'){ 
           binit = apply(bhat, 2, median, na.rm=T) 
           mymessage('median as initial est:')
-        } else if(control$init_method == 'weighted.median'){
-          binit = apply(bhat, 2, function(x) weighted.median(x, site_size))
-          mymessage('median (site size weighted) as initial est:')
+        # } else if(control$init_method == 'weighted.median'){
+        #   binit = apply(bhat, 2, function(x) weighted.median(x, site_size))
+        #   mymessage('median (site size weighted) as initial est:')
         } else if(control$init_method == 'lead'){
           binit = bhat[control$sites==control$lead_site,]
           mymessage('lead site est as initial est:')

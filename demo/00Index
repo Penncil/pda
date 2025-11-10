@@ -6,4 +6,8 @@ DLM    Distributed algorithm for Linear Model, with possible fixed / random site
 DPQL   Distributed Penalized Quasi-Likelihood algorithm for Generalized Linear Mixed Model
 ADAP   A Distributed Algorithm for Penalized regression
 ODACAT  One-shot Distributed Algorithm for multi-CATegorical regression (nominal or ordinal)
-dGEM   Decentralized Generalized Linear Mixed Effects Model
+dGEM  Decentralized Generalized Linear Mixed Effects Model
+COLA Collaborative One-shot and Lossless Algorithms of generalized linear models
+DisC2o Distributed Causal inference with Covariates shift
+ODACH_CC ODACH with case-cohort design 
+ODACT ODACH with time-varying effects

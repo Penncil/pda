@@ -1,8 +1,5 @@
-//[[Rcpp::depends(RcppEigen)]]
-#include <RcppEigen.h>
 #include <Rcpp.h>
-using namespace Rcpp;
-using namespace Eigen; 
+using namespace Rcpp;  
 using namespace std;
 
 // This is a simple example of exporting a C++ function to R. You can
@@ -21,55 +18,55 @@ double soft_c(double x, double thres) {
     out=x-thres;
   } else if(x<-thres){
     out=x+thres;
-  } else{
+  } else {
     out=0;
-  }
+  } 
   return out;
-}
+} 
 
 
 // [[Rcpp::export]]
-List coordi_cho(VectorXd atilde, MatrixXd B, VectorXd betainit, double lambda, int iter_max) {
+List coordi_cho(NumericVector atilde, NumericMatrix B, NumericVector betainit, double lambda, int iter_max) {
   int iter=1, p=betainit.size();
   double dif=1, a, b, c;
-  VectorXd beta1;
+  NumericVector beta1;
   while(iter<=iter_max && dif>1e-4){
     beta1=betainit;
     for(int i=0; i<p; i++){
       a=B(i,i);
-      c=betainit.adjoint()*B.col(i);
+      c= Rcpp::sum(betainit * B(_, i));
       b=atilde(i) + c - a*betainit(i);
       if(i==0){
         betainit(i)=-b/a;
-      }else{
-      betainit(i)=-soft_c(b/a,lambda/a);
+      } else{
+        betainit(i)=-soft_c(b/a,lambda/a);
       }
     }
-    a=(betainit-beta1).adjoint()*(betainit-beta1);
+    a= Rcpp::sum((betainit-beta1) * (betainit-beta1));
     dif = sqrt(a);
     iter=iter+1;
-  }
+  } 
   List out;
   out["betainit"]=betainit;
   out["iter"]=iter;
   return out;
-}
+} 
 
 
 // [[Rcpp::export]]
-List coordi_c(VectorXd atilde, MatrixXd B, VectorXd betainit, double lambda, int iter_max) {
+List coordi_c(NumericVector atilde, NumericMatrix B, NumericVector betainit, double lambda, int iter_max) {
   int iter=1, p=betainit.size();
   double dif=1, a, b, c;
-  VectorXd beta1;
+  NumericVector beta1;
   while(iter<=iter_max && dif>1e-4){
     beta1=betainit;
     for(int i=0; i<p; i++){
       a=B(i,i);
-      c=betainit.adjoint()*B.col(i);
+      c= Rcpp::sum(betainit * B(_, i));  
       b=atilde(i) + c - a*betainit(i);
       betainit(i)=-soft_c(b/a,lambda/a);
-    }
-    a=(betainit-beta1).adjoint()*(betainit-beta1);
+    } 
+    a= Rcpp::sum((betainit-beta1) * (betainit-beta1));
     dif = sqrt(a);
     iter=iter+1;
   }
@@ -77,5 +74,5 @@ List coordi_c(VectorXd atilde, MatrixXd B, VectorXd betainit, double lambda, int
   out["betainit"]=betainit;
   out["iter"]=iter;
   return out;
-}
+} 
 

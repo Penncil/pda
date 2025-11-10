@@ -17,7 +17,7 @@
 
 # https://style.tidyverse.org/functions.html#naming
 # https://ohdsi.github.io/Hades/codeStyle.html#OHDSI_code_style_for_R
-
+ 
 # set in pda()?
 #NOTE: MLR models must contain intercept
 ODACAT.steps <- c('initialize','derive','estimate','synthesize')
@@ -231,12 +231,13 @@ ODACAT.synthesize <- function(ipdata,control,config) {
   btilde.var_matrix=matrix(0,K,px)
   
   
-  
+  i = 1
   for(site_i in control$sites){
     surr_i <- pdaGet(paste0(site_i,'_estimate'),config)
     btilde_matrix[i,]=surr_i$btilde
     btilde.var_matrix[i,]=diag(surr_i$vcov)
     vcov_sum <- vcov_sum + surr_i$vcov
+    i = i + 1
   }
   
   # inv-Var weighted average est, and final Var = average Var-tilde

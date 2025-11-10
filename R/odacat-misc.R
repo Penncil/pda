@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # https://style.tidyverse.org/functions.html#naming
 # https://ohdsi.github.io/Hades/codeStyle.html#OHDSI_code_style_for_R
 
@@ -31,6 +30,7 @@
 
 ## (normalized neg) log-lik of proportional odds linear reg (polr) or 
 ## multinomial logistic reg (mlr) for ordinal outcome
+#' @import MASS numDeriv
 #' @keywords internal
 model.logL <- function(g, x, y , model='polr'){ # 'mlr'
   #POLR model is reparameterized to beta and theta
@@ -140,7 +140,7 @@ model.fit <- function(x, y, model='polr', b0){
   if(missing(b0)) b0 = rep(0, pp) 
   
   # ll <- function(g) polr.logL(g, x, y, wt, offset, method) 
-  res <- optim(b0, model.logL, x=x, y=y, model=model, method="BFGS", hessian=T,control = list(maxit=500,reltol=1e-8))
+  res <- optim(b0, model.logL, x=x, y=y, model=model, method="BFGS", hessian=T, control = list(maxit=500,reltol=1e-8))
 
   tt = list()
   
@@ -210,7 +210,7 @@ odacat.fit <- function(x, y,
   # di <- as.matrix(mydata)
   grad_LN_L1_beta_bar <- sum_D1_beta_bar - logL_N_D1_beta_bar[id.local,]
   hess_LN_L1_beta_bar <- sum_D2_beta_bar - logL_N_D2_beta_bar[id.local,,]
-  
+   
   # surrogate log-L 
   Ltilde1 <- function(g) model.logL(g, x=x, y=y, model=model) + sum(g * grad_LN_L1_beta_bar)
   Ltilde2 <- function(g) Ltilde1(g) + 1/2 * t(c(g-beta_bar)) %*% hess_LN_L1_beta_bar %*% c(g-beta_bar)
@@ -290,5 +290,4 @@ repar2 <- function(g, g.covar, px){
   return(list(beta = beta, theta = theta, zeta = zeta, 
               beta.var = beta.var, theta.var=theta.var, zeta.var = zeta.var,vcov=vcov))
 }
-
 

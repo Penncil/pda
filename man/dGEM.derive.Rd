@@ -4,7 +4,7 @@
 \alias{dGEM.derive}
 \title{dGEM hospital-specific effect derivation}
 \usage{
-dGEM.derive(ipdata,control,config)
+dGEM.derive(ipdata,control,config,hosdata)
 }
 \arguments{
 \item{ipdata}{individual participant data}

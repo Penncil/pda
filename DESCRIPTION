@@ -1,45 +1,45 @@
 Package: pda
 Type: Package
 Title: Privacy-Preserving Distributed Algorithms
-Version: 1.3-0
-Date: 2025-10-10
-Authors@R: c(person("Chongliang", "Luo", role=c("aut","cre"), email ="luocl3009@gmail.com"),
+Version: 1.3.0
+Date: 2025-10-20
+Authors@R: c(person("Chongliang", "Luo", role=c("cre"), email ="luocl3009@gmail.com"),
                 person("Rui", "Duan", role="aut"), person("Mackenzie", "Edmondson", role="aut"),
                 person("Jiayi", "Tong", role="aut"), person("Xiaokang", "Liu", role="aut"),
                 person("Kenneth", "Locke", role="aut"),
                 person("Jie", "Hu", role="aut"),
                 person("Bingyu", "Zhang", role="aut"),
+                person("Yicheng", "Shen", role="aut"), 
                 person("Yudong", "Wang", role="aut"),
+                person("Yiwen", "Lu", role="aut"), 
                 person("Yong", "Chen", role="aut", email ="ychen123@upenn.edu"),
                 person("Penn Computing Inference Learning (PennCIL) lab", role = c("cph")))
 Description: A collection of privacy-preserving distributed algorithms (PDAs) for conducting federated statistical learning across multiple data sites. The PDA framework includes models for various tasks such as regression, trial emulation, causal inference, design-specific analysis, and clustering. The PDA algorithms run on a lead site and only require summary statistics from collaborating sites, with one or few iterations. The package can be used together with the online data transfer system (<https://pda-ota.pdamethods.org/>) for safe and convenient collaboration. For more information, please visit our software websites: <https://github.com/Penncil/pda>, and <https://pdamethods.org/>.
 Maintainer: Chongliang Luo <luocl3009@gmail.com>
-License: Apache License 2.0 
-Suggests: 
-  imager,
-  lme4 
-Depends: R (>= 4.4.0)
-Imports: 
-  Rcpp (>= 0.12.19), 
-  stats, 
-  httr, 
-  rvest, 
-  jsonlite, 
-  data.table, 
-  survival,
-  minqa,
-  glmnet,
-  MASS,
-  numDeriv,
-  metafor,
-  rootSolve,
-  ordinal,
-  prodlim,
-  dplyr,
-  data.tree
-LinkingTo: 
-  Rcpp, 
-  RcppArmadillo
+License: Apache License 2.0
+Suggests: lme4
+Depends: R (>= 4.1.0)
+Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table,
+        survival, minqa, glmnet, MASS, numDeriv, metafor, ordinal,
+        plyr, tidyr, tibble, dplyr, geex, data.tree
+LinkingTo: Rcpp, RcppArmadillo, RcppEigen
 RoxygenNote: 7.3.2
 Encoding: UTF-8
 LazyData: true
+NeedsCompilation: yes
+Packaged: 2025-11-09 07:43:20 UTC; root
+Author: Chongliang Luo [cre],
+  Rui Duan [aut],
+  Mackenzie Edmondson [aut],
+  Jiayi Tong [aut],
+  Xiaokang Liu [aut],
+  Kenneth Locke [aut],
+  Jie Hu [aut],
+  Bingyu Zhang [aut],
+  Yicheng Shen [aut], 
+  Yudong Wang [aut],
+  Yiwen Lu [aut],
+  Yong Chen [aut],
+  Penn Computing Inference Learning (PennCIL) lab [cph]
+Repository: CRAN
+Date/Publication: 2025-10-20 15:30:01 UTC

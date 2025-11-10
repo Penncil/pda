@@ -4,7 +4,7 @@
 \alias{pdaPut}
 \title{Function to upload object to cloud as json}
 \usage{
-pdaPut(obj,name,config)
+pdaPut(obj,name,config,upload_without_confirm=F,silent_message=F,digits=4)
 }
 \arguments{
 \item{obj}{R object to encode as json and uploaded to cloud}
@@ -12,6 +12,12 @@ pdaPut(obj,name,config)
 \item{name}{of file}
 
 \item{config}{a list of variables for cloud configuration}
+
+\item{upload_without_confirm}{logical. TRUE if want silent upload, no interactive confirm}
+
+\item{silent_message}{logical. TRUE if want to mute message}
+
+\item{digits}{digits after decimal points in the output json files}
 }
 \value{
 NONE

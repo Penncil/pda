@@ -4,7 +4,7 @@
 \alias{getCloudConfig}
 \title{gather cloud settings into a list}
 \usage{
-getCloudConfig(site_id,dir,uri,secret)
+getCloudConfig(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=T)
 }
 \arguments{
 \item{site_id}{site identifier}
@@ -14,6 +14,8 @@ getCloudConfig(site_id,dir,uri,secret)
 \item{uri}{web uri if web service}
 
 \item{secret}{web token if web service}
+
+\item{silent_message}{logical, if the message will be muted}
 }
 \value{
 A list of cloud parameters: site_id, secret and uri

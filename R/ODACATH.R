@@ -173,7 +173,7 @@ ODACATH.derive <- function(ipdata,control,config){
 #' @useDynLib pda
 #' @title PDA surrogate estimation
 #' 
-#' @usage ODACAT.estimate(ipdata,control,config)
+#' @usage ODACATH.estimate(ipdata,control,config)
 #' @param ipdata local data in data frame
 #' @param control PDA control
 #' @param config cloud configuration

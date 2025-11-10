@@ -27,7 +27,8 @@ control <- list(project_name = 'Lung cancer study',
                 variables_site_level = c('volume'),
                 optim_maxit = 100,
                 lead_site = 'site1',
-                upload_date = as.character(Sys.time()) )
+                upload_date = as.character(Sys.time()),
+                init_method = 'meta')
 
 
 ## run the example in local directory:

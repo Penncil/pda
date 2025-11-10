@@ -31,9 +31,9 @@ control <- list(project_name = 'ODACH case-cohort toy example',
                 model = 'ODACH_CC',
                 family = 'cox',
                 outcome = "Surv(time, status)",
-                variables = c('X1','`Group (A,B,C)`', 'Category'),
+                variables = c('X1','Group', 'Category'),
                 #levels of all categorical X's, with the first being the reference
-                variables_lev = list(`Group (A,B,C)`=c('A','B','C'), 
+                variables_lev = list(Group=c('A','B','C'), 
                                      Category=c('X (X,Y,Z)','Y (X,Y,Z)','Z (X,Y,Z)')),  
                 full_cohort_size = c(site1=800,site2=600,site3=400), # for ODACH_CC
                 method = 'Prentice',                          # for ODACH_CC weights
@@ -43,21 +43,11 @@ control <- list(project_name = 'ODACH case-cohort toy example',
                 lead_site = 'site1',
                 upload_date = as.character(Sys.time()) )
 
-## cch stratified by site, using self-written cch_pooled()
-fit.pool <- cch_pooled(Surv(time, status) ~ X1+`Group (A,B,C)`+Category, data=odach_cc, variables_lev = control$variables_lev,
-                       full_cohort_size=c(site1=800,site2=600,site3=400), method='Prentice',var_sandwich=T)
-fit.pool$par
-#          X1   `Group (A,B,C)`B  `Group (A,B,C)`C CategoryY (X,Y,Z) CategoryZ (X,Y,Z) 
-# -0.5129684         0.1277404         0.2421812        -0.2374705         0.1359541 
-sqrt(diag(fit.pool$var)) # robust s.e. from sandwich 
-#  0.1153119         0.3363288         0.3260169         0.3059613         0.3590618  
-
-## another approach to do pooled: Vivian's coxph trick
 precision <- min(diff(sort(odach_cc$time)))/2 # 1e-4
 odach_cc$time_in = 0
 odach_cc[odach_cc$subcohort == 0, "time_in"] <- odach_cc[odach_cc$subcohort == 0, "time"] - precision
 odach_cc$ID = 1:nrow(odach_cc)
-fit.pool1 <- coxph(Surv(time_in, time, status) ~ X1+`Group (A,B,C)`+Category + strata(site)+cluster(ID), data=odach_cc, robust=T)
+fit.pool1 <- coxph(Surv(time_in, time, status) ~ X1+Group+Category + strata(site)+cluster(ID), data=odach_cc, robust=T)
 fit.pool1$coef
 # -0.5129683         0.1277399         0.2421812        -0.2374701         0.1359542
 sqrt(diag(fit.pool1$var)) # identical to the above cch_pooled
@@ -141,28 +131,3 @@ fit.pda = pdaGet(name = 'site1_estimate', config = config)
 
 
 ## the PDA ODACH_CC is now completed!
-#NOT TESTED!# All the sites can still run their own surrogate estimates and broadcast them.
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-# cch each site
-sapply(1:3, function(i) cch(Surv(time, status) ~ X1+`Group (A,B,C)`+Category, 
-                            data = cbind(ID=1:nrow(data_split[[i]]), data_split[[i]]),
-                            subcoh = ~subcohort, id = ~ID, 
-                            cohort.size =c(site1=800,site2=600,site3=400)[i], 
-                            method = 'Prentice')$coef) 
-#        XX1  X`Group (A,B,C)`B  X`Group (A,B,C)`C XCategoryY (X,Y,Z) XCategoryZ (X,Y,Z) 
-# -0.5184543          0.4805595          0.8929081         -0.5006887         -0.1715390 
-# -0.4707972          0.2383644          0.6133549         -0.7252045          0.1941511 
-# -0.5406719         -0.1171266         -1.2518623          0.3119451 

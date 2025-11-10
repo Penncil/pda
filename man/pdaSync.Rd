@@ -4,10 +4,16 @@
 \alias{pdaSync}
 \title{pda control synchronize}
 \usage{
-pdaSync(config)
+pdaSync(config,upload_without_confirm,silent_message, digits)
 }
 \arguments{
 \item{config}{cloud configuration}
+
+\item{upload_without_confirm}{logical. TRUE if want silent upload, no interactive confirm}
+
+\item{silent_message}{logical. TRUE if want to mute message}
+
+\item{digits}{digits after decimal points in the output json files}
 }
 \value{
 control
