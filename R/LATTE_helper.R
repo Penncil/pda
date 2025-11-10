@@ -68,7 +68,6 @@ logLik_conditional_2x2 <- function(beta, tables) {
     
     loglik <- loglik + (numerator - denominator)
   }
-  print(loglik)
   return(-loglik)  # Return negative for minimization
 }
 optimize_conditional_logistic_2x2 <- function(tables, start_beta = 0.1) {  # Changed default start_beta

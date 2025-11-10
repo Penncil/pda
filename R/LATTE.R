@@ -228,9 +228,7 @@ LATTE.estimate <- function(init_data, control, config) {
       calibrated_p  = as.numeric(nco_cal_p[i])
     )
   }
-  # Return results
-  # Return everything
-  # return(results_all)
+  
   return(list(
     by_outcome = results_all,
     calibration = list(
@@ -238,8 +236,5 @@ LATTE.estimate <- function(init_data, control, config) {
     ),
     raw_table = results_table
   ))
-  
-  # Return results
-  # return(results_all)
 }
  
