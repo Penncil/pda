@@ -45,7 +45,10 @@ n_sites = length(sites)
 load("/Users/luli/pda2/pda/data/latte_synthetic_data.rda")
  
 
-# Arrays to store data for standard logistic regression
+######################################################################
+############ Get Pooled results      #################################
+######################################################################
+
 all_stratified_data <- NULL
 KSiteAD_uf <- list()
 
@@ -149,7 +152,13 @@ site_data <- list(
   site1 = cohort[cohort$site == 1, ],
   site2 = cohort[cohort$site == 2, ],
   site3 = cohort[cohort$site == 3, ]
-) 
+)
+
+######################################################################
+############ Run LATTE results      ##################################
+######################################################################
+
+
 
 # Initialize LATTE analysis
 control <- list(
