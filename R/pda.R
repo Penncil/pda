@@ -534,15 +534,24 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     }
   } else if(control$model=='ODACH_CC'){
     if (!is.null(ipdata)){
-      ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
-                                      status=as.numeric(model.response(mf))[-c(1:n)],
-                                      subcohort = ipdata$subcohort,
-                                      # sampling_weight = ipdata$sampling_weight,
-                                      model.matrix(formula, mf)[,-1])
+      if(ncol(model.response(mf))==3){
+        ipdata = data.table::data.table(time_in=as.numeric(model.response(mf)[,1]), 
+                                        time=as.numeric(model.response(mf)[,2]), 
+                                        status=as.numeric(model.response(mf)[,3]),
+                                        subcohort = ipdata$subcohort,
+                                        # sampling_weight = ipdata$sampling_weight,
+                                        model.matrix(formula, mf)[,-1])
+      } else if(ncol(model.response(mf))==2){
+        ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
+                                        status=as.numeric(model.response(mf))[-c(1:n)],
+                                        subcohort = ipdata$subcohort,
+                                        # sampling_weight = ipdata$sampling_weight,
+                                        model.matrix(formula, mf)[,-1])
+      }
       # convert irregular risk factor names, e.g. `Group (A,B,C) B` to Group..A.B.C..B
       # this should (and will) apply to all other models...
       ipdata = data.table(data.frame(ipdata)) 
-      control$risk_factor = colnames(ipdata)[-c(1:3)] 
+      control$risk_factor = colnames(ipdata)[-c(1:(ncol(model.response(mf))+1))] 
     }
   }
   
