@@ -24,7 +24,7 @@ Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table,
         survival, minqa, glmnet, MASS, numDeriv, metafor, ordinal,
         plyr, tidyr, tibble, dplyr, geex, data.tree
 LinkingTo: Rcpp, RcppArmadillo, RcppEigen
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Encoding: UTF-8
 LazyData: true
 NeedsCompilation: yes
