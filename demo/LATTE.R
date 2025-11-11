@@ -11,9 +11,10 @@ require(tibble)
 library(cobalt)
 library(geex)
 library(numDeriv)
-source("R/pda.R")
-source("R/LATTE.R")
-source("R/latte-misc.R")
+# require(ParallelLogger)
+# source("R/pda.R")
+# source("R/LATTE.R")
+# source("R/latte-misc.R")
 library(EmpiricalCalibration)
 
 ## In the toy example below we aim to analyze the treatment effects of acetaminophen on ADRD using logistic regression, and propensity score stratification,
@@ -42,8 +43,8 @@ outcome_times = c(outcome_time, nco_outcomes_time)
 sites <- c("site1", "site2", "site3")
 n_sites = length(sites)
 
-load("data/LATTE_ADRD.rda")
- 
+# load("data/LATTE_ADRD.rda")
+data("LATTE_ADRD", package = "pda")
 
 ######################################################################
 ############ Get Pooled results      #################################
@@ -55,7 +56,7 @@ KSiteAD_uf <- list()
 # # Process each simulated site
 for (site_id in 1:n_sites) {
   # Extract data for this site
-  site_data <- cohort[cohort$site == site_id, ]
+  site_data <- LATTE_ADRD[LATTE_ADRD$site == site_id, ]
   
   # Process covariates
   xvars <- colnames(site_data)[!grepl("^outcome_", colnames(site_data)) & 
@@ -149,9 +150,9 @@ if (!is.na(fit_poisson$coefficients["treatment"])) {
  
 # Prepare data for LATTE analysis
 site_data <- list(
-  site1 = cohort[cohort$site == 1, ],
-  site2 = cohort[cohort$site == 2, ],
-  site3 = cohort[cohort$site == 3, ]
+  site1 = LATTE_ADRD[LATTE_ADRD$site == 1, ],
+  site2 = LATTE_ADRD[LATTE_ADRD$site == 2, ],
+  site3 = LATTE_ADRD[LATTE_ADRD$site == 3, ]
 )
 
 ######################################################################

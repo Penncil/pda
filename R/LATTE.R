@@ -13,14 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-library(glmnet)
+# library(glmnet)
 # Set in pda()
-LATTE.steps <- c('initialize', 'estimate')
-LATTE.family <- 'binomial'
+# LATTE.steps <- c('initialize', 'estimate')
+# LATTE.family <- 'binomial'
 
 #' @useDynLib pda
 #' @title LATTE initialize
-#' @description Initialize step for LATTE (Lossless Aggregation for Treatment effect estimation)
+#' @description LATTE (Lossless Aggregation for Treatment effect estimation) initialization: Propensity Score stratification/matching at Lead site
 #' 
 #' @usage LATTE.initialize(ipdata, control, config)
 #' @param ipdata individual participant data
@@ -41,9 +41,7 @@ LATTE.initialize <- function(ipdata, control, config) {
   }
   ADdatas = list()
 
-  # Prepare data for PS model
-  
-
+  # Prepare data for PS model 
   mydata_ps <- ipdata[, colnames(ipdata) %in% c(xvars, "treatment", yvars)]
 
   Xmat <- grab_design_matrix(data = mydata_ps, rhs_formula = ps_formula)
@@ -109,7 +107,7 @@ LATTE.initialize <- function(ipdata, control, config) {
 
 #' @useDynLib pda
 #' @title LATTE LATTE.estimate
-#' @description Analysis step for LATTE
+#' @description LATTE conditional log-likelihood reconstruction at Lead Site
 #' 
 #' @usage LATTE.estimate(init_data, control, config)
 #' @param init_data initialization data from LATTE.initialize

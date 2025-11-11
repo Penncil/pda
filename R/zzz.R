@@ -1,1 +1,0 @@
-utils::globalVariables(c("y", "n", "SY", "S2", "..keep"))

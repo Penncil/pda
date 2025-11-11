@@ -2,7 +2,7 @@
 
 ---
 ## version 1.3.0 
-- Add pdaCataog() and DisC2o, ODACH_CC, COLA, ODACT models
+- Add pdaCataog() and DisC2o, ODACH_CC, COLA, ODACT, LATTE models
 
 ---
 ## version 1.2.8 
