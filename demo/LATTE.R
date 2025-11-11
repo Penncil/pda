@@ -13,7 +13,7 @@ library(geex)
 library(numDeriv)
 source("R/pda.R")
 source("R/LATTE.R")
-source("R/LATTE_helper.R")
+source("R/latte-misc.R")
 library(EmpiricalCalibration)
 
 ## In the toy example below we aim to analyze the treatment effects of acetaminophen on ADRD using logistic regression, and propensity score stratification,
@@ -42,7 +42,7 @@ outcome_times = c(outcome_time, nco_outcomes_time)
 sites <- c("site1", "site2", "site3")
 n_sites = length(sites)
 
-load("/Users/luli/pda2/pda/data/latte_synthetic_data.rda")
+load("/Users/luli/pda2/pda/data/LATTE_ADRD.rda")
  
 
 ######################################################################
@@ -183,7 +183,8 @@ control <- list(
   nco_outcome_times = outcome_times# only needed if outcome_model is poisson
 )
 
-setwd("/Users/luli/pda2/pda/test")
+dir.create("test")
+setwd("test")
 # Step 1: Initialize at each site (each site computes their 2x2 tables)
 menu <- function(choices, title = NULL) 1
 
@@ -243,3 +244,4 @@ cat("Standard Error:", round(latte_results$by_outcome[[outcome_id]]$calibrated$s
 cat("Odds Ratio:", round(latte_results$by_outcome[[outcome_id]]$calibrated$effect_size, 2), "\n")
 cat("95% CI:", sprintf("[%.2f, %.2f]", latte_results$by_outcome[[outcome_id]]$calibrated$ci_lower, latte_results$by_outcome[[outcome_id]]$calibrated$ci_upper), "\n")
  
+
