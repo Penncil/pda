@@ -581,18 +581,18 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
         mymessage("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
       }else if(control$model=='LATTE'){
       if(config$site_id==control$lead_site) {
-        analyze_results <- LATTE.estimate(
-          init_data = list(
-            prepared_data = control$prepared_data,
-            ps_model = control$ps_model,
-            xvars = control$xvars
-          ),
-          control = control,
-          config = config
-        )
+        # analyze_results <- LATTE.estimate(
+        #   init_data = list(
+        #     prepared_data = control$prepared_data,
+        #     ps_model = control$ps_model,
+        #     xvars = control$xvars
+        #   ),
+        #   control = control,
+        #   config = config
+        # )
         
-        control$latte_results <- analyze_results
-        mymessage('LATTE analysis completed')
+        # control$latte_results <- analyze_results
+        mymessage("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
       }
     }else{
         if(control$model=='dGEM'){

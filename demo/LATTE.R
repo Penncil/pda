@@ -159,8 +159,8 @@ site_data <- list(
 ######################################################################
 
 
+#############################  STEP 1: initialize  ###############################
 
-# Initialize LATTE analysis
 control <- list(
   project_name = "LATTE Demo Study",
   step = "initialize",
@@ -200,6 +200,8 @@ menu <- function(choices, title = NULL) 1
 
 pda(site_id = "site1", ipdata = site_data$site1, dir = getwd())
 # auto change to estimate
+
+#############################  STEP 2: estimate  ###############################
 menu <- function(choices, title = NULL) 1
 
 pda(site_id = "site1", ipdata = site_data$site1, dir = getwd())
