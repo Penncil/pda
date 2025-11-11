@@ -495,6 +495,9 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
   } else if(control$model=='ODACT'){ # ODACH with time-varying effects
     ODACT.steps <- c('initialize','derive', 'estimate','synthesize')
     ODACT.family <- 'cox'
+  } else if(control$model=='LATTE'){  
+    LATTE.steps<-c('initialize','estimate')
+    LATTE.family<-'binomial'
   }
   
   family = get(paste0(control$model,'.family'))
@@ -696,7 +699,11 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     if(control$step=='estimate'){
       if(control$model=='DLM'){
         mymessage("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
-      }else{
+      }else if(control$model=='LATTE'){
+        if(config$site_id==control$lead_site) {
+          mymessage("Congratulations, the PDA is completed! The result is guaranteed to be identical to the pooled analysis")
+        }
+    } else{
         if(control$model=='dGEM'){
           mymessage("Congratulations, this the final step: you are transfering the counterfactural event rate. The lead site or coordinating center will broadcast the final results")
         }else{
@@ -807,6 +814,9 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){
   }else if(control$model=='ODACH_CC'){  # ODACH with case-cohort design
     ODACH_CC.steps <- c('initialize','derive', 'estimate','synthesize') 
     ODACH_CC.family <- 'cox'
+  }else if (control$model == "LATTE") {
+    LATTE.steps <- c("initialize", "estimate")
+    LATTE.family <- "binomial"
   }else if(control$model=='DisC2o'){
     DisC2o.steps <- c('PSinitialize','PSderive','PSestimate',
                       'OMinitialize','OMderive','OMestimate',
@@ -825,6 +835,8 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){
       }
       if(control$model=='DLM'){
         # DLM does not need derivative, thus estimate after initialize...
+      }else if(control$model=='LATTE'){
+        # LATTE does not need derivative, thus estimate after initialize...
       }else if(control$model=='ODAH'){
         bhat_zero <-init_i$bhat_zero_i
         vbhat_zero <- init_i$Vhat_zero_i
