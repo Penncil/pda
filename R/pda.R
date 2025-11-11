@@ -692,7 +692,7 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
     LATTE.family <- "binomial"
   }
   
-  files<-pdaList(config)
+  files<-pdaList(config) 
   if(all(paste0(control$sites,"_",control$step) %in% files)){ # all init are ready
     if(control$step=="initialize"){
       if(control$lead_site %in% control$sites){
