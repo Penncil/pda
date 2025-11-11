@@ -42,7 +42,7 @@ outcome_times = c(outcome_time, nco_outcomes_time)
 sites <- c("site1", "site2", "site3")
 n_sites = length(sites)
 
-load("/Users/luli/pda2/pda/data/LATTE_ADRD.rda")
+load("data/LATTE_ADRD.rda")
  
 
 ######################################################################
@@ -183,8 +183,8 @@ control <- list(
   nco_outcome_times = outcome_times# only needed if outcome_model is poisson
 )
 
-dir.create("test")
-setwd("test")
+dir.create("pda_latte_results")
+setwd("pda_latte_results")
 # Step 1: Initialize at each site (each site computes their 2x2 tables)
 menu <- function(choices, title = NULL) 1
 
@@ -209,11 +209,6 @@ pda(site_id = "site1", ipdata = site_data$site1, dir = getwd())
 
 # Get the results using pdaGet
 config <- getCloudConfig(site_id = 'site1', dir = getwd())
-cat("Working directory:", getwd(), "\n")
-cat("Config contents:", str(config), "\n")
-config$dir = "/Users/luli/pda2/pda/test"
-config$dir <- gsub("\\\\", "/", config$dir)
-
 latte_results <- pdaGet('site1_estimate', config)
 
 # Print comparison of results

@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // rcpp_coxph_logL
 double rcpp_coxph_logL(const arma::vec& beta, const arma::vec& time, const arma::vec& event, const arma::mat& z);
 RcppExport SEXP _pda_rcpp_coxph_logL(SEXP betaSEXP, SEXP timeSEXP, SEXP eventSEXP, SEXP zSEXP) {
