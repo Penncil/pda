@@ -692,7 +692,7 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
     LATTE.family <- "binomial"
   }
   
-  files <- pdaList(config)
+  files<-pdaList(config)
   if(all(paste0(control$sites,"_",control$step) %in% files)){ # all init are ready
     if(control$step=="initialize"){
       if(control$lead_site %in% control$sites){
@@ -919,31 +919,31 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
       mes <- 'beta_init added, step=2 (derivatives)! \n'
     } 
     
-    if (control$step == "derive") {
-      if (control$model == "dGEM") {
+    if(control$step=='derive'){
+      if(control$model == "dGEM"){
         # get b_meta as initial bbar
         ghat <- c()
         vghat <- c()
         hosdata <- c()
-        for (site_i in control$sites) {
+        for(site_i in control$sites){
           i = 1
-          init_i <- pdaGet(paste0(site_i, "_derive"), config)
+          init_i <- pdaGet(paste0(site_i,'_derive'),config)
           ghat = rbind(ghat, init_i$gammahat_i)
           vghat = rbind(vghat, init_i$Vgammahat_i)
           hosdata = rbind(hosdata, init_i$hosdata)
           i = i + 1
         }
-
+        
         # meta-regression
         colnames(hosdata) = control$variables_site_level
-        formula <- as.formula(paste("", paste(control$variables_site_level, collapse = "+"), sep = "~"))
+        formula <- as.formula(paste("", paste(control$variables_site_level, collapse = "+"), sep = '~'))
         gamma_meta_reg_new = rma.uni(ghat, vghat, mods = formula, data = hosdata)
-        gamma_BLUP <- blup(gamma_meta_reg_new)$pred
+        gamma_BLUP <- blup(gamma_meta_reg_new)$pred 
         control$estimated_hospital_effect = gamma_BLUP
-      } else if (control$model == "OLGLM") {
+      }else if(control$model == "OLGLM"){
         mymessage("You are done!")
       }
-    }
+    }    
   }
   
   if(control$step=='synthesize'){
@@ -961,7 +961,7 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F){
   
   ## update control with next step
   steps = get(paste0(control$model,'.steps'))
-  current_index <- which(steps == control$step)
+  current_index <-  which(steps==control$step)
   if(current_index < length(steps)) {
     next_index <- current_index + 1
     next_step <- steps[next_index]
