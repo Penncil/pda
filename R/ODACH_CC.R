@@ -70,14 +70,22 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
   formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
   fit_i <- tryCatch(survival::coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
+  # if (sum(ipdata_i$time<=ipdata_i$time_in) > 0) {
+  #   print(ipdata_i[time<=time_in, c("ID", "time", "time_in", "status")])
+  # }
   
+  # print(fit_i)
+  # print(formula_i)
+  # w <- warnings()
+  # print(w)
+  # stop()
   if(!is.null(fit_i)){
     # for degenerated X, coef=0, var=Inf
     bhat_i = rep(0,px)
     Vhat_i = rep(Inf,px) 
     bhat_i[!col_deg] <- fit_i$coef
     Vhat_i[!col_deg] <- summary(fit_i)$coef[,"se(coef)"]^2 # dont's use robust var diag(fit_i$var)
-    
+    # Vhat_i[Vhat_i == 0] <- Inf # for caases when survival::coxph() returns coef=NA and se(coef)=0, which is not handled by summary(fit_i)$coef[,2]^2
     init <- list(bhat_i = bhat_i,
                  Vhat_i = Vhat_i,  
                  site = config$site_id,
@@ -87,15 +95,14 @@ ODACH_CC.initialize <- function(ipdata,control,config){
     # init$Vhat_i[init$Vhat_i==0] = NA # 20250106
   } else{
     warning('survival::coxph() failed!!!')
-    init <- list(bhat_i = NA,
-                 Vhat_i = NA,  
+    init <- list(bhat_i = rep(0,px),
+                 Vhat_i = rep(Inf,px),  
                  S_i = NA,
                  site = config$site_id,
                  site_size = nrow(ipdata),
                  full_cohort_size = full_cohort_size, 
                  method = control$method)
   }
-  
   return(init)
 }
  
@@ -121,15 +128,28 @@ ODACH_CC.derive <- function(ipdata,control,config){
   ipdata_i = ipdata[,-(which(col_deg)+3),with=F]
   ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch...  
   precision <- min(diff(sort(ipdata_i$time))) / 2 #  
+  # print("=======")
+  # print(precision)
+  # if (precision < 10^(-6)){
+  #   ipdata_i[["time"]] <- ipdata_i[["time"]] * 100
+  #   precision <- min(diff(sort(ipdata_i$time))) / 2 #  
+  #   print(precision)
+  # }
   ipdata_i$time_in = 0
   ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
-  
+
+  # filter_<-ipdata_i[["time_in"]]>=ipdata_i[["time"]]
+  # print(str(filter_))
+  # print(ipdata_i[filter_,c("time_in", "time")])
+  # print(min(ipdata_i[["time"]]-ipdata_i[["time_in"]]))
   ## grad and hess
   bbar = control$beta_init
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
   cc_prep = prepare_case_cohort(list(ipdata), control$method, full_cohort_size)
   # logL_D1 <- grad_plk(bbar, cc_prep)
   # logL_D2 <- hess_plk(bbar, cc_prep)
+  # if(config$site_id == "site11") print(bbar)
+  # if(config$site_id == "site11") print(cc_prep)
   logL_D1 <- rcpp_cc_grad_plk(beta = bbar, site_num = 1, 
                covariate_list = cc_prep$covariate_list,
                failure_position = cc_prep$failure_position,
@@ -142,11 +162,19 @@ ODACH_CC.derive <- function(ipdata,control,config){
                 failure_num = cc_prep$failure_num,
                 risk_sets = cc_prep$risk_sets,
                 risk_set_weights = cc_prep$risk_set_weights)
-  
+  # if(config$site_id == "site11") stop("Me after rcpp")
   ## get intermediate (sandwich meat) for robust variance est of ODACH_CC  
   # fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
   formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
-  fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick
+  # print(formula_i)
+  # print(bbar[!col_deg])
+  # fit_i <- survival::coxph(formula_i, data=ipdata_i, robust=T)
+  # print(fit_i)
+  # fit_i <- survival::coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg])
+  # print(fit_i)
+  fit_i <- tryCatch(survival::coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick: coxPH will only calcualte the loglikelihood function for the input init point without iterating (iter == survival::coxph.control(max.iter=0)). Since the default value for `init` is avector of zeros, this will return a vector of zeros unless `init`` is initialised.
+  # print(fit_i)
+  
   score_resid <- resid(fit_i, type = "score")  # n x p matrix  
   S_i = matrix(0, px, px)   # this is the meat in sandwich var
   S_i[!col_deg, !col_deg] <- crossprod(score_resid)
