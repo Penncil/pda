@@ -20,8 +20,8 @@ Maintainer: Chongliang Luo <luocl3009@gmail.com>
 License: Apache License 2.0
 Suggests: lme4
 Depends: R (>= 4.1.0)
-Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table,
-        survival, minqa, glmnet, MASS, numDeriv, metafor, ordinal,
+Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table, cobalt, EmpiricalCalibration,
+        survival, minqa, glmnet, MASS, numDeriv, metafor, Matrix, ordinal,
         plyr, tidyr, tibble, dplyr, geex, data.tree
 LinkingTo: Rcpp, RcppArmadillo, RcppEigen
 RoxygenNote: 7.3.3

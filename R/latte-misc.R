@@ -13,6 +13,7 @@ library(EmpiricalCalibration)
 ###########################     Stratification: Conditional Logistic Regression     ############################################
 ################################################################################################################################
 
+#' @keywords internal
 create_2x2_tables <- function(X, Y, strata) {
   unique_strata <- unique(strata)
   tables <- list()
@@ -36,6 +37,7 @@ create_2x2_tables <- function(X, Y, strata) {
   return(tables)
 }
 
+#' @keywords internal
 logLik_conditional_2x2 <- function(beta, tables) {
   loglik <- 0
 
@@ -81,6 +83,8 @@ logLik_conditional_2x2 <- function(beta, tables) {
   }
   return(-loglik)  # Return negative for minimization
 }
+
+#' @keywords internal
 optimize_conditional_logistic_2x2 <- function(tables, start_beta = 0.1) {  # Changed default start_beta
   result <- optim(par = start_beta, 
                  fn = logLik_conditional_2x2, 
@@ -122,7 +126,7 @@ optimize_conditional_logistic_2x2 <- function(tables, start_beta = 0.1) {  # Cha
   )
 }
 
-
+#' @keywords internal
 optimize_conditional_logistic_2x2 <- function(tables, start_beta = 0.1) {  # Changed default start_beta
   result <- optim(par = start_beta, 
                  fn = logLik_conditional_2x2, 
@@ -169,7 +173,7 @@ optimize_conditional_logistic_2x2 <- function(tables, start_beta = 0.1) {  # Cha
 ###########################     Stratification: Conditional Poisson Regression      ############################################
 ################################################################################################################################ 
 
-
+#' @keywords internal
 create_2x2_tables_poisson <- function(stratifiedPop, outcome_id, outcome_time) {
     KSiteAD_uf = list()
     for (strat in unique(stratifiedPop$stratumId)) {
@@ -210,6 +214,8 @@ create_2x2_tables_poisson <- function(stratifiedPop, outcome_id, outcome_time) {
     
     return(KSiteAD_uf)
 }
+
+#' @keywords internal
 logLik_conditional_poisson_2x2 <- function(beta, tables) {
   loglik <- 0
 
@@ -262,6 +268,7 @@ logLik_conditional_poisson_2x2 <- function(beta, tables) {
   return(-loglik)  # Return negative for minimization
 }
 
+#' @keywords internal
 # Optimization function for conditional Poisson regression
 optimize_conditional_poisson_2x2 <- function(tables, start_beta = NULL) {
   if (is.null(start_beta)) {
@@ -300,7 +307,7 @@ optimize_conditional_poisson_2x2 <- function(tables, start_beta = NULL) {
 ###################################################     IPTW      ##############################################################
 ################################################################################################################################ 
 
-
+#' @keywords internal
 trimByW <- function(propensityScore, treatment, trimFraction = 0.05) {
   # 0.05 cutoff: Stürmer  T, Rothman  KJ, Avorn  J, et al.  Treatment effects in the presence of unmeasured confounding: dealing with observations in the tails of the propensity score distribution—a simulation study. Am J Epidemiol. 2010;172(7):843–854.
   cutoffTarget <- quantile(propensityScore, trimFraction) 
@@ -309,7 +316,7 @@ trimByW <- function(propensityScore, treatment, trimFraction = 0.05) {
   return(result)
 }
 
-
+#' @keywords internal
 getAD_IPW <- function(SiteIPD, outcome_name, formula, link = "canonical", cut_off = NULL) {
   AD = list()
   Xmat <- grab_design_matrix(data = SiteIPD, rhs_formula = formula)
@@ -341,6 +348,8 @@ getAD_IPW <- function(SiteIPD, outcome_name, formula, link = "canonical", cut_of
   }
   AD
 }
+
+#' @keywords internal
 computeWeights <- function(population, estimator = "ate") {
   if (estimator == "ate") {
     # 'Stabilized' ATE:
@@ -357,6 +366,7 @@ computeWeights <- function(population, estimator = "ate") {
   }
 }
 
+#' @keywords internal
 # Function to fit GLM using aggregated data
 #    allows for site-specific intercept by using heter_intercept = TRUE
 oneshot_IPWGLM <- function(KSiteAD, formula, heter_intercept = FALSE) {
@@ -419,7 +429,7 @@ oneshot_IPWGLM <- function(KSiteAD, formula, heter_intercept = FALSE) {
 ################################################################################################################################ 
 
 
-
+#' @keywords internal
 getAD_IPW_overlap <- function(SiteIPD, outcome_name, formula, link = "canonical", cut_off = NULL) {
   AD = list()
   Xmat <- grab_design_matrix(data = SiteIPD, rhs_formula = formula)
@@ -452,7 +462,7 @@ getAD_IPW_overlap <- function(SiteIPD, outcome_name, formula, link = "canonical"
   AD
 }
 
-
+#' @keywords internal
 ### overlapping weights 
 computeWeights_overlap <- function(population, estimator = "ato") {
   if (estimator == "ato") {
@@ -501,6 +511,7 @@ optimize_strata <- function(data, xvars, min_strata = 2, max_strata = 6) {
   ))
 }
 
+#' @keywords internal
 get_stratified_pop = function(mydata_test, nstrata){
   rowId = c(1:length(mydata_test$treatment))
   mydata_test <- cbind(rowId, mydata_test)
@@ -508,6 +519,7 @@ get_stratified_pop = function(mydata_test, nstrata){
   return (stratifiedPop)
 }
 
+#' @keywords internal
 stratifyByPs <- function(population, numberOfStrata = 5, stratificationColumns = c(), baseSelection = "all") {
   if (!("rowId" %in% colnames(population)))
     stop("Missing column rowId in population")
@@ -578,6 +590,8 @@ stratifyByPs <- function(population, numberOfStrata = 5, stratificationColumns =
     return(result)
   }
 }
+
+#' @keywords internal
 get_SMD <-function(stratifiedPop, xvars){
   smd_before <- GetSMD(stratifiedPop[, xvars], stratifiedPop$treatment)
   weight_mat=Compute_weight(stratifiedPop)
@@ -586,6 +600,8 @@ get_SMD <-function(stratifiedPop, xvars){
   
   return(list(smd_before=smd_before,smd_after=smd_after))
 }
+
+#' @keywords internal
 GetSMD <- function(data, treat, weights = NULL, std = TRUE){
   table <- col_w_smd(data, treat, weights, std)
   smd = t(data.frame(as.list(table)))
@@ -596,7 +612,7 @@ GetSMD <- function(data, treat, weights = NULL, std = TRUE){
   return(smd)
 }
 
-
+#' @keywords internal
 Compute_weight <- function(data) {
   stratumSize <- data %>%
     group_by(stratumId, treatment) %>%
@@ -606,7 +622,7 @@ Compute_weight <- function(data) {
   w <- stratumSize %>%
     mutate(weight = 1 / n) %>%
     inner_join(data, by = c("stratumId", "treatment"), multiple = "all") %>%
-    select(rowId, treatment, weight)
+    dplyr::select(rowId, treatment, weight)
 
   wSum <- w %>%
     group_by(treatment) %>%
@@ -616,7 +632,7 @@ Compute_weight <- function(data) {
   w_final <- w %>%
     inner_join(wSum, by = "treatment") %>%
     mutate(weight = weight / wSum) %>%
-    select(rowId, treatment, weight)
+    dplyr::select(rowId, treatment, weight)
 
   return(w_final[, c(1, 3)])
 }
@@ -701,8 +717,8 @@ run_pooled_analysis <- function(data, outcome_id, outcome_time, sites) {
   ))
 }
 
-
-#' Function to neatly print the results
+#' @keywords internal
+## Function to neatly print the results
 print_results <- function(title, est, se) {
   effect_size <- exp(est)
   ci_lower <- exp(est - 1.96 * se)
