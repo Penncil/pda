@@ -1,3 +1,14 @@
+require(survival)
+require(data.table)
+require(glmnet)
+require(dplyr)
+require(Matrix)
+require(tibble)
+library(cobalt)
+library(geex)
+library(numDeriv)
+library(EmpiricalCalibration)
+
 ################################################################################################################################
 ###########################     Stratification: Conditional Logistic Regression     ############################################
 ################################################################################################################################
@@ -504,7 +515,6 @@ stratifyByPs <- function(population, numberOfStrata = 5, stratificationColumns =
     stop("Missing column treatment in population")
   if (!("propensityScore" %in% colnames(population)))
     stop("Missing column propensityScore in population")
-  ParallelLogger::logTrace("Stratifying by propensity score")
   if (nrow(population) == 0) {
     return(population)
   }
@@ -609,4 +619,98 @@ Compute_weight <- function(data) {
     select(rowId, treatment, weight)
 
   return(w_final[, c(1, 3)])
+}
+
+#' Function to perform all data processing and pooled stratified analysis
+#'
+#' @param data The combined LATTE_ADRD data.
+#' @param outcome_id The name of the primary outcome column.
+#' @param outcome_time The name of the outcome time column (for Poisson).
+#' @param sites A vector of site identifiers.
+#' @return A list containing the results of the standard logistic and Poisson pooled analysis.
+run_pooled_analysis <- function(data, outcome_id, outcome_time, sites) {
+  
+  n_sites <- length(sites)
+  all_stratified_data <- NULL
+  
+  # Process each simulated site to calculate PS and strata
+  for (site_id in 1:n_sites) {
+    site_data <- data[data$site == site_id, ]
+    
+    # Identify covariates (xvars)
+    xvars <- colnames(site_data)[!grepl("^outcome_", colnames(site_data)) & 
+                                !colnames(site_data) %in% c("ID", "treatment", "index_date", "site", "group")]
+    xvars <- xvars[colSums(site_data[xvars]) > 30]
+    yvars <- colnames(site_data)[grepl("^outcome_", colnames(site_data))]
+    
+    # Prepare data for PS calculation
+    mydata_ps <- site_data[, colnames(site_data) %in% c(xvars, "treatment", yvars, outcome_id, outcome_time)]
+    
+    # Calculate Propensity Scores (PS) using Lasso/Elastic Net
+    form <- as.formula(paste("treatment ~ ", paste(xvars, collapse = "+")))
+    Xmat <- grab_design_matrix(data = mydata_ps, rhs_formula = form)
+    Y <- mydata_ps$treatment
+    
+    nfolds <- 10
+    set.seed(42)
+    foldid <- sample(rep(seq(nfolds), length.out = length(Y)))
+    
+    Fit_ps_cv <- tryCatch({
+      cv.glmnet(Xmat, Y, alpha = 1, family = "binomial", nfolds = nfolds, foldid = foldid)
+    }, error = function(e) {
+      message("CV failed for site ", site_id, ". Using fixed lambda.")
+      list(lambda.min = 0.01)
+    })
+    Fit_ps <- glmnet(Xmat, Y, alpha = 1, family = "binomial", lambda = Fit_ps_cv$lambda.min)
+    propensityScore <- predict(Fit_ps, (Xmat), type = "response")
+    mydata_ps$propensityScore <- propensityScore
+    
+    # Create stratified population
+    best_strata <- optimize_strata(mydata_ps, xvars)
+    stratifiedPop <- get_stratified_pop(mydata_test = mydata_ps, nstrata = best_strata$n_strata)
+    
+    # Add identifiers
+    stratifiedPop$site <- site_id
+    stratifiedPop$global_stratumId <- paste0(site_id, "_", stratifiedPop$stratumId)
+    
+    # Collect all stratified data
+    if (is.null(all_stratified_data)) {
+      all_stratified_data <- stratifiedPop
+    } else {
+      common_cols <- intersect(colnames(all_stratified_data), colnames(stratifiedPop))
+      all_stratified_data <- rbind(
+        all_stratified_data[, common_cols],
+        stratifiedPop[, common_cols]
+      )
+    }
+  }
+  
+  # --- Standard Pooled Analysis ---
+  
+  # Logistic Regression
+  outcome_formula <- as.formula(paste0(outcome_id, "~ treatment + factor(global_stratumId)"))
+  fit_log <- glm(outcome_formula, data = all_stratified_data, family = binomial(link = "logit"))
+  
+  log_res <- summary(fit_log)$coefficients["treatment", ]
+  normal_est <- log_res["Estimate"]
+  normal_se <- log_res["Std. Error"]
+  
+  
+  return(list(
+    logistic = list(est = normal_est, se = normal_se)
+  ))
+}
+
+
+#' Function to neatly print the results
+print_results <- function(title, est, se) {
+  effect_size <- exp(est)
+  ci_lower <- exp(est - 1.96 * se)
+  ci_upper <- exp(est + 1.96 * se)
+  
+  cat(paste("\n", title, ":\n", sep = ""))
+  cat("Coefficient:", round(est, 2), "\n")
+  cat("Standard Error:", round(se, 2), "\n")
+  cat("Odds Ratio/Rate Ratio:", round(effect_size, 2), "\n")
+  cat("95% CI:", sprintf("[%.2f, %.2f]", ci_lower, ci_upper), "\n")
 }

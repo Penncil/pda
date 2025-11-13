@@ -180,3 +180,21 @@
 "COLA_covid" 
 
  
+#' LATTE simulated data
+#' 
+#' A simulated ADRD data set for Lossless Oneshot Algorithm for Target Trial Emulation (LATTE)
+#' 
+#' @format A data frame with 1224 rows and 6 variables:
+#' \describe{
+#' \item{site}{site, 399 'site1', 437 'site2', 388 'site3'}
+#' \item{variables 2-65}{comorbidity history variables, binary indicators of 64 comorbidities}
+#' \item{66 - 265}{medication history variables, binary indicators of 200 medications}
+#' \item{sex}{binary sex}
+#' \item{age}{age, continuous}
+#' \item{race}{race, binary indicators of 5 races}
+#' \item{days}{time from index to MCI, continuous}
+#' \item{index date}{index date of AD diagnosis}
+#' \item{treatment}{binary treatment, 1=treated with acetaminophen}
+#' \item{272 - 325}{outcomes, binary indicators of 54 outcomes and time to each outcome}
+#' }
+"LATTE_ADRD"
