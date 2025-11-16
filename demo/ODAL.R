@@ -1,7 +1,7 @@
 require(survival)
 require(data.table)
 require(pda)
-require(imager)
+# require(imager)
 # data(lung)
 
 ## In the toy example below we aim to analyze the association of lung status with age and sex using logistic regression,
