@@ -20,15 +20,16 @@ Maintainer: Chongliang Luo <luocl3009@gmail.com>
 License: Apache License 2.0
 Suggests: lme4
 Depends: R (>= 4.1.0)
-Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table, cobalt, EmpiricalCalibration,
-        survival, minqa, glmnet, MASS, numDeriv, metafor, Matrix, ordinal,
-        plyr, tidyr, tibble, dplyr, geex, data.tree
+Imports: Rcpp (>= 0.12.19), stats, httr, rvest, jsonlite, data.table,
+        cobalt, EmpiricalCalibration, survival, minqa, glmnet, MASS,
+        numDeriv, metafor, Matrix, ordinal, plyr, tidyr, tibble, dplyr,
+        geex, data.tree
 LinkingTo: Rcpp, RcppArmadillo, RcppEigen
 RoxygenNote: 7.3.3
 Encoding: UTF-8
 LazyData: true
 NeedsCompilation: yes
-Packaged: 2025-11-11 07:43:20 UTC; root
+Packaged: 2025-11-15 09:55:58 UTC; root
 Author: Chongliang Luo [cre],
   Rui Duan [aut],
   Mackenzie Edmondson [aut],

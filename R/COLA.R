@@ -71,7 +71,7 @@ make_patterns <- function(x_names, intercept = TRUE) {
 #' One-shot site summaries for COLA-GLMM
 #'
 #' Produces the **lossless**, pattern-level sufficient statistics for a single site:
-#' pattern counts `Ck`, outcome sums `Sk = Σy`, squared sums `S2k = Σy^2`, and the
+#' pattern counts `Ck`, outcome sums `Sk = \eqn{\sum y}`, squared sums `S2k = \eqn{\sum y^2}`, and the
 #' corresponding pattern matrix `X0`. Works for both binomial and Poisson outcomes
 #' (for Bernoulli, `S2k == Sk`).
 #'

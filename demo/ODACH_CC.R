@@ -1,7 +1,8 @@
 require(survival)
 require(data.table)
 # require(pda) 
- 
+# require(spatstat) # for using weighted.median() as init
+
 # load('/Users/chongliang/Dropbox/PDA-git/pda/data/odach_cc.rda')
 # setwd('/Users/chongliang/Dropbox/PDA_test/CL/')
 

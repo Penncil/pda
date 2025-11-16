@@ -4,7 +4,8 @@
 \alias{pda}
 \title{PDA: Privacy-preserving Distributed Algorithm}
 \usage{
-pda(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,upload_without_confirm=F, silent_message=F, digits=4,hosdata=NULL)
+pda(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
+upload_without_confirm=F, silent_message=F, digits=4,hosdata=NULL)
 }
 \arguments{
 \item{ipdata}{Local IPD data in data frame, should include at least one column for the outcome and one column for the covariates}

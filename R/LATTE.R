@@ -185,7 +185,7 @@ LATTE.estimate <- function(init_data, control, config) {
   )
   
   # Fit empirical null (for p-value calibration) and systematic error model (for CI calibration)
-  fitnull <- fitNull(logR = neg_df$est, seLogRr = neg_df$se)
+  fitnull <- fitNull(logRr = neg_df$est, seLogRr = neg_df$se)
   se_model <- fitSystematicErrorModel(neg_df$est,
                                       neg_df$se,
                                       rep(0, nrow(neg_df)))  # NCO truth = 0 on log scale
@@ -201,7 +201,7 @@ LATTE.estimate <- function(init_data, control, config) {
     )
     colnames(cal_ci) <- c("cal_est", "cal_ll", "cal_ul", "cal_se")
     # Calibrated p-values
-    cal_p <- calibrateP(null = fitnull, logR = target_df$est, seLogRr = target_df$se)
+    cal_p <- calibrateP(null = fitnull, logRr = target_df$est, seLogRr = target_df$se)
     # Merge calibrated stats back into the per-outcome list
     for (i in seq_len(nrow(target_df))) {
       outname <- target_df$outcome[i]
@@ -217,8 +217,8 @@ LATTE.estimate <- function(init_data, control, config) {
     }
   }
   # Also annotate NCO entries with their (uncalibrated) traditional p and calibrated p for QC
-  nco_trad_p <- computeTraditionalP(logR = neg_df$est, seLogRr = neg_df$se)
-  nco_cal_p  <- calibrateP(null = fitnull, logR = neg_df$est, seLogRr = neg_df$se)
+  nco_trad_p <- computeTraditionalP(logRr = neg_df$est, seLogRr = neg_df$se)
+  nco_cal_p  <- calibrateP(null = fitnull, logRr = neg_df$est, seLogRr = neg_df$se)
   for (i in seq_len(nrow(neg_df))) {
     outname <- neg_df$outcome[i]
     results_all[[outname]]$nco_qc <- list(
