@@ -85,15 +85,7 @@ ODACH_CC.initialize <- function(ipdata, control, config) {
   
   formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), "+ cluster(ID)"))
   fit_i <- tryCatch(survival::coxph(formula_i, data = ipdata_i, robust = T), error = function(e) NULL)
-  # if (sum(ipdata_i$time<=ipdata_i$time_in) > 0) {
-  #   print(ipdata_i[time<=time_in, c("ID", "time", "time_in", "status")])
-  # }
-
-  # print(fit_i)
-  # print(formula_i)
-  # w <- warnings()
-  # print(w)
-  # stop()
+  
   if (!is.null(fit_i)) {
     # for degenerated X, coef=0, var=Inf
     bhat_i <- rep(0, px)
