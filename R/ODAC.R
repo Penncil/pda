@@ -99,8 +99,8 @@ ODAC.deriveUWZ <- function(ipdata,control,config) {
   pfdata$interval[is.na(pfdata$interval)]<-nt
   # X <- as.matrix(pfdata[, control$variables, with=F])
   X <- as.matrix(pfdata[,-c(1,2)][,-'interval'])
-  print(head(X))
-  print(bbar)
+  # print(head(X))
+  # print(bbar)
   
   # summary stats: U, W, Z
   eXb <- c(exp(X %*% bbar))
