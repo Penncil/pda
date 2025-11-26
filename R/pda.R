@@ -33,18 +33,18 @@
 #' @return NONE
 #' @seealso \code{pda}
 #' @export
-pdaPut <- function(obj,name,config,upload_without_confirm=F,silent_message=F,digits=4){
+pdaPut <- function(obj,name,config,upload_without_confirm=F,silent_message=F,digits=16){
   mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
   
   obj_Json <- jsonlite::toJSON(obj, digits = digits)  # RJSONIO::toJSON(tt) keep vec name?
   file_name <- paste0(name, '.json')  
   
-  if(!is.null(config$uri)){
-    mymessage(paste("Put",file_name,"on public cloud:"))
-  }else{
-    mymessage(paste("Put",file_name,"on local directory", config$dir, ':'))
-  }
-  mymessage(obj_Json)
+  # if(!is.null(config$uri)){
+  #   mymessage(paste("Put",file_name,"on public cloud:"))
+  # }else{
+  #   mymessage(paste("Put",file_name,"on local directory", config$dir, ':'))
+  # }
+  # mymessage(obj_Json)
   
   # if(interactive()) {
   if(upload_without_confirm==F) {
@@ -155,7 +155,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=
   } else if (pda_uri!='') {
     config$uri = pda_uri
   } else{
-    mymessage('no cloud uri found! ')
+    # mymessage('no cloud uri found! ')
   }
   
   if(!is.null(dir)) {
@@ -378,13 +378,17 @@ pdaCatalog <- function(task=c('Regression',
 #' @return control
 #' @export
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
-                upload_without_confirm=F, silent_message=F, digits=4,
+                upload_without_confirm=F, silent_message=F, digits=16,
                 hosdata=NULL # for dGEM
+<<<<<<< HEAD
 ){ 
+=======
+                ){
+>>>>>>> left_truncation
   config <- getCloudConfig(site_id,dir,uri,secret,silent_message)
   mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
   files <- pdaList(config)
-  mymessage('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): ')
+  # mymessage('You are performing Privacy-preserving Distributed Algorithm (PDA, https://github.com/Penncil/pda): ')
   mymessage(paste0('your site = ', config$site_id)) 
   
   data_now<-ipdata
@@ -639,15 +643,24 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     }
   }else if(control$model=='ODACH_CC'){
     if (!is.null(ipdata)){
-      ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
-                                      status=as.numeric(model.response(mf))[-c(1:n)],
-                                      subcohort = ipdata$subcohort,
-                                      # sampling_weight = ipdata$sampling_weight,
-                                      model.matrix(formula, mf)[,-1])
+      if(ncol(model.response(mf))==3){
+        ipdata = data.table::data.table(time_in=as.numeric(model.response(mf)[,1]), 
+                                        time=as.numeric(model.response(mf)[,2]), 
+                                        status=as.numeric(model.response(mf)[,3]),
+                                        subcohort = ipdata$subcohort,
+                                        # sampling_weight = ipdata$sampling_weight,
+                                        model.matrix(formula, mf)[,-1])
+      } else if(ncol(model.response(mf))==2){
+        ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
+                                        status=as.numeric(model.response(mf))[-c(1:n)],
+                                        subcohort = ipdata$subcohort,
+                                        # sampling_weight = ipdata$sampling_weight,
+                                        model.matrix(formula, mf)[,-1])
+      }
       # convert irregular risk factor names, e.g. `Group (A,B,C) B` to Group..A.B.C..B
       # this should (and will) apply to all other models...
       ipdata = data.table(data.frame(ipdata)) 
-      control$risk_factor = colnames(ipdata)[-c(1:3)] 
+      control$risk_factor = colnames(ipdata)[-c(1:(ncol(model.response(mf))+1))] 
     }
   }else if(control$model=='DisC2o'){
     ipdata = data.table::data.table(treatment = treatment_col,
@@ -764,7 +777,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
 #' @return control
 #' @seealso \code{pda}
 #' @export  
-pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){  
+pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=16){  
   control = pdaGet('control',config)
   mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
   
@@ -1015,7 +1028,7 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){
         
         ## estimate for pda init: meta, or median, or lead est?...
         if(control$init_method == 'meta'){
-          binit = apply(bhat/vbhat,2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)})
+          binit = apply(as.data.frame(bhat/vbhat),2,function(x){sum(x, na.rm = TRUE)})/apply(as.data.frame(1/vbhat),2,function(x){sum(x, na.rm = TRUE)})
           # vinit = 1/apply(1/vbhat,2,function(x){sum(x, na.rm = TRUE)}) 
           mymessage('meta (inv var weighted avg) as initial est:')
         } else if(control$init_method == 'median'){ 
