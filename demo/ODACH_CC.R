@@ -3,20 +3,20 @@ require(data.table)
 # require(pda) 
 # require(spatstat) # for using weighted.median() as init
 
-# load('/Users/chongliang/Dropbox/PDA-git/pda/data/odach_cc.rda')
-# setwd('/Users/chongliang/Dropbox/PDA_test/CL/')
-
 ## In the toy example below we aim to analyze the association of survival {time} 
 ##  with X1, Category, and Group using Cox reg with case-cohort design,
 ## data(odach_cc) simulated, subsampled case+cohort data, 3 sites: 'site1', 'site2', 'site3'
 ## the full_cohort_size are 800 600 400 for the 3 sites respectively 
 ## we demonstrate using PDA ODACH_CC can obtain a surrogate estimator that is close to the pooled estimate.
 ## ODACH_CC relies on the surrogate of the pooled stratified case-cohort pseudo likelihood function
-## We run the example in local directory. In actual collaboration, account/password for pda server
-## will be assigned to the sites at the server https://pda.one.
-## Each site can access via web browser to check the communication of the summary stats.
+## We run the example in local directory. 
+## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
+## Each site can access via web browser to transfer aggregate data and check the progress of the project.
 
-# data(odach_cc)
+
+# load('/Users/chongliang/Dropbox/PDA-git/pda/data/odach_cc.rda')
+# setwd('/Users/chongliang/Dropbox/PDA_test/CL/')
+data(odach_cc)
 odach_cc$Category = as.character(odach_cc$Category)
 # to test site3 has missing category Z for "Category" variable
 odach_cc[odach_cc$site=='site3'&odach_cc$Category=='Z (X,Y,Z)', ]$Category='Y (X,Y,Z)'

@@ -2,17 +2,20 @@ require(lme4)
 require(minqa)
 require(data.table)
 require(geex)
-## In the toy example below we aim to estimate the average treatment effect (ATE) of covid vaccination 
-# on the outcome (number of Post Acute Sequelae of COVID features), with 50 covariates X1-X50
-# The data are simulated as from 3 sites (site1, site2, site3), each has 300 participants.
-
-# library(devtools)
-# devtools::install_github("penncil/pda")
-# library(pda)
 library(dplyr)
 library(numDeriv)
 library(glmnet)
 
+## In the toy example below we aim to estimate the average treatment effect (ATE) of covid vaccination 
+# on the outcome (number of Post Acute Sequelae of COVID features), with 50 covariates X1-X50
+# The data are simulated as from 3 sites (site1, site2, site3), each has 300 participants.
+## We run the example in local directory. 
+## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
+## Each site can access via web browser to transfer aggregate data and check the progress of the project.
+
+# library(devtools)
+# devtools::install_github("penncil/pda")
+# library(pda) 
  
 # Rcpp::sourceCpp("pda/src/DisC2o.cpp")
 # load("~/Dropbox/PDA-git/pda/data/long_covid.rda")

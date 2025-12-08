@@ -278,8 +278,8 @@ ODAC.estimate <- function(ipdata,control,config) {
                # gr = logL_tilde_D1,
                hessian = TRUE,
                control = list(maxit=control$optim_maxit))
-  
-  surr <- list(btilde = sol$par, Htilde = sol$hessian, site=config$site_id, site_size=nrow(ipdata))
+  setilde = sqrt(diag(solve(sol$hessian))/N)
+  surr <- list(btilde = sol$par, setilde = setilde, site=config$site_id, site_size=nrow(ipdata))
   
   return(surr)
 }

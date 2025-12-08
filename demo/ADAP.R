@@ -7,9 +7,10 @@ data(ADAP_data) # load simulated dataset
 ## with 49 covariates 'x1' to 'x49'  using logistic lasso regression.
 ## In this toy example, we have 3 sites: 'site1', 'site2', 'site3' and each has 300 subjects.
 ## We demonstrate using PDA ADAP can obtain a surrogate estimator that is close to the pooled estimate. 
-## We run the example in local directory. In actual collaboration, account/password for pda server 
-## will be assigned to the sites at the server https://pda.one.
-## Each site can access via web browser to check the communication of the summary stats.
+## We run the example in local directory. 
+## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
+## Each site can access via web browser to transfer aggregate data and check the progress of the project.
+
 
 ADAP_data <- data.frame(sites=ADAP_data$sites, status=ADAP_data$y, x=ADAP_data$x)
 colnames(ADAP_data) <- c("sites", "status", paste0("x", 1:49))

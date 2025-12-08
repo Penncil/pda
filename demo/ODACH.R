@@ -7,9 +7,9 @@ require(pda)
 ## data(lung) from 'survival', we randomly assign to 3 sites: 'site1', 'site2', 'site3'
 ## we demonstrate using PDA ODACH can obtain a surrogate estimator that is close to the pooled estimate.
 ## Different from ODAC, ODACH accounts for heterogeneity across sites by allowing site-specific baseline hazard functions and feature distributions.
-## We run the example in local directory. In actual collaboration, account/password for pda server
-## will be assigned to the sites at the server https://pda.one.
-## Each site can access via web browser to check the communication of the summary stats.
+## We run the example in local directory. 
+## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
+## Each site can access via web browser to transfer aggregate data and check the progress of the project.
 
 data(lung2)
 lung_split <- split(lung2, lung2$site)
@@ -39,11 +39,6 @@ control <- list(project_name = 'Lung cancer study',
 mydir <- getwd()   # tempdir()
 ## assume lead site1: enter "1" to allow transferring the control file
 pda(site_id = 'site1', control = control, dir = mydir)
-## in actual collaboration, account/password for pda server will be assigned, thus:
-# pda(site_id = 'site1', control = control, uri = 'https://pda.one', secret='abc123')
-## you can also set your environment variables, and no need to specify them in pda:
-# Sys.setenv(PDA_USER = 'site1', PDA_SECRET = 'abc123', PDA_URI = 'https://pda.one')
-# pda(site_id = 'site1', control = control)
 
 S=readline(prompt="Type  <Return>   to continue : ")
 ## assume remote site3: enter "1" to allow tranferring your local estimate

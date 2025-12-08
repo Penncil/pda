@@ -6,9 +6,9 @@ require(pda)
 ## In the toy example below we aim to analyze the association of lung status with age and sex using Cox regression,
 ## data(lung) from 'survival', we randomly assign to 3 sites: 'site1', 'site2', 'site3'
 ## we demonstrate using PDA ODAC can obtain a surrogate estimator that is close to the pooled estimate.
-## We run the example in local directory. In actual collaboration, account/password for pda server
-## will be assigned to the sites at the server https://pda.one.
-## Each site can access via web browser to check the communication of the summary stats.
+## We run the example in local directory. 
+## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
+## Each site can access via web browser to transfer aggregate data and check the progress of the project.
 
 # load('pda/data/lung2.rda')
 data(lung2) 

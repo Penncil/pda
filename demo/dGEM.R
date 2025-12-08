@@ -6,9 +6,9 @@ require(pda)
 ## In the toy example below we aim to conduct hospital profiling using dGEM. We randomly assign to 3 sites: 'site1', 'site2', 'site3'
 ## we demonstrate using PDA ODACH can obtain a surrogate estimator that is close to the pooled estimate.
 ## Different from ODAC, ODACH accounts for heterogeneity across sites by allowing site-specific baseline hazard functions and feature distributions.
-## We run the example in local directory. In actual collaboration, account/password for pda server
-## will be assigned to the sites at the server https://pda.one.
-## Each site can access via web browser to check the communication of the summary stats.
+## We run the example in local directory. 
+## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
+## Each site can access via web browser to transfer aggregate data and check the progress of the project.
 
 data(lung2)
 lung_split <- split(lung2, lung2$site)

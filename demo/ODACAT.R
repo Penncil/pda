@@ -2,18 +2,18 @@ require(data.table)
 require(pda)
 require(glmnet)
 library(MASS) 
-data(ODACAT_ordinal) # load simulated dataset
-# load('data/ODACAT_ordinal.rda')
 
 ## In the toy example below we aim to analyze the association of a 3-category outcome 'y' 
 ## with 3 covariates 'X1', 'X2', 'X3'  using multinom-logistic (mlogit, if y is nominal) 
 ## or proportional odds logistic regression (polr, if y is ordinal).
 ## In this simulated data, we have 3 sites: 'site1', 'site2', 'site3'.
 ## We demonstrate using PDA ODACAT can obtain a surrogate estimator that is close to the pooled estimate. 
-## We run the example in local directory. In actual collaboration, account/password for pda server 
-## will be assigned to the sites at the server https://pda.one.
-## Each site can access via web browser to check the communication of the summary stats.
+## We run the example in local directory. 
+## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
+## Each site can access via web browser to transfer aggregate data and check the progress of the project.
 
+data(ODACAT_ordinal) # load simulated dataset
+# load('data/ODACAT_ordinal.rda')
 sites <- unique(ODACAT_ordinal$id.site)
 dd <- split(ODACAT_ordinal, ODACAT_ordinal$id.site)
 

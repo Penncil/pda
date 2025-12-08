@@ -43,22 +43,22 @@ ODACT.initialize <- function(ipdata,control,config){
   # }
   
   # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
-  px = ncol(ipdata) - 2
-  col_deg = apply(ipdata[,-c(1:2)],2,var)==0    # degenerated X columns...
-  ipdata_i = ipdata[,-(which(col_deg)+2),with=F]
-  
-  # time-dependent Cox: local constant partial likelihood estimate 
+  px = ncol(ipdata) - 2 
   h = control$bandwidth
   evalt = control$times
   nT = length(evalt)
-  fit_i <- seq_fit_list(ipdata_i, fn=llpl, times=evalt, h=h, betabar=rep(0,px), hessian=T) 
+  col_deg = apply(ipdata[,-c(1:2)],2,var)==0    # degenerated X columns...
+  ipdata_i = ipdata[,-(which(col_deg)+2),with=F] 
+  
+  # Cox with beta(t): local constant partial likelihood estimate
+  fit_i <- seq_fit_list(data.frame(ipdata_i), fn=llpl, times=evalt, h=h, betabar=rep(0,px), hessian=T) 
   
   if(!is.null(fit_i)){
     # for degenerated X, coef=0, var=Inf
-    bhat_i = matrix(0,px,nT)    # p * nT 
+    bhat_i = matrix(0,px,nT)    # px * nT 
     Vhat_i = matrix(Inf,px,nT)
-    bhat_i[,!col_deg] <- matrix(unlist(lapply(fit_i, function(a) a$par) ), nrow=px) 
-    Vhat_i[,!col_deg] <- matrix(unlist(sapply(fit_i, function(a) diag(solve(a$hessian)*0.6/h) )), nrow=px)  
+    bhat_i[!col_deg,] <- sapply(fit_i, function(a) a$par) 
+    Vhat_i[!col_deg,] <- sapply(fit_i, function(a) diag(solve(a$hessian+diag(1e-7,px))*0.6/h) )  
     
     init <- list(#T_i = T_i,
                  bhat_i = bhat_i,
@@ -92,8 +92,7 @@ ODACT.initialize <- function(ipdata,control,config){
 #' @return  list(b_meta=b_meta, site=control$mysite, site_size = nrow(ipdata), logL_D1=logL_D1, logL_D2=logL_D2)
 #' @keywords internal
 ODACT.derive <- function(ipdata,control,config){
-  px <- ncol(ipdata) - 2 
-  
+  px <- ncol(ipdata) - 2  
   time <- ipdata$time
   status <- ipdata$status
   X <- as.matrix(ipdata[,-c(1,2)])
@@ -123,7 +122,7 @@ ODACT.derive <- function(ipdata,control,config){
 #' @param config cloud config
 #' @import data.table
 #' 
-#' @details step-4: construct and solve surrogate logL at the master/lead site
+#' @details step-3: construct and solve surrogate logL at the Lead site
 #' @import Rcpp  
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
 #' @keywords internal
@@ -137,18 +136,19 @@ ODACT.estimate <- function(ipdata,control,config) {
   h = control$bandwidth
   evalt = control$times
   nT = length(evalt)
+  K = length(control$sites)
   
   # download derivatives of other sites from the cloud
   # calculate 2nd order approx of the total logL  
-  logL_all_D1 <- matrix(0, px, nT)
-  logL_all_D2 <- array(0, c(px, px, nT))
+  logL_all_D1 <- matrix(0, nT, px)
+  logL_all_D2 <- array(0, c(nT, px, px))
   N <- 0
-  for(site_i in control$sites){
-    derivatives_i <- pdaGet(paste0(site_i,'_derive'),config)
-    logL_all_D1 <- logL_all_D1 + derivatives_i$logL_D1
-    logL_all_D2 <- logL_all_D2 + derivatives_i$logL_D2
+  for(i in 1:K){
+    derivatives_i <- pdaGet(paste0(control$sites[i],'_derive'),config)
+    logL_all_D1 <- logL_all_D1 + derivatives_i$logL_D1 
+    logL_all_D2 <- logL_all_D2 + derivatives_i$logL_D2 
     N <- N + derivatives_i$site_size
-  }
+  } 
   
   # initial beta
   bbar <- control$beta_init
@@ -161,9 +161,9 @@ ODACT.estimate <- function(ipdata,control,config) {
     logL_local_D2 <- function(b) llplh(b, time, status, X, tt, h=h, order.time=F)
     
     # surrogate log-L and its gradient
-    logL_diff_D1 <- logL_all_D1[,it] / N - logL_local_D1(bbar[,it]) / n
-    logL_diff_D2 <- logL_all_D2[,,it] / N - logL_local_D2(bbar[,it]) / n
-    logL_tilde <- function(b) -(logL_local(b) / n + sum(b * logL_diff_D1) + 1/2 * t(b-bbar[,it]) %*% logL_diff_D2 %*% (b-bbar[,it]))
+    logL_diff_D1 <- logL_all_D1[it,] / N - logL_local_D1(bbar[,it]) / n
+    logL_diff_D2 <- logL_all_D2[it,,] / N - logL_local_D2(bbar[,it]) / n
+    logL_tilde <- function(b) c(logL_local(b) / n + sum(b * logL_diff_D1) + 1/2 * t(b-bbar[,it]) %*% logL_diff_D2 %*% (b-bbar[,it]))
 
     # optimize the surrogate logL 
     sol <- optim(par = bbar[,it], 
@@ -174,7 +174,7 @@ ODACT.estimate <- function(ipdata,control,config) {
                  control = list(maxit=control$optim_maxit))
     btilde[,it] = sol$par
     # var estimate: by inv hessian 
-    setilde[,it] = sqrt(diag(solve(sol$hessian))/N)
+    setilde[,it] = sqrt(diag(solve(sol$hessian+diag(1e-7,px)))/N)
   }
   
   surr <- list(btilde = btilde, setilde=setilde,  

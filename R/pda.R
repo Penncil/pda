@@ -240,7 +240,7 @@ pdaCatalog <- function(task=c('Regression',
       "Task/Survival",
       "Task/Survival/heterogeneity=No: ODAC_0",  
       "Task/Survival/heterogeneity=Yes: ODAC_1",  # ODACH
-      "Task/Survival/time-varying effects: ODACT", # ODACT-H? 
+      "Task/Survival/time-varying effects: ODACT", # ODACT (site-stratified) 
       "Task/Survival/competing risk",         # Dazheng  
       "Task/Survival/competing risk/heterogeneity=No: ODACoR_0", #  
       "Task/Survival/competing risk/heterogeneity=Yes: ODACoR_1", #  
@@ -298,11 +298,14 @@ pdaCatalog <- function(task=c('Regression',
   
   # read in variable names: 
   # outcome variable
-  outcome = readline(prompt='\nPlease provide your outcome variable name, \nif your Task is Survival, provide both variables for time-to-event and censor status separated by blank, \ntype <Return> to skip if Task is Clustering: ') 
-  if(grepl('ODAC', model[1])){
+  if(model[1] %in% c('ODAC','ODACT','ODACoR')){
+    outcome = readline(prompt='\nPlease provide your outcome variable name, with both time-to-event and censor status separated by blank, \n example: time status \ntype <Return> to skip if Task is Clustering: ') 
     outcome = unlist(strsplit(outcome, ' ', fixed = T))
     control$outcome = paste0('Surv(', outcome[1], ', ', outcome[2], ')' )
-  } 
+  } else{
+    outcome = readline(prompt='\nPlease provide your outcome variable name, \ntype <Return> to skip if Task is Clustering: ') 
+    control$outcome = outcome
+  }
   
   # covariate variables
   variables = readline(prompt='\nPlease provide your covariate variable names separated by blanks, \nthe variables need to be harmonized properly between sites (see Harminization guidelines xxx), \ntype <Return> to skip if you want to provide it later: ')
@@ -311,6 +314,13 @@ pdaCatalog <- function(task=c('Regression',
   # levels of all categorical X's, with the first being the reference
   variables_lev = readline(prompt="\nPlease provide the levels of all categorical covariates, with the first being the reference, \n example input: age=c('young', 'old'), sex=c('M','F') \ntype <Return> to skip if you want to provide it later: ")
   control$variables_lev = eval(parse(text=paste0('list(', variables_lev, ')')))
+  
+  if(model[1] == 'ODACT'){ # time points to estimate beta(t), and bandwidth
+    times = readline(prompt='\nAs you assume time-varying effects, please provide the time points at which you want to estimate the effects, \n example (survivail time in days): 0 100 200 300 \ntype <Return> to skip if you want to provide it later: ') 
+    control$times = as.numeric(unlist(strsplit(times, ' ', fixed = T)))
+    bandwidth = readline(prompt='\nPlease also provide the bandwidth of data at each time point you want to use for estimation, this is usually the gap between your time points, \n example (days): 100 \ntype <Return> to skip if you want to provide it later: ') 
+    control$bandwidth = as.numeric(bandwidth)
+  }
   
   # other defaults
   control$step = 'initialize'
@@ -660,6 +670,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
                                     status=as.numeric(model.response(mf))[-c(1:n)], 
                                     model.matrix(formula, mf)[,-1])
     ipdata = data.table(data.frame(ipdata)) 
+    ipdata = ipdata[order(time), ] # odact code requires time to be sorted 
     control$risk_factor = colnames(ipdata)[-c(1:2)]
   }
   
@@ -879,105 +890,24 @@ pdaSync <- function(config,upload_without_confirm,silent_message=F, digits=4){
         res = list(bmeta = bmeta, vmeta = vmeta)
         mymessage('sample size weighted average result:')
         #print(res)
-        control$beta_init = bmeta
-        # }else if(control$model == "OLGLM"){ 
-        #   K <- length(control$sites)
-        #   if(control$heterogeneity == FALSE){
-        #     read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
-        #     # print(read_AD$SXY) 
-        #     SXY <- read_AD$SXY
-        #     Xtable <- as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
-        #     colnames(Xtable) <- c("intercept", control$variables, "n") 
-        #     Xcat <- Xtable[,colnames(Xtable)!='n']
-        #     Xcat <- as.matrix(Xcat)
-        #     counts <- Xtable$n
-        #     for(site_i in control$sites[-1]){
-        #       KSiteAD <- pdaGet(paste0(site_i,'_initialize'),config)
-        #       SXY <- SXY+KSiteAD$SXY 
-        #       Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
-        #       colnames(Xtable) <- c("intercept", control$variables, "n")
-        #       counts <- counts + Xtable$n
-        #     }
-        #   }else{
-        #     read_AD <- pdaGet(paste0(control$sites[1],'_initialize'),config) 
-        #     SXY.intercept <- read_AD$SXY[1]
-        #     SXY.cov <- read_AD$SXY[-1]
-        #     Xtable <-as.data.frame(matrix(unlist(read_AD$Xtable), ncol = (length(control$variables) + 2)))
-        #     colnames(Xtable) <- c("intercept", control$variables, "n") 
-        #     Xcat0 <- Xtable[,colnames(Xtable)!='n']
-        #     Xcat <- Xcat0[,-1]
-        #     counts <- Xtable$n
-        #     
-        #     for(site_i in control$sites[-1]){
-        #       KSiteAD <- pdaGet(paste0(control$sites[1],'_initialize'),config)
-        #       SXY.intercept <- c(SXY.intercept,KSiteAD$SXY[1])
-        #       SXY.cov <- SXY.cov+KSiteAD$SXY[-1] 
-        #       Xtable <- as.data.frame(matrix(unlist(KSiteAD$Xtable), ncol = (length(control$variables) + 2)))
-        #       colnames(Xtable) <- c("intercept", control$variables, "n") 
-        #       Xcat0 <- Xtable[,colnames(Xtable)!='n']
-        #       Xcat_tmp <- Xcat0[,-1]
-        #       Xcat <- rbind(Xcat,Xcat_tmp)
-        #       counts <- c(counts, Xtable$n)
-        #     }
-        #     
-        #     SXY <- c(SXY.intercept,SXY.cov)
-        #     SiteID <- rep(1:K, each = nrow(Xcat0))
-        #     new.siteID <- sapply(1:K,function(i) ifelse(SiteID==i,1,0))
-        #     colnames(new.siteID) <- paste0("Site", 1:K)
-        #     Xcat <- cbind(new.siteID,Xcat)
-        #     Xcat <- as.matrix(Xcat)
-        #   } 
-        #   logLik_AD <- function(beta){
-        #     -(sum(SXY*beta)-sum(log(1+exp(Xcat%*%c(beta)))*counts))/sum(counts)
-        #   } 
-        #   fit.AD <- optim(par = rep(0, ncol(Xcat)), logLik_AD, method = "BFGS") 
-        #   se <- sqrt(diag(solve(hessian(func = function(x) logLik_AD(x)*sum(counts), x = fit.AD$par))))
-        #   res <- data.frame(est = fit.AD$par, se = se)
-        #   rownames(res) <- colnames(Xcat) 
-        #   control$final_output = res 
-        # }else if(control$model == "OLGLMM"){
-        #   for(site_i in control$site[1]){
-        #     AD = pdaGet(paste0(site_i,'_initialize'),config)
-        #     Xtable <- AD$Xtable
-        #     SY <- Xtable$SY
-        #     count <- Xtable$n
-        #     new_Xtable <- Xtable[,1:(1+length(control$variables))] 
-        #     new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
-        #     generate_Y <- function(Y_count, overall_count){
-        #       sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
-        #     }
-        #     new_Y <- unlist(mapply(generate_Y,SY,overall_count = count)) 
-        #     output_0 = cbind(new_Y, new_X)
-        #     colnames(output_0) = c(control$outcome,"intercept",control$variables)
-        #     output_0$site <- site_i
-        #   }
-        #   
-        #   for(site_i in control$sites[-1]){
-        #     AD = pdaGet(paste0(site_i,'_initialize'),config)
-        #     Xtable <- AD$Xtable
-        #     SY <- Xtable$SY
-        #     count <- Xtable$n
-        #     new_Xtable <- Xtable[,1:(1+length(control$variables))] 
-        #     new_X <- new_Xtable[rep(seq_len(nrow(new_Xtable)), times = count), ]
-        #     generate_Y <- function(Y_count, overall_count){
-        #       sub_Y <- rep(c(1,0), times = c(Y_count, overall_count- Y_count))
-        #     }
-        #     new_Y <- unlist(mapply(generate_Y,SY,overall_count = count)) 
-        #     output = cbind(new_Y, new_X)
-        #     colnames(output) = c(control$outcome,"intercept",control$variables)
-        #     output$site <- site_i
-        #     output_0 <- rbind(output_0, output)
-        #   } 
-        #   
-        #   fit.pool.recons <- MASS::glmmPQL(as.formula(paste(control$outcome, paste(control$variables, collapse = "+"), sep = '~')), 
-        #                              ~1|site, 
-        #                              data = output_0,
-        #                              family='binomial')
-        #   control$est <- fit.pool.recons$coefficients
-        #   control$varFix <- fit.pool.recons$varFix
-        #   control$rand_se <- fit.pool.recons$sigma 
+        control$beta_init = bmeta 
       }else if(control$model=='COLA'){
         # COLA does not need derivative, thus estimate after initialize...
+      }else if(control$model=='ODACT'){  
+        px = length(control$variables)
+        nT = length(control$times)
+        K = length(control$sites)
+        bhat <- array(NA, c(px, nT, K))  # nT time points
+        vbhat <- array(NA, c(px, nT, K)) # nT time points
+        for(i in 1:K){
+          init_i <- pdaGet(paste0(control$sites[i],'_initialize'),config)
+          bhat[,,i] = init_i$bhat_i  # px * nT matrix
+          vbhat[,,i] = init_i$Vhat_i # px * nT matrix
+        }
+        # meta est (IVWA) as binit 
+        bmeta = apply(bhat/vbhat,1:2,function(x){sum(x, na.rm = TRUE)})/apply(1/vbhat,1:2,function(x){sum(x, na.rm = TRUE)})
+        mymessage('meta (inv var weighted avg) as initial est:') 
+        control$beta_init = bmeta
       }else{ 
         if(control$lead_site %in% control$sites){
           bhat <-init_i$bhat_i 

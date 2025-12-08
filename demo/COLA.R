@@ -14,9 +14,9 @@ library(numDeriv)
 # - COLA-GLM
 # - COLA-GLM-H
 # - COLA-GLMM
-## We run the example in local directory. In actual collaboration, account/password for pda server 
-## will be assigned to the sites at the server https://pda.one.
-## Each site can access via web browser to check the communication of the summary stats.
+## We run the example in local directory. 
+## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
+## Each site can access via web browser to transfer aggregate data and check the progress of the project.
 # library(devtools)
 # devtools::install_github("penncil/pda")
  

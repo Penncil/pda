@@ -2,22 +2,18 @@ require(survival)
 require(data.table)
 require(pda)
 # require(imager)
-# data(lung)
 
-## In the toy example below we aim to analyze the association of lung status with age and sex using logistic regression,
+
+## In the toy example below we aim to analyze the association of lung cancer with age and sex using logistic regression,
 ## data(lung) from 'survival', we randomly assign to 3 sites: 'site1', 'site2', 'site3'
 ## we demonstrate using PDA ODAL can obtain a surrogate estimator that is close to the pooled estimate. 
-## We run the example in local directory. In actual collaboration, account/password for pda server 
-## will be assigned to the sites at the server https://pda.one.
-## Each site can access via web browser to check the communication of the summary stats.
+## We run the example in local directory. 
+## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
+## Each site can access via web browser to transfer aggregate data and check the progress of the project.
 
-# Create 3 sites, split the lung data amongst them
-sites = c('site1', 'site2', 'site3')
-set.seed(42)
-lung2 <- lung[,c('status', 'age', 'sex')]
-lung2$sex <- lung2$sex - 1
-lung2$status <- ifelse(lung2$status == 2, 1, 0)
-lung_split <- split(lung2, sample(1:length(sites), nrow(lung), replace=TRUE))
+# lung cancer data modified from survival::lung
+data(lung2)
+
 ## fit logistic reg using pooled data
 fit.pool <- glm(status ~ age + sex, family = 'binomial', data = lung2)
 

@@ -19,12 +19,12 @@
 
 require(RcppArmadillo)
 require(Rcpp)
-# sourceCpp('odact.cpp')
+# sourceCpp('pda/src/odact.cpp')
 
 ## DO NOT use order.time=T, always order time before calling 
 ## llpl llplg llplh sllpl sllplg D12
 
-# log-lik
+# log-lik of one site
 #' @keywords internal
 llpl <- function(beta, times, status, covars, tt=0.5, h=500,
                  order.time=F) {  
@@ -47,7 +47,7 @@ llpl <- function(beta, times, status, covars, tt=0.5, h=500,
   -sum((K * status * (lp - log(cum_sum(exp(lp), reversely = T))))[nn])
 }
 
-# gradient of ll
+# gradient of ll of one site
 #' @keywords internal
 llplg <- function(beta, times, status, covars, tt=0.5, h=500,
                   order.time=F) {
@@ -74,7 +74,7 @@ llplg <- function(beta, times, status, covars, tt=0.5, h=500,
   -colSums(((covars - num/den) * (K * status))[nn, , drop = FALSE])
 }
 
-# hessian of ll
+# hessian of ll of one site
 #' @keywords internal
 llplh <- function(beta, times, status, covars, tt=0.5, h=500,
                   order.time=F) {
@@ -116,16 +116,47 @@ llplh <- function(beta, times, status, covars, tt=0.5, h=500,
   return(hh)
 }
 
+# fit Cox with beta(t) for one site
+#' @keywords internal
 seq_fit_list <- function(da, fn=llpl, times=seq(0,1,0.1), h=0.1, betabar, ...){
   # wrapper function to make it easier to call optim() multiple times
   # da: data table, columns: time, status, X's
   # return: list of optim output
   lapply(as.list(times), function(x)
     optim(par=betabar, fn=fn, method="Nelder-Mead", times=da[,1], status=da[,2], 
-          covars=da[,-c(1:2),drop=FALSE], tt=x, h=h, ...) )
+          covars=as.matrix(da[,-c(1:2),drop=FALSE]), tt=x, h=h, ...) )
 }
 
 
+# log-lik of site-stratified Cox with beta(t)
+#' @keywords internal
+llpl_st <- function(beta, times, status, covars, site, tt=0.5, h=500,
+                    order.time=F){
+  site.uni = unique(site)
+  sum(sapply(site.uni, function(ss) llpl(beta, times[site==ss], status[site==ss], covars[site==ss,],
+                                         tt=tt, h=h, order.time=order.time) ) )
+}
+
+# fit site-stratified Cox with beta(t), list of optim outputs  
+#' @keywords internal
+seq_fit_st_list <- function(da, site, fn=llpl_st, times=seq(0,1,0.1), h=0.1, betabar, ...){
+  # wrapper function to make it easier to call optim() multiple times
+  da = data.frame(da)
+  lapply(as.list(times), function(x)
+    optim(par=betabar, fn=fn, method="Nelder-Mead", times=da[,1], status=da[,2], covars=as.matrix(da[,-c(1:2),drop=FALSE]),
+          site=site, tt=x, h=h, ...) )
+}
+
+# fit site-stratified Cox with beta(t), as matrix format  
+#' @keywords internal
+mycoxph_bt <- function(da, site, fn=llpl_st, times=seq(0,1,0.1), h=0.1, betabar, ...){
+  px = ncol(da) - 2
+  fit.pool = seq_fit_st_list(da, site, llpl_st, times, h, betabar, ...)
+  b.pool = matrix(unlist(lapply(fit.pool, function(a) a$par) ), nrow=px) 
+  se.pool = sqrt(matrix(unlist(sapply(fit.pool, function(a) diag(solve(a$hessian)*0.6/h) )), nrow=px) )
+  return(list(b.pool=round(b.pool,4), se.pool= round(se.pool,4)))
+}
+  
 # # surrogate ll 
 # sllpl <- function(beta, times, status, covars, betabar, ind1, order=1, tt=0.5, h=.25,
 #                   order.time=F) {
@@ -178,13 +209,7 @@ seq_fit_list <- function(da, fn=llpl, times=seq(0,1,0.1), h=0.1, betabar, ...){
 #   }
 # }
 
-# # log-lik of stratified Cox with beta(t)
-# llpl_st <- function(beta, times, status, covars, site, tt=0.5, h=500,
-#                     order.time=F){
-#   site.uni = unique(site)
-#   sum(sapply(site.uni, function(ss) llpl(beta, times[site==ss], status[site==ss], covars[site==ss,], 
-#                                          tt=tt, h=h, order.time=order.time) ) )
-# }
+
 # 
 # # gradient of llpl_st
 # llplg_st <- function(beta, times, status, covars, site, tt=0.5, h=500,
@@ -258,12 +283,7 @@ seq_fit_list <- function(da, fn=llpl, times=seq(0,1,0.1), h=0.1, betabar, ...){
 #   }
 # }
  
-# seq_fit_st_list <- function(da, site, fn=llpl_st, times=seq(0,1,0.1), h=0.1, betabar, ...){
-#   # wrapper function to make it easier to call optim() multiple times
-#   lapply(as.list(times), function(x)
-#     optim(par=betabar, fn=fn, method="Nelder-Mead", times=da[,1], status=da[,2], covars=da[,-c(1:2),drop=FALSE], 
-#           site=site, tt=x, h=h, ...) )
-# }
+
  
 
 # # 1st and 2nd order derivatives of llpl, using local or pooled data
