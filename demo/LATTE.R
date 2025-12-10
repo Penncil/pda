@@ -7,85 +7,117 @@
 ## In the toy example below we aim to analyze the treatment effects of acetaminophen on ADRD using logistic regression, and propensity score stratification,
 ## data: latte_synthetic_data.rda, we randomly assign to 3 sites: 'site1', 'site2', 'site3'
 ## we demonstrate using PDA LATTE can obtain a surrogate estimator that is close to the pooled estimate.
-## We run the example in local directory. 
+## We run the example in local directory.
 ## In actual collaboration, the data communication can be done via the PDA_OTA platform https://pda-ota.pdamethods.org/
 ## Each site can access via web browser to transfer aggregate data and check the progress of the project.
-
-
 # Define variables and load data
 set.seed(42)
-outcome_id = "outcome_ADRD_value"
-outcome_time = "outcome_ADRD_time"
-sites <- c("site1", "site2", "site3")
-data("LATTE_ADRD", package = "pda")
+outcome_id = "status"
+outcome_time = "time"
+treatment_var = "Trt"
+xvars = c("Age", "Sex", "RE", "Mutation")
 
+sites <- c("site1", "site2", "site3", "site4", "site5", "site6", "site7", "site8", "site9", "site10")
+
+# data = read.csv("/Users/luli/Documents/developer/pda1210/pda/JJ_pda_simu_data_20251123.csv")
+data = read.csv("../../JJ_pda_simu_data_20251123.csv")
+
+# data= mydata
+data = data %>% select(-X)
+
+# simulate some nco outcomes 
+data$nco1 = rbinom(nrow(data),1,0.3)
+data$nco2 = rbinom(nrow(data),1,0.3)
+data$nco3 = rbinom(nrow(data), 1, 0.3)
+
+# simulate the time to event for nco outcomes
+data$nco1_time = sample(data$time, nrow(data), replace = TRUE)
+data$nco2_time = sample(data$time, nrow(data), replace = TRUE)
+data$nco3_time = sample(data$time, nrow(data), replace = TRUE)
+
+
+LATTE_ADRD = data.frame(data)
 # Separate data for LATTE analysis
 site_data <- list(
-  site1 = LATTE_ADRD[LATTE_ADRD$site == 1, ],
-  site2 = LATTE_ADRD[LATTE_ADRD$site == 2, ],
-  site3 = LATTE_ADRD[LATTE_ADRD$site == 3, ]
+    site1 = LATTE_ADRD[LATTE_ADRD$site == "site1", ],
+    site2 = LATTE_ADRD[LATTE_ADRD$site == "site2", ],
+    site3 = LATTE_ADRD[LATTE_ADRD$site == "site3", ],
+    site4 = LATTE_ADRD[LATTE_ADRD$site == "site4", ],
+    site5 = LATTE_ADRD[LATTE_ADRD$site == "site5", ],
+    site6 = LATTE_ADRD[LATTE_ADRD$site == "site6", ],
+    site7 = LATTE_ADRD[LATTE_ADRD$site == "site7", ],
+    site8 = LATTE_ADRD[LATTE_ADRD$site == "site8", ],
+    site9 = LATTE_ADRD[LATTE_ADRD$site == "site9", ],
+    site10 = LATTE_ADRD[LATTE_ADRD$site == "site10", ]
 )
 
-# Identify covariates from site1 data for control list
-site1_data_subset <- LATTE_ADRD[LATTE_ADRD$site == 3, ]
-xvars <- colnames(site1_data_subset)[!grepl("^outcome_", colnames(site1_data_subset)) & 
-                            !colnames(site1_data_subset) %in% c("ID", "treatment", "index_date", "site", "group")]
-xvars <- xvars[colSums(site1_data_subset[xvars]) > 30]
+
 
 # Non-Concurrent Outcomes (NCOs) setup for LATTE calibration
 nco_outcomes = c(
-  "acute_conjunctivitis", "acute_tonsillitis", "adhesive_capsulitis_of_shoulder", "allergic_rhinitis", 
-  "blepharitis", "carpal_tunnel_syndrome", "chalazion", "contact_dermatitis", "dental_caries", 
-  "deviated_nasal_septum", "foreign_body_in_ear", "gout", "hemorrhoids", "impacted_cerumen", 
-  "influenza", "ingrowing_nail", "low_back_pain", "menieres_disease", "osteoarthritis_of_knee", 
-  "osteoporosis", "foot_drop", "hearing_problem", "intra_abdominal_and_pelvic_swelling_mass_and_lump", 
-  "irritability_and_anger", "wristdrop"
+    "nco1", "nco2", "nco3"
 )
-nco_outcomes <- paste0("outcome_", nco_outcomes, "_value")
-outcome_times = c(outcome_time, paste0("outcome_", c("acute_conjunctivitis", "acute_tonsillitis", 
-                                                    "adhesive_capsulitis_of_shoulder", "allergic_rhinitis", 
-                                                    "blepharitis", "carpal_tunnel_syndrome", "chalazion", 
-                                                    "contact_dermatitis", "dental_caries", 
-                                                    "deviated_nasal_septum", "foreign_body_in_ear", 
-                                                    "gout", "hemorrhoids", "impacted_cerumen", 
-                                                    "influenza", "ingrowing_nail", "low_back_pain", 
-                                                    "menieres_disease", "osteoarthritis_of_knee", 
-                                                    "osteoporosis", "foot_drop", "hearing_problem", 
-                                                    "intra_abdominal_and_pelvic_swelling_mass_and_lump", 
-                                                    "irritability_and_anger", "wristdrop"), "_time"))
-
 
 # --- Setup: Working directory ---
 if (!dir.exists("pda_latte_results")) {
   dir.create("pda_latte_results")
 }
 original_wd <- getwd()
-setwd("pda_latte_results")
+setwd("../pda/LATTE/")
 
 # 1. Run Pooled Analysis (Traditional Benchmark)
 cat("## Running Traditional Pooled Analysis...\n")
-pooled_results <- run_pooled_analysis(LATTE_ADRD, outcome_id, outcome_time, sites)
+pooled_results <- run_pooled_analysis(LATTE_ADRD, outcome_id, outcome_time, sites, treatment_var, xvars)
 
 # 2. Setup LATTE Control Parameters
+### LATTE example, with NCO outcomes, logistic outcome model
 control <- list(
-  project_name = "LATTE Demo Study",
-  step = "initialize", # Will be set by run_latte_analysis
-  sites = sites,
-  model = "LATTE",
-  family = "binomial",
-  outcome = outcome_id,
-  nco_outcomes = nco_outcomes,
-  variables = xvars,
-  lead_site = "site1",
-  min_count = 5,
-  nfolds = 5,
-  min_strata = 2,
-  max_strata = 6,
-  start_beta = 0.1,
-  balancing_method = "stratification", # stratification
-  outcome_model = "logistic",          # logistic
-  nco_outcome_times = outcome_times    # needed if outcome_model is poisson
+    project_name = "LATTE Demo Study",
+    step = "initialize", # Will be set by run_latte_analysis
+    sites = sites,
+    model = "LATTE",
+    family = "binomial",
+    outcome = outcome_id,
+    nco_outcomes = nco_outcomes,
+    variables = xvars,
+    treatment = treatment_var,
+    lead_site = "site1",
+    balancing_method = "stratification", # stratification
+    outcome_model = "logistic" # logistic
 )
+
+### LATTE example, without NCO outcomes 
+# control <- list(
+#     project_name = "LATTE Demo Study",
+#     step = "initialize", # Will be set by run_latte_analysis
+#     sites = sites,
+#     model = "LATTE",
+#     family = "binomial",
+#     outcome = outcome_id,
+#     variables = xvars,
+#     treatment = treatment_var,
+#     lead_site = "site1",
+#     balancing_method = "stratification", # stratification
+#     outcome_model = "logistic" # logistic
+# )
+
+### LATTE example, with NCO outcomes, poisson outcome model
+# control <- list(
+#     project_name = "LATTE Demo Study",
+#     step = "initialize", # Will be set by run_latte_analysis
+#     sites = sites,
+#     model = "LATTE",
+#     family = "binomial",
+#     outcome = outcome_id,
+#     nco_outcomes = nco_outcomes,
+#     variables = xvars,
+#     treatment = treatment_var,
+#     lead_site = "site1",
+#     balancing_method = "stratification", # stratification
+#     outcome_model = "poisson", # logistic
+#     outcome_times = c("time", "nco1_time", "nco2_time", "nco3_time")
+# )
+
 
 # 3. Run LATTE Analysis (Distributed Simulation)
 cat("\n## Running Distributed LATTE Analysis (Initialize & Estimate)...\n")
@@ -95,7 +127,9 @@ setwd("pda_latte_results")
 menu <- function(choices, title = NULL) 1
 
 pda(site_id = 'site1', control = control, ipdata = site_data$site1, dir = getwd())
-
+library(cobalt)
+library(geex)
+library(glmnet)
 menu <- function(choices, title = NULL) 1
 
 pda(site_id = 'site2', ipdata = site_data$site2, dir = getwd())
@@ -103,6 +137,24 @@ menu <- function(choices, title = NULL) 1
 
 pda(site_id = 'site3', ipdata = site_data$site3, dir = getwd())
 menu <- function(choices, title = NULL) 1
+
+pda(site_id = 'site4', ipdata = site_data$site4, dir = getwd())
+menu <- function(choices, title = NULL) 1
+pda(site_id = "site5", ipdata = site_data$site5, dir = getwd())
+
+menu <- function(choices, title = NULL) 1
+
+pda(site_id = "site6", ipdata = site_data$site6, dir = getwd())
+menu <- function(choices, title = NULL) 1
+pda(site_id = "site7", ipdata = site_data$site7, dir = getwd())
+
+menu <- function(choices, title = NULL) 1
+pda(site_id = "site8", ipdata = site_data$site8, dir = getwd())
+menu <- function(choices, title = NULL) 1
+pda(site_id = "site9", ipdata = site_data$site9, dir = getwd())
+menu <- function(choices, title = NULL) 1
+pda(site_id = "site10", ipdata = site_data$site10, dir = getwd())
+
 
 pda(site_id = "site1", ipdata = site_data$site1, dir = getwd())
 
@@ -141,3 +193,5 @@ print_results("LATTE Distributed Analysis (NCO Calibrated)",
 # Clean up
 setwd(original_wd)
 cat(paste0("\n\nResults files are located in the '", original_wd, "/pda_latte_results' directory.\n"))
+
+

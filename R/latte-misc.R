@@ -142,7 +142,6 @@ optimize_conditional_logistic_2x2 <- function(tables, start_beta = 0.1) {  # Cha
   if (result$convergence != 0) {
     warning("Optimization did not converge. Results may be unreliable.")
   }
-  
   # Check if hessian is invertible
   hessian_inv <- try(solve(result$hessian), silent = TRUE)
   if (inherits(hessian_inv, "try-error")) {
@@ -151,7 +150,6 @@ optimize_conditional_logistic_2x2 <- function(tables, start_beta = 0.1) {  # Cha
   } else {
     se <- sqrt(diag(hessian_inv))
   }
-  
   odds_ratios <- exp(result$par)
   ci_lower <- exp(result$par - 1.96 * se)
   ci_upper <- exp(result$par + 1.96 * se)
@@ -174,8 +172,9 @@ optimize_conditional_logistic_2x2 <- function(tables, start_beta = 0.1) {  # Cha
 ################################################################################################################################ 
 
 #' @keywords internal
-create_2x2_tables_poisson <- function(stratifiedPop, outcome_id, outcome_time) {
+create_2x2_tables_poisson <- function(stratifiedPop, outcome_id, outcome_time, control) {
     KSiteAD_uf = list()
+    treatment_var = control$treatment
     for (strat in unique(stratifiedPop$stratumId)) {
         strat_data <- stratifiedPop[stratifiedPop$stratumId == strat, ]
         
@@ -184,7 +183,7 @@ create_2x2_tables_poisson <- function(stratifiedPop, outcome_id, outcome_time) {
         time_var <- outcome_time
         
         # Only include strata with variation in treatment and non-zero counts
-        if (length(unique(strat_data$treatment)) > 1 && sum(strat_data[[count_var]]) > 0) {
+        if (length(unique(strat_data[[treatment_var]])) > 1 && sum(strat_data[[count_var]]) > 0) {
         
         # Create the 2x2 contingency table for Poisson
         # [treated_value, treated_persontime]
@@ -192,16 +191,16 @@ create_2x2_tables_poisson <- function(stratifiedPop, outcome_id, outcome_time) {
         table_2x2 <- matrix(0, nrow = 2, ncol = 2)
         
         # Treated count
-        table_2x2[1,1] <- sum(strat_data[strat_data$treatment == 1, count_var])
+        table_2x2[1,1] <- sum(strat_data[strat_data[[treatment_var]] == 1, count_var])
         
         # Treated person-time
-        table_2x2[1,2] <- sum(strat_data[strat_data$treatment == 1, time_var])
+        table_2x2[1,2] <- sum(strat_data[strat_data[[treatment_var]] == 1, time_var])
         
         # Untreated count
-        table_2x2[2,1] <- sum(strat_data[strat_data$treatment == 0, count_var])
+        table_2x2[2,1] <- sum(strat_data[strat_data[[treatment_var]] == 0, count_var])
         
         # Untreated person-time
-        table_2x2[2,2] <- sum(strat_data[strat_data$treatment == 0, time_var])
+        table_2x2[2,2] <- sum(strat_data[strat_data[[treatment_var]] == 0, time_var])
         
         # Only add tables that are informative for Poisson regression
         # Need positive person-time in both groups and at least one event
@@ -353,7 +352,7 @@ getAD_IPW <- function(SiteIPD, outcome_name, formula, link = "canonical", cut_of
 computeWeights <- function(population, estimator = "ate") {
   if (estimator == "ate") {
     # 'Stabilized' ATE:
-    return(ifelse(population$treatment == 1,
+    return(ifelse(population == 1,
       mean(population$treatment == 1) / population$propensityScore,
       mean(population$treatment == 0) / (1 - population$propensityScore)
     ))
@@ -486,14 +485,14 @@ computeWeights_overlap <- function(population, estimator = "ato") {
 
 
 #' @keywords internal
-optimize_strata <- function(data, xvars, min_strata = 2, max_strata = 6) {
+optimize_strata <- function(data, xvars, treatment, min_strata = 2, max_strata = 6) {
   best_n_strata <- 0
   best_after <- 1000
   best_smd_res <- NULL
   
   for (nstrata in min_strata:max_strata) {
-    stratifiedPop <- get_stratified_pop(data, nstrata = nstrata)
-    smd_res <- get_SMD(stratifiedPop = stratifiedPop, xvars = xvars)
+    stratifiedPop <- get_stratified_pop(data, nstrata = nstrata, treatment = treatment)
+    smd_res <- get_SMD(stratifiedPop = stratifiedPop, xvars = xvars, treatment = treatment)
     
     before <- sum(abs(smd_res$smd_before$SMD) > 0.2)
     after <- sum(abs(smd_res$smd_after$SMD) > 0.2)
@@ -512,18 +511,18 @@ optimize_strata <- function(data, xvars, min_strata = 2, max_strata = 6) {
 }
 
 #' @keywords internal
-get_stratified_pop = function(mydata_test, nstrata){
+get_stratified_pop = function(mydata_test, nstrata, treatment){
   rowId = c(1:length(mydata_test$treatment))
   mydata_test <- cbind(rowId, mydata_test)
-  stratifiedPop <- stratifyByPs(mydata_test, numberOfStrata = nstrata)
+  stratifiedPop <- stratifyByPs(mydata_test, treatment, numberOfStrata = nstrata)
   return (stratifiedPop)
 }
 
 #' @keywords internal
-stratifyByPs <- function(population, numberOfStrata = 5, stratificationColumns = c(), baseSelection = "all") {
+stratifyByPs <- function(population, treatment, numberOfStrata = 5, stratificationColumns = c(), baseSelection = "all") {
   if (!("rowId" %in% colnames(population)))
     stop("Missing column rowId in population")
-  if (!("treatment" %in% colnames(population)))
+  if (!(treatment %in% colnames(population)))
     stop("Missing column treatment in population")
   if (!("propensityScore" %in% colnames(population)))
     stop("Missing column propensityScore in population")
@@ -534,9 +533,9 @@ stratifyByPs <- function(population, numberOfStrata = 5, stratificationColumns =
   if (baseSelection == "all") {
     basePop <- population$propensityScore
   } else if (baseSelection == "target") {
-    basePop <- population$propensityScore[population$treatment == 1]
+    basePop <- population$propensityScore[population[[treatment]] == 1]
   } else if (baseSelection == "comparator") {
-    basePop <- population$propensityScore[population$treatment == 0]
+    basePop <- population$propensityScore[population[[treatment]] == 0]
   } else {
     stop(paste0("Unknown base selection: '", baseSelection, "'. Please choose 'all', 'target', or 'comparator'"))
   }
@@ -592,11 +591,11 @@ stratifyByPs <- function(population, numberOfStrata = 5, stratificationColumns =
 }
 
 #' @keywords internal
-get_SMD <-function(stratifiedPop, xvars){
-  smd_before <- GetSMD(stratifiedPop[, xvars], stratifiedPop$treatment)
-  weight_mat=Compute_weight(stratifiedPop)
+get_SMD <-function(stratifiedPop, xvars, treatment){
+  smd_before <- GetSMD(stratifiedPop[, xvars], stratifiedPop[[treatment]])
+  weight_mat=Compute_weight(stratifiedPop, treatment)
   stratifiedPop=stratifiedPop%>%left_join(weight_mat,by="rowId")
-  smd_after <- GetSMD(stratifiedPop[, xvars], stratifiedPop$treatment,stratifiedPop$weight)
+  smd_after <- GetSMD(stratifiedPop[, xvars], stratifiedPop[[treatment]],stratifiedPop$weight)
   
   return(list(smd_before=smd_before,smd_after=smd_after))
 }
@@ -613,26 +612,26 @@ GetSMD <- function(data, treat, weights = NULL, std = TRUE){
 }
 
 #' @keywords internal
-Compute_weight <- function(data) {
+Compute_weight <- function(data, treatment) {
   stratumSize <- data %>%
-    group_by(stratumId, treatment) %>%
+    group_by(stratumId, .data[[treatment]]) %>%
     count() %>%
     ungroup()
 
   w <- stratumSize %>%
     mutate(weight = 1 / n) %>%
-    inner_join(data, by = c("stratumId", "treatment"), multiple = "all") %>%
-    dplyr::select(rowId, treatment, weight)
+    inner_join(data, by = c("stratumId", treatment), multiple = "all") %>%
+    dplyr::select(rowId, .data[[treatment]], weight)
 
   wSum <- w %>%
-    group_by(treatment) %>%
+    group_by(.data[[treatment]]) %>%
     summarize(wSum = sum(weight, na.rm = TRUE)) %>%
     ungroup()
 
   w_final <- w %>%
-    inner_join(wSum, by = "treatment") %>%
+    inner_join(wSum, by = treatment) %>%
     mutate(weight = weight / wSum) %>%
-    dplyr::select(rowId, treatment, weight)
+    dplyr::select(rowId, .data[[treatment]], weight)
 
   return(w_final[, c(1, 3)])
 }
@@ -644,28 +643,26 @@ Compute_weight <- function(data) {
 #' @param outcome_time The name of the outcome time column (for Poisson).
 #' @param sites A vector of site identifiers.
 #' @return A list containing the results of the standard logistic and Poisson pooled analysis.
-run_pooled_analysis <- function(data, outcome_id, outcome_time, sites) {
+run_pooled_analysis <- function(data, outcome_id, outcome_time, sites, treatment, xvars) {
   
   n_sites <- length(sites)
   all_stratified_data <- NULL
   
   # Process each simulated site to calculate PS and strata
-  for (site_id in 1:n_sites) {
+  for (site_id in unique(data$site)) {
     site_data <- data[data$site == site_id, ]
     
     # Identify covariates (xvars)
-    xvars <- colnames(site_data)[!grepl("^outcome_", colnames(site_data)) & 
-                                !colnames(site_data) %in% c("ID", "treatment", "index_date", "site", "group")]
-    xvars <- xvars[colSums(site_data[xvars]) > 30]
     yvars <- colnames(site_data)[grepl("^outcome_", colnames(site_data))]
     
     # Prepare data for PS calculation
-    mydata_ps <- site_data[, colnames(site_data) %in% c(xvars, "treatment", yvars, outcome_id, outcome_time)]
+    mydata_ps <- site_data[, colnames(site_data) %in% c(xvars, treatment, yvars, outcome_id, outcome_time)]
     
     # Calculate Propensity Scores (PS) using Lasso/Elastic Net
-    form <- as.formula(paste("treatment ~ ", paste(xvars, collapse = "+")))
+    form <- as.formula(paste("Trt ~", paste(xvars, collapse = "+")))
+
     Xmat <- grab_design_matrix(data = mydata_ps, rhs_formula = form)
-    Y <- mydata_ps$treatment
+    Y <- mydata_ps[[treatment]]
     
     nfolds <- 10
     set.seed(42)
@@ -682,8 +679,8 @@ run_pooled_analysis <- function(data, outcome_id, outcome_time, sites) {
     mydata_ps$propensityScore <- propensityScore
     
     # Create stratified population
-    best_strata <- optimize_strata(mydata_ps, xvars)
-    stratifiedPop <- get_stratified_pop(mydata_test = mydata_ps, nstrata = best_strata$n_strata)
+    best_strata <- optimize_strata(mydata_ps, xvars, treatment)
+    stratifiedPop <- get_stratified_pop(mydata_test = mydata_ps, nstrata = best_strata$n_strata, treatment = treatment)
     
     # Add identifiers
     stratifiedPop$site <- site_id
@@ -704,10 +701,10 @@ run_pooled_analysis <- function(data, outcome_id, outcome_time, sites) {
   # --- Standard Pooled Analysis ---
   
   # Logistic Regression
-  outcome_formula <- as.formula(paste0(outcome_id, "~ treatment + factor(global_stratumId)"))
+  outcome_formula <- as.formula(paste0(outcome_id, "~", treatment, " + factor(global_stratumId)"))
   fit_log <- glm(outcome_formula, data = all_stratified_data, family = binomial(link = "logit"))
   
-  log_res <- summary(fit_log)$coefficients["treatment", ]
+  log_res <- summary(fit_log)$coefficients[treatment, ]
   normal_est <- log_res["Estimate"]
   normal_se <- log_res["Std. Error"]
   

@@ -32,20 +32,21 @@
 LATTE.initialize <- function(ipdata, control, config) {
   xvars = control$variables
   # Create PS model formula
-  ps_formula <- as.formula(paste("treatment ~", paste(xvars, collapse = "+")))
+  treatment_var = control$treatment
+  ps_formula <- as.formula(paste(treatment_var, " ~", paste(xvars, collapse = "+")))
   outcomes = c(control$outcome, control$nco_outcomes)
   yvars <- outcomes
   if (control$outcome_model == "poisson") { 
-    outcomes_time = control$nco_outcome_times
+    outcomes_time = control$outcome_times
     yvars <- c(outcomes, outcomes_time)
   }
   ADdatas = list()
 
   # Prepare data for PS model 
-  mydata_ps <- ipdata[, colnames(ipdata) %in% c(xvars, "treatment", yvars)]
+  mydata_ps <- ipdata[, colnames(ipdata) %in% c(xvars, treatment_var, yvars)]
 
-  Xmat <- grab_design_matrix(data = mydata_ps, rhs_formula = ps_formula)
-  Y <- mydata_ps$treatment
+  Xmat <- grab_design_matrix(data = data.frame(mydata_ps), rhs_formula = ps_formula)
+  Y <- mydata_ps[[treatment_var]]
   
   # Fit PS model using cv.glmnet
   nfolds <- 10
@@ -66,14 +67,14 @@ LATTE.initialize <- function(ipdata, control, config) {
       outcome_time = outcomes_time[i]
     }
     
-    outcome_formula <- as.formula(paste0( outcome, " ~ treatment"))
+    outcome_formula <- as.formula(paste0( outcome, " ~ ", treatment_var))
     if (control$balancing_method == "stratification") {
       # Find optimal number of strata
-      best_strata <- optimize_strata(mydata_ps, xvars)
-      stratifiedPop <- get_stratified_pop(mydata_ps, nstrata = best_strata$n_strata)
+      best_strata <- optimize_strata(mydata_ps, xvars, treatment_var)
+      stratifiedPop <- get_stratified_pop(mydata_ps, nstrata = best_strata$n_strata, treatment = treatment_var)
       if (control$outcome_model == "logistic") {
         ADdata <- create_2x2_tables(
-          stratifiedPop$treatment,
+          stratifiedPop[[treatment_var]],
           stratifiedPop[[outcome]],
           stratifiedPop$stratumId
         )
@@ -81,7 +82,8 @@ LATTE.initialize <- function(ipdata, control, config) {
         ADdata <- create_2x2_tables_poisson(
           stratifiedPop,
           outcome_id = outcome,
-          outcome_time = outcome_time
+          outcome_time = outcome_time,
+          control = control
         )
       }
     } else if (control$balancing_method == "matching") {
@@ -89,7 +91,7 @@ LATTE.initialize <- function(ipdata, control, config) {
       mydata_ps$weights <- IPTW_ato
       ADdata <- getAD_IPW_overlap(mydata_ps, paste0(outcome_id), outcome_formula)
     } else if (control$balancing_method == "IPTW") {
-      result <- trimByW(mydata_ps$propensityScore, mydata_ps$treatment, trimFraction = 0.05)
+      result <- trimByW(mydata_ps$propensityScore, mydata_ps[[treatment_var]], trimFraction = 0.05)
       mydata_ps <- mydata_ps[result, ]
       IPTW <- computeWeights(mydata_ps)
       mydata_ps$weights <- IPTW
@@ -142,7 +144,7 @@ LATTE.estimate <- function(init_data, control, config) {
     if (length(ADdata) == 0) {
       next
     }
-    outcome_formula <- as.formula(paste0(outcome, " ~ treatment"))
+    outcome_formula <- as.formula(paste0(outcome, " ~ ", control$treatment))
     # Fit conditional logistic regression
     if (control$balancing_method == "stratification") {
       if (control$outcome_model == "logistic") {
@@ -179,6 +181,10 @@ LATTE.estimate <- function(init_data, control, config) {
   }
   # }
   # Prepare negative control set
+  if (length(outcomes) == 1){
+    warning("No negative controls provided; skipping empirical calibration. If this is unintended, please provide negative control outcomes using control `nco_outcomes`")
+    return (results_all[[outcomes]])
+  }
   neg_df <- subset(
     results_table,
     is_nco & !is.na(est) & !is.na(se) & is.finite(est) & is.finite(se) & abs(est) <= 10
@@ -186,11 +192,14 @@ LATTE.estimate <- function(init_data, control, config) {
   
   # Fit empirical null (for p-value calibration) and systematic error model (for CI calibration)
   fitnull <- fitNull(logRr = neg_df$est, seLogRr = neg_df$se)
-  se_model <- fitSystematicErrorModel(neg_df$est,
-                                      neg_df$se,
-                                      rep(0, nrow(neg_df)))  # NCO truth = 0 on log scale
+  se_model <- fitSystematicErrorModel(
+    neg_df$est,
+    neg_df$se,
+    rep(0, nrow(neg_df))
+  ) # NCO truth = 0 on log scale
   # Apply calibration to *non*-NCO outcomes
   target_df <- subset(results_table, !is_nco & !is.na(est) & !is.na(se) & is.finite(est) & is.finite(se))
+  
   if (nrow(target_df) > 0) {
     # Calibrated CIs
     cal_ci <- calibrateConfidenceInterval(

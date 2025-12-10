@@ -13,10 +13,11 @@ require(pda)
 
 # lung cancer data modified from survival::lung
 data(lung2)
+sites = unique(lung2$site)
+lung_split = split(lung2, lung2$site)
 
 ## fit logistic reg using pooled data
 fit.pool <- glm(status ~ age + sex, family = 'binomial', data = lung2)
-
 
 S=readline(prompt="Type  <Return>   to continue : ")
 # ############################  STEP 1: initialize  ###############################
