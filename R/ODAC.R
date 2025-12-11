@@ -40,18 +40,19 @@
 #' @return  list(T_i = T_i, bhat_i = fit_i$coef, Vhat_i = summary(fit_i)$coef[,2]^2, site=control$mysite, site_size= nrow(ipdata))
 #' @keywords internal
 ODAC.initialize <- function(ipdata,control,config){
-  if(control$heterogeneity == FALSE){
-    T_i <- sort(unique(ipdata$time[ipdata$status==TRUE]))
-  }else{
-    T_i <- NA
-  }
   fit_i <- survival::coxph(survival::Surv(time, status) ~ ., data=ipdata)
   
-  init <- list(T_i = T_i,
-               bhat_i = fit_i$coef,
-               Vhat_i = summary(fit_i)$coef[,2]^2,   # not as glm, coxph summary can keep NA's! but vcov fills 0's!  
+  init <- list(bhat_i = fit_i$coef,
+               # not as glm, coxph summary can keep NA's! but vcov fills 0's!
+               Vhat_i = summary(fit_i)$coef[,2]^2,     
                site = config$site_id,
                site_size = nrow(ipdata))
+  
+  # if assume no heterogeneity (i.e. ODAC, not ODACH), then also need unique event times
+  if(control$heterogeneity == FALSE){
+    init$T_i <- sort(unique(ipdata$time[ipdata$status==TRUE]))
+  } 
+  
   return(init)
 }
 
@@ -184,18 +185,8 @@ ODAC.derive <- function(ipdata,control,config){
     n <- length(time)
     # px <- ncol(X)
     
-    ## get the initial values, beta_bar (i.e., bbar), broadcasted by sites
-    bhat_wt_sum <- rep(0, px)
-    wt_sum <- rep(0, px)     # cov matrix?
-    
-    for(site_i in control$sites){
-      init_i <- pdaGet(paste0(site_i,'_initialize'),config)
-      bhat_wt_sum <- bhat_wt_sum + init_i$bhat_i / init_i$Vhat_i
-      wt_sum <- wt_sum + 1 / init_i$Vhat_i  # cov matrix?
-    }
-    b_meta <- bhat_wt_sum / wt_sum
-    bbar <- b_meta
-     
+    # get the initial est (beta_init calculated in pdaSync, e.g. meta-estimates) 
+    bbar <- control$beta_init 
     
     hasTies <- any(duplicated(ipdata$time)) 
     if(hasTies){
