@@ -299,9 +299,15 @@ pdaCatalog <- function(task=c('Regression',
   # read in variable names: 
   # outcome variable
   if(model[1] %in% c('ODAC','ODACT','ODACoR')){
-    outcome = readline(prompt='\nPlease provide your outcome variable name, with both time-to-event and censor status separated by blank, \n example: time status \ntype <Return> to skip if Task is Clustering: ') 
+    outcome = readline(prompt='\nPlease provide your outcome variable name, with both time-to-event and censor status, \n example: time status ') 
     outcome = unlist(strsplit(outcome, ' ', fixed = T))
-    control$outcome = paste0('Surv(', outcome[1], ', ', outcome[2], ')' )
+    outcome = outcome[outcome!='']
+    control$outcome = paste0('Surv(', paste0(outcome, collapse=', '), ')' )
+  } else if(model[1] == ' DRAFT'){
+    outcome = readline(prompt='\nPlease provide your outcome variable name, it can be a time or time-interval with censor status, \n example: time status  or  time_in time_out status') 
+    outcome = unlist(strsplit(outcome, ' ', fixed = T))
+    outcome = outcome[outcome!='']
+    control$outcome = paste0('Surv(', paste0(outcome, collapse=', '), ')' )
   } else{
     outcome = readline(prompt='\nPlease provide your outcome variable name, \ntype <Return> to skip if Task is Clustering: ') 
     control$outcome = outcome
@@ -530,6 +536,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
       treatment_name <- control$treatment
       treatment_col <- ipdata[[treatment_name]]
     }
+    
     formula <- as.formula(paste(control$outcome, paste(variables, collapse = "+"), sep = '~'))
     mf <- model.frame(formula, ipdata, xlev=control$variables_lev)
   } 
@@ -647,17 +654,46 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
         control$risk_factor <- colnames(ipdata)[-1]
       }
     }
-  }else if(control$model=='ODACH_CC'){
-    if (!is.null(ipdata)){
-      ipdata = data.table::data.table(time=as.numeric(model.response(mf))[1:n], 
-                                      status=as.numeric(model.response(mf))[-c(1:n)],
-                                      subcohort = ipdata$subcohort,
-                                      # sampling_weight = ipdata$sampling_weight,
-                                      model.matrix(formula, mf)[,-1])
+  }else if(control$model=='ODACH_CC'){  
+    if (!is.null(ipdata)){ 
+      # create stratum ID with strata_names (e.g. center, sex)
+      # this part of code was taken out of prepare_case_cohort()
+      if (is.null(control$strata_names)) {
+        strata_id <- rep.int(1L, nrow(ipdata))
+      } else {
+        strata_vars <- ipdata[, control$strata_names, drop = F]
+        if (ncol(strata_vars) == 1L) {
+          strata_id <- as.integer(factor(strata_vars[[1]]))
+        } else {
+          strata_id <- as.integer(interaction(strata_vars, drop = T, lex.order =T))
+        }
+      } 
+      # create time interval outcome if not provided
+      is_interval = sum(strsplit(control$outcome, '')[[1]]==',') == 2
+      if(is_interval==T){
+        ipdata = data.table::data.table(time_in=as.numeric(model.response(mf))[1:n], 
+                                        time_out=as.numeric(model.response(mf))[(n+1):(2*n)],
+                                        status=as.numeric(model.response(mf))[(2*n+1):(3*n)],
+                                        subcohort = ipdata$subcohort,
+                                        strata_id = strata_id,
+                                        # sampling_weight = ipdata$sampling_weight,
+                                        model.matrix(formula, mf)[,-1])
+      }else{ 
+        ipdata = data.table::data.table(time_out=as.numeric(model.response(mf))[1:n], 
+                                        status=as.numeric(model.response(mf))[(n+1):(2*n)], 
+                                        subcohort = ipdata$subcohort,
+                                        strata_id = strata_id,
+                                        # sampling_weight = ipdata$sampling_weight,
+                                        model.matrix(formula, mf)[,-1])
+        precision <- min(diff(sort(ipdata$time_out))) / 2 # 
+        time_in = ifelse(ipdata$subcohort == 0, ipdata$time_out - precision, 0) 
+        ipdata = data.table(time_in=time_in, ipdata)
+      } 
+      
       # convert irregular risk factor names, e.g. `Group (A,B,C) B` to Group..A.B.C..B
       # this should (and will) apply to all other models...
       ipdata = data.table(data.frame(ipdata)) 
-      control$risk_factor = colnames(ipdata)[-c(1:3)] 
+      control$risk_factor = colnames(ipdata)[-c(1:5)] 
     }
   }else if(control$model=='DisC2o'){
     ipdata = data.table::data.table(treatment = treatment_col,

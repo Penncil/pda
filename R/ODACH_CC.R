@@ -14,26 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # https://style.tidyverse.org/functions.html#naming
 # https://ohdsi.github.io/Hades/codeStyle.html#OHDSI_code_style_for_R
 
 # ODACH_CC.steps<-c('initialize','derive', 'estimate','synthesize')
 # ODACH_CC.family<-'cox'
 
-# control <- list(project_name = 'IARC cancer study',
-#                 step = 'initialize',
-#                 sites = sites,
-#                 heterogeneity = T,
-#                 model = 'ODACH_CC', 
-#                 method='Prentice', # 
-#                 full_cohort_size=NA, # 
-#                 family = 'cox',
-#                 outcome = "status",
-#                 variables = c('age', 'sex'),
-#                 optim_maxit = 100,
-#                 lead_site = 'site1',
-#                 upload_date = as.character(Sys.time()) )
 
 #' @useDynLib pda
 #' @title ODACH_CC initialize
@@ -49,26 +35,22 @@
 #' @keywords internal
 ODACH_CC.initialize <- function(ipdata,control,config){
   # coxph with case-cohort design
-  full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  px = ncol(ipdata) - 3
+  # ipdata columns: time_in, time_out, status, subcohort, strata_id, and covariates
+  # full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
+  px = ncol(ipdata) - 5
   
   # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
-  col_deg = apply(ipdata[,-c(1:3)],2,var)==0    # degenerated X columns...
-  ipdata_i = ipdata[,-(which(col_deg)+3),with=F]
+  col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
+  ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
   ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch... 
-  
-  # formula_i <- as.formula(paste("Surv(time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+")))   
-  # fit_i <- tryCatch(survival::cch(formula_i, data = ipdata_i, subcoh = ~subcohort, id = ~ID, 
-  #                        cohort.size = full_cohort_size, method = control$method), error=function(e) NULL)  
   
   ## 3 ways to do local est: cch, coxph with a tweak of the formula, and cch_pooled
   # to avoid numerical error using cch() indicated by Ali, we use coxph with a tweak of the formula...
   # generally cch, coxph and cch_pooled will generate almost identical b and close var (for continuous X, coxph has smaller S.E. than the other two)
   # but coxph only works for Prentice wt, so will look into it later (and may revert to cch_pooled...)
-  precision <- min(diff(sort(ipdata_i$time))) / 2 #  
-  ipdata_i$time_in = 0
-  ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
-  formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
+  formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", 
+                                paste(control$risk_factor[!col_deg], collapse = "+"), 
+                                "+ strata(strata_id) + cluster(ID)"))
   fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
   
   if(!is.null(fit_i)){
@@ -76,13 +58,13 @@ ODACH_CC.initialize <- function(ipdata,control,config){
     bhat_i = rep(0,px)
     Vhat_i = rep(Inf,px) 
     bhat_i[!col_deg] <- fit_i$coef
-    Vhat_i[!col_deg] <- summary(fit_i)$coef[,"se(coef)"]^2 # dont's use robust var diag(fit_i$var)
+    Vhat_i[!col_deg] <- summary(fit_i)$coef[,"se(coef)"]^2 # don't use robust var diag(fit_i$var)
     
     init <- list(bhat_i = bhat_i,
                  Vhat_i = Vhat_i,  
                  site = config$site_id,
                  site_size = nrow(ipdata),
-                 full_cohort_size = full_cohort_size, 
+                 # full_cohort_size = full_cohort_size, 
                  method = control$method)
     # init$Vhat_i[init$Vhat_i==0] = NA # 20250106
   } else{
@@ -92,7 +74,7 @@ ODACH_CC.initialize <- function(ipdata,control,config){
                  S_i = NA,
                  site = config$site_id,
                  site_size = nrow(ipdata),
-                 full_cohort_size = full_cohort_size, 
+                 # full_cohort_size = full_cohort_size, 
                  method = control$method)
   }
   
@@ -114,38 +96,31 @@ ODACH_CC.initialize <- function(ipdata,control,config){
 #' @return  list(bbar=bbar, site=control$mysite, site_size = nrow(ipdata), logL_D1=logL_D1, logL_D2=logL_D2)
 #' @keywords internal
 ODACH_CC.derive <- function(ipdata,control,config){
-  px <- ncol(ipdata) - 3
+  px <- ncol(ipdata) - 5
   
   # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
-  col_deg = apply(ipdata[,-c(1:3)],2,var)==0    # degenerated X columns...
-  ipdata_i = ipdata[,-(which(col_deg)+3),with=F]
+  col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
+  ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
   ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch...  
-  precision <- min(diff(sort(ipdata_i$time))) / 2 #  
-  ipdata_i$time_in = 0
-  ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
   
   ## grad and hess
   bbar = control$beta_init
-  full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  cc_prep = prepare_case_cohort(list(ipdata), control$method, full_cohort_size)
-  # logL_D1 <- grad_plk(bbar, cc_prep)
-  # logL_D2 <- hess_plk(bbar, cc_prep)
-  logL_D1 <- rcpp_cc_grad_plk(beta = bbar, site_num = 1, 
-               covariate_list = cc_prep$covariate_list,
-               failure_position = cc_prep$failure_position,
-               failure_num = cc_prep$failure_num,
-               risk_sets = cc_prep$risk_sets,
-               risk_set_weights = cc_prep$risk_set_weights)
-  logL_D2 <- rcpp_cc_hess_plk(beta = bbar, site_num = 1,
-                covariate_list = cc_prep$covariate_list,
-                failure_position = cc_prep$failure_position,
-                failure_num = cc_prep$failure_num,
-                risk_sets = cc_prep$risk_sets,
-                risk_set_weights = cc_prep$risk_set_weights)
+  # full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
+  cc_prep = prepare_case_cohort(ipdata_i[,-'ID'])
+  logL_D1 <- rep(0, px) # is it 0？
+  logL_D2 <- matrix(0, px, px)
+  logL_D1[!col_deg] <- rcpp_cc_grad_plk(beta = bbar,  
+                              X = cc_prep$X,
+                              failure_position = cc_prep$failure_position,
+                              failure_num = cc_prep$failure_num,
+                              risk_sets = cc_prep$risk_sets)
+  logL_D2[!col_deg, !col_deg] <- rcpp_cc_hess_plk(beta = bbar,  
+                              X = cc_prep$X,
+                              failure_num = cc_prep$failure_num,
+                              risk_sets = cc_prep$risk_sets)
   
   ## get intermediate (sandwich meat) for robust variance est of ODACH_CC  
-  # fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
-  formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
+  formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
   fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick
   score_resid <- resid(fit_i, type = "score")  # n x p matrix  
   S_i = matrix(0, px, px)   # this is the meat in sandwich var
@@ -153,10 +128,12 @@ ODACH_CC.derive <- function(ipdata,control,config){
   # S_i[!col_deg, !col_deg] <- logL_D2[!col_deg, !col_deg] %*% fit_i$var %*% logL_D2[!col_deg, !col_deg] # Skhat in Yudong's note...
   
   derivatives <- list(bbar=bbar, 
-    site=config$site_id, site_size = nrow(ipdata), 
-    full_cohort_size=full_cohort_size,
-    logL_D1=logL_D1, logL_D2=logL_D2,
-    S_i = S_i)
+                      site=config$site_id, 
+                      site_size = nrow(ipdata), 
+                      # full_cohort_size=full_cohort_size,
+                      logL_D1=logL_D1, 
+                      logL_D2=logL_D2,
+                      S_i = S_i)
   
   return(derivatives)
 }
@@ -176,13 +153,13 @@ ODACH_CC.derive <- function(ipdata,control,config){
 #' @return  list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow(ipdata))
 #' @keywords internal
 ODACH_CC.estimate <- function(ipdata,control,config) {
-  # data sanity check ...
-  # time <- ipdata$time
-  # status <- ipdata$status
-  # X <- as.matrix(ipdata[,-c(1:3)])
-  # n <- length(time)
-  # px <- ncol(X)
-  px <- ncol(ipdata) - 3
+  # data sanity check ... 
+  px <- ncol(ipdata) - 5
+  
+  # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
+  col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
+  ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
+  ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch...  
   # hasTies <- any(duplicated(ipdata$time))
   
   # download derivatives of other sites from the cloud
@@ -197,37 +174,32 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
     N <- N + derivatives_i$site_size
   }
   
-  # initial beta
-  # bbar <- derivatives_i$b_meta
+  # initial beta 
   bbar <- control$beta_init
-  full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  cc_prep = prepare_case_cohort(list(ipdata), control$method, full_cohort_size) 
+  # full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
+  cc_prep = prepare_case_cohort(ipdata_i[,-'ID']) 
   
-  # logL at local site
+  # logL at local site (mo negate or average)
   # logL_local <- function(beta) log_plk(beta, cc_prep)
   # logL_local_D1 <- function(beta) grad_plk(beta, cc_prep)
   # logL_local_D2 <- function(beta) hess_plk(beta, cc_prep)
-  logL_local <- function(beta) rcpp_cc_log_plk(beta, site_num = 1, 
-                             covariate_list = cc_prep$covariate_list,
-                             failure_position = cc_prep$failure_position,
-                             failure_num = cc_prep$failure_num,
-                             risk_sets = cc_prep$risk_sets,
-                             risk_set_weights = cc_prep$risk_set_weights)
-  logL_local_D1 <- function(beta) rcpp_cc_grad_plk(beta, site_num = 1, 
-                              covariate_list = cc_prep$covariate_list,
-                              failure_position = cc_prep$failure_position,
-                              failure_num = cc_prep$failure_num,
-                              risk_sets = cc_prep$risk_sets,
-                              risk_set_weights = cc_prep$risk_set_weights)
-  logL_local_D2 <- function(beta) rcpp_cc_hess_plk(beta, site_num = 1,
-                              covariate_list = cc_prep$covariate_list,
-                              failure_position = cc_prep$failure_position,
-                              failure_num = cc_prep$failure_num,
-                              risk_sets = cc_prep$risk_sets,
-                              risk_set_weights = cc_prep$risk_set_weights)
+  logL_local <- function(beta) rcpp_cc_log_plk(beta,  
+                                               covariate = cc_prep$X,
+                                               failure_position = cc_prep$failure_position,
+                                               failure_num = cc_prep$failure_num,
+                                               risk_sets = cc_prep$risk_sets)
+  logL_local_D1 <- function(beta) rcpp_cc_grad_plk(beta,  
+                                                   X = cc_prep$X,
+                                                   failure_position = cc_prep$failure_position,
+                                                   failure_num = cc_prep$failure_num,
+                                                   risk_sets = cc_prep$risk_sets)
+  logL_local_D2 <- function(beta) rcpp_cc_hess_plk(beta, 
+                                                   X = cc_prep$X,
+                                                   failure_num = cc_prep$failure_num,
+                                                   risk_sets = cc_prep$risk_sets)
   
   # surrogate log-L and its gradient
-  logL_diff_D1 <- logL_all_D1 - logL_local_D1(bbar)  # / N / n
+  logL_diff_D1 <- logL_all_D1 - logL_local_D1(bbar)  # / N / n (???? these loglik are not averaged)
   logL_diff_D2 <- logL_all_D2 - logL_local_D2(bbar)  # / N / n
   logL_tilde <- function(b) -(logL_local(b) + sum(b * logL_diff_D1) + 1/2 * t(b-bbar) %*% logL_diff_D2 %*% (b-bbar)) #  / n
   # logL_tilde_D1 <- function(b) -(logL_local_D1(b) / n + logL_diff_D1 + logL_diff_D2 %*% (b-bbar)) 
@@ -248,8 +220,9 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   Stilde = solve(logL_tilde_D2) %*% control$S_i_sum %*% solve(logL_tilde_D2)
   setilde = sqrt(diag(Stilde))
   
-  surr <- list(bbar=bbar, full_cohort_size=full_cohort_size, 
-               btilde = sol$par, setilde=setilde, Htilde = sol$hessian, site=config$site_id, site_size=nrow(ipdata))
+  surr <- list(# bbar=bbar, # full_cohort_size=full_cohort_size,  
+               btilde = sol$par, setilde=setilde, Htilde = sol$hessian,
+               site=config$site_id, site_size=nrow(ipdata))
   return(surr)
 }
 

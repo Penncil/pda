@@ -1,83 +1,151 @@
+# updated 20251211: 
+# (1) survival outcome with time interval (time_in, time_out)
+# (2) strata within one site: e.g. by sex and center within a country
 
-## prepare calculation for case-cohort design at ONE site
-# the purpose of this function is to "pre-calculate" the weight before calculating the log-likelihood
+# to "pre-calculate" the weight for case-cohort design before calculating the log-lik
 # this would accelerate the subsequent calculation of log-likelihood
 # currently, we only provide Prentice weight; more options will be provided later
-## this is Yudong's weight_CC() in functions_CC_1.R, can take multi-site data, or single-site as a list of length 1
-## data_list contains list of ipdata, with columns: time, status, subcohort, and covariates
+# this is used in ODACH_CC.derive(), ipdata_i contains columns (built-in colnames): 
+# time_in, time_out, status, subcohort, strata_id, and covariates (no ID)
 #' @keywords internal
-prepare_case_cohort <- function(data_list, method, full_cohort_size){
+prepare_case_cohort <- function(ipdata_i){
   # for each site, pre-calculate the failure time points, the risk sets, and the respective weights
   # also, remove those sites with zero events
-  site_to_remove <- c()
-  K <- length(full_cohort_size)
-  failure_num <- rep(NA, K)
-  failure_times <- as.list(rep(NA, K))
-  risk_sets <- as.list(rep(NA, K))
-  risk_set_weights <- as.list(rep(NA, K))
-  covariate_list <- as.list(rep(NA, K))
-  failure_position <- as.list(rep(NA, K))
-  for(k in 1:K){
-    # prepare a list for covariates in matrix format so as to speed up computation of log partial likelihood, gradient, and hessian
-    covariate_list[[k]] <- as.matrix(data_list[[k]][, -c(1:3)]) 
-    # find over which position lies the failure times
-    failure_position[[k]] <- which(data_list[[k]]$status == 1)
-    # find failure times
-    failure_times[[k]] <- data_list[[k]]$time[which(data_list[[k]]$status == 1)]
-    # the number of failures
-    failure_num[k] <- length(failure_times[[k]])
-    
-    if(failure_num[k] == 0){
-      site_to_remove <- c(site_to_remove, k)
-    }else{
-      risk_size <- 0
-      temp_risk <- as.list(rep(NA, failure_num[k]))
-      temp_weight <- as.list(rep(NA, failure_num[k]))
-      for(j in 1:failure_num[k]){
-        my_risk_set1 <- which((data_list[[k]]$subcohort == 1) & (data_list[[k]]$time >= failure_times[[k]][j]))
-        risk_size <- risk_size + length(my_risk_set1)
-        if(method == "Prentice"){
-          my_weight1 <- rep(1, length(my_risk_set1))
-          if(data_list[[k]]$subcohort[which(data_list[[k]]$time == failure_times[[k]][j])] == 0){
-            my_risk_set2 <- which(data_list[[k]]$time == failure_times[[k]][j])
-            my_weight2 <- 1
-          }else{
-            my_risk_set2 <- c()
-            my_weight2 <- c()
-          }
-        } # else if (method == "Barlow")
-        temp_risk[[j]] <- c(my_risk_set1, my_risk_set2)
-        temp_weight[[j]] <- c(my_weight1, my_weight2)
-      }
-      risk_sets[[k]] <- temp_risk
-      risk_set_weights[[k]] <- temp_weight
-      if(risk_size == 0){
-        site_to_remove <- c(site_to_remove, k)
-      }
-    }
-  }
+
+  # covariates in matrix format so as to speed up computation of log partial lik, gradient, and hessian
+  X = as.matrix(ipdata_i[, -c(1:5), drop = FALSE])
+  # find over which position lies the failure times
+  failure_position <- which(ipdata_i$status == 1)
+  # find failure times
+  failure_times <- ipdata_i$time_out[failure_position]
+  # the number of failures (events)
+  failure_num <- length(failure_times)
+  temp_risk <- as.list(rep(NA, failure_num))
   
-  if(length(site_to_remove) > 0){
-    data_list <- data_list[-site_to_remove]
-    full_cohort_size <- full_cohort_size[-site_to_remove]
-    failure_num <- failure_num[-site_to_remove]
-    failure_times <- failure_times[-site_to_remove]
-    failure_position <- failure_position[-site_to_remove]
-    risk_sets <- risk_sets[-site_to_remove]
-    risk_set_weights <- risk_set_weights[-site_to_remove]
-    covariate_list <- covariate_list[-site_to_remove]
-    K <- K - length(site_to_remove)
-  }
-  
-  return(list(# data_list = data_list,
-              full_cohort_size = full_cohort_size,
-              covariate_list = covariate_list,
+  strata_id = ipdata_i$strata_id
+  for(j in 1:failure_num){
+    fpos_j <- failure_position[j]
+    t_j    <- failure_times[j] 
+    idx_strata <- strata_id == strata_id[fpos_j]
+    idx_time   <- (ipdata_i$time_in <= t_j) & (ipdata_i$time_out >= t_j) 
+    temp_risk[[j]] <- which(idx_strata & idx_time)
+  } 
+
+  return(list(X = X,
               failure_position = failure_position,
               failure_num = failure_num,
-              risk_sets = risk_sets,
-              risk_set_weights = risk_set_weights,
-              site_num=K))
+              risk_sets = temp_risk ))
 }
+
+
+## this is Yudong's weight_CC(), can take multi-site data, or single-site as a list of length 1 
+# prepare_case_cohort <- function(data_list, covariate_names, strata_names = c()){
+#   # for each site, pre-calculate the failure time points, the risk sets, and the respective weights
+#   # also, remove those sites with zero events
+#   K <- length(data_list) # K=1 if used at one site
+#   failure_num <- rep(NA, K)
+#   failure_times <- as.list(rep(NA, K))
+#   risk_sets <- as.list(rep(NA, K))
+#   covariate_list <- as.list(rep(NA, K))
+#   failure_position <- as.list(rep(NA, K))
+#   for(k in 1:K){
+#     local_data <- data_list[[k]]
+#     # prepare a list for covariates in matrix format so as to speed up computation of log partial likelihood, gradient, and hessian
+#     covariate_list[[k]] <- as.matrix(local_data[, covariate_names, drop = FALSE]) 
+#     # find over which position lies the failure times
+#     failure_position[[k]] <- which(local_data$censor_ind == 1)
+#     # find failure times
+#     failure_times[[k]] <- local_data$time_out[failure_position[[k]]]
+#     # the number of failures
+#     failure_num[k] <- length(failure_times[[k]])
+#     
+#     local_data[local_data$subcohort == 0, "time_in"] <- local_data[local_data$subcohort == 0, "time_out"] - 1e-6
+#     
+#     if (length(strata_names) == 0L) {
+#       strata_id <- rep.int(1L, nrow(local_data))
+#     } else {
+#       strata_vars <- local_data[, strata_names, drop = FALSE]
+#       if (ncol(strata_vars) == 1L) {
+#         strata_id <- as.integer(factor(strata_vars[[1]]))
+#       } else {
+#         strata_id <- as.integer(interaction(strata_vars, drop = TRUE, lex.order = TRUE))
+#       }
+#     }
+#     
+#     temp_risk <- as.list(rep(NA, failure_num[k]))
+#     for(j in 1:failure_num[k]){
+#       fpos_j <- failure_position[[k]][j]
+#       t_j    <- failure_times[[k]][j]
+#       
+#       idx_strata <- strata_id == strata_id[fpos_j]
+#       idx_time   <- (local_data$time_in <= t_j) & (local_data$time_out >= t_j)
+#       
+#       temp_risk[[j]] <- which(idx_strata & idx_time)
+#     }
+#     risk_sets[[k]] <- temp_risk
+#   }
+#   
+#   return(list(data_list = data_list,
+#               covariate_list = covariate_list,
+#               failure_position = failure_position,
+#               failure_num = failure_num,
+#               risk_sets = risk_sets,
+#               K = K))
+# }
+
+# prepare_case_cohort <- function(data_list, covariate_names, strata_names = c()){
+#   # for each site, pre-calculate the failure time points, the risk sets, and the respective weights
+#   # also, remove those sites with zero events
+#   K <- length(data_list) # K=1 if used at one site
+#   failure_num <- rep(NA, K)
+#   failure_times <- as.list(rep(NA, K))
+#   risk_sets <- as.list(rep(NA, K))
+#   covariate_list <- as.list(rep(NA, K))
+#   failure_position <- as.list(rep(NA, K))
+#   for(k in 1:K){
+#     local_data <- data_list[[k]]
+#     # prepare a list for covariates in matrix format so as to speed up computation of log partial likelihood, gradient, and hessian
+#     covariate_list[[k]] <- as.matrix(local_data[, covariate_names, drop = FALSE]) 
+#     # find over which position lies the failure times
+#     failure_position[[k]] <- which(local_data$censor_ind == 1)
+#     # find failure times
+#     failure_times[[k]] <- local_data$time_out[failure_position[[k]]]
+#     # the number of failures
+#     failure_num[k] <- length(failure_times[[k]])
+#     
+#     local_data[local_data$subcohort == 0, "time_in"] <- local_data[local_data$subcohort == 0, "time_out"] - 1e-6
+#     
+#     if (length(strata_names) == 0L) {
+#       strata_id <- rep.int(1L, nrow(local_data))
+#     } else {
+#       strata_vars <- local_data[, strata_names, drop = FALSE]
+#       if (ncol(strata_vars) == 1L) {
+#         strata_id <- as.integer(factor(strata_vars[[1]]))
+#       } else {
+#         strata_id <- as.integer(interaction(strata_vars, drop = TRUE, lex.order = TRUE))
+#       }
+#     }
+#     
+#     temp_risk <- as.list(rep(NA, failure_num[k]))
+#     for(j in 1:failure_num[k]){
+#       fpos_j <- failure_position[[k]][j]
+#       t_j    <- failure_times[[k]][j]
+#       
+#       idx_strata <- strata_id == strata_id[fpos_j]
+#       idx_time   <- (local_data$time_in <= t_j) & (local_data$time_out >= t_j)
+#       
+#       temp_risk[[j]] <- which(idx_strata & idx_time)
+#     }
+#     risk_sets[[k]] <- temp_risk
+#   }
+#   
+#   return(list(data_list = data_list,
+#               covariate_list = covariate_list,
+#               failure_position = failure_position,
+#               failure_num = failure_num,
+#               risk_sets = risk_sets,
+#               K = K))
+# }
 
 ## below only take input single-site ipdata...
 # prepare_case_cohort <- function(ipdata, full_cohort_size, method){
@@ -126,35 +194,33 @@ prepare_case_cohort <- function(data_list, method, full_cohort_size){
  
 
 # this function calculate the log pseudo-likelihood for ONE site
-# cc_prep is the output of prepare_case_cohort()
+# pars except beta come from prepare_case_cohort()
 #' @keywords internal
-log_plk <- function(beta, cc_prep, site_num) {
-  eta <- cc_prep$covariate_list[[site_num]] %*% beta
+log_plk <- function(beta, covariate, failure_position, failure_num, risk_sets) {
+  eta <- covariate %*% beta
   exp_eta <- exp(eta)
-  res <- sum(eta[cc_prep$failure_position[[site_num]]])
+  res <- sum(eta[failure_position])
   
-  for (j in 1:cc_prep$failure_num[site_num]) {
-    idx <- cc_prep$risk_sets[[site_num]][[j]]
-    weights <- cc_prep$risk_set_weights[[site_num]][[j]]
-    res <- res - log(sum(exp_eta[idx] * weights) + 1e-12)
+  for (j in 1:failure_num) {
+    idx <- risk_sets[[j]]
+    res <- res - log(sum(exp_eta[idx]))
   }
   return(res)
 }
 
+
 # this function calculate the gradient of log pseudo-likelihood for ONE site
-# cc_prep is the output of prepare_case_cohort()
+# pars except beta come from prepare_case_cohort()
 #' @keywords internal
-grad_plk <- function(beta, cc_prep, site_num) {
-  X <- cc_prep$covariate_list[[site_num]]
+grad_plk <- function(beta, X, failure_position, failure_num, risk_sets) {
   eta <- X %*% beta
   exp_eta <- exp(eta)
   
-  grad <- colSums(X[cc_prep$failure_position[[site_num]], , drop = FALSE])
+  grad <- colSums(X[failure_position, , drop = FALSE])
   
-  for (j in 1:cc_prep$failure_num[site_num]) {
-    idx <- cc_prep$risk_sets[[site_num]][[j]]
-    weights <- cc_prep$risk_set_weights[[site_num]][[j]]
-    temp_w <- exp_eta[idx] * weights
+  for (j in 1:failure_num) {
+    idx <- risk_sets[[j]]
+    temp_w <- exp_eta[idx] 
     denom <- sum(temp_w)
     weighted_X <- sweep(X[idx, , drop = FALSE], 1, temp_w, '*')
     grad <- grad - colSums(weighted_X) / denom
@@ -165,19 +231,17 @@ grad_plk <- function(beta, cc_prep, site_num) {
 
 
 # this function calculate the Hessian of log pseudo-likelihood for ONE site
-# cc_prep is the output of prepare_case_cohort()
+# pars except beta come from prepare_case_cohort()
 #' @keywords internal
-hess_plk <- function(beta, cc_prep, site_num) {
-  X <- cc_prep$covariate_list[[site_num]]
+hess_plk <- function(beta, X, failure_num, risk_sets) {
   eta <- X %*% beta
   exp_eta <- exp(eta)
   d <- ncol(X)
   H <- matrix(0, d, d)
   
-  for (j in 1:cc_prep$failure_num[site_num]) {
-    idx <- cc_prep$risk_sets[[site_num]][[j]]
-    weights <- cc_prep$risk_set_weights[[site_num]][[j]]
-    temp_w <- exp_eta[idx] * weights
+  for (j in 1:failure_num) {
+    idx <- risk_sets[[j]]
+    temp_w <- exp_eta[idx]
     denom <- sum(temp_w)
     
     X_sub <- X[idx, , drop = FALSE]
@@ -195,7 +259,7 @@ hess_plk <- function(beta, cc_prep, site_num) {
 
 # this function fits Cox PH to case-cohort (survival::cch) with the pooled multi-site data
 # notice this assumes varying baseline hazard functions across sites
-# cc_prep is the output of prepare_case_cohort()
+# pars except beta come from prepare_case_cohort()
 #' @keywords internal
 cch_pooled <- function(formula, data, subcoh='subcohort', site='site', variables_lev,
                        full_cohort_size, method = "Prentice", optim_method = "BFGS",
