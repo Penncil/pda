@@ -380,11 +380,7 @@ pdaCatalog <- function(task=c('Regression',
 pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
                 upload_without_confirm=F, silent_message=F, digits=16,
                 hosdata=NULL # for dGEM
-<<<<<<< HEAD
 ){ 
-=======
-                ){
->>>>>>> left_truncation
   config <- getCloudConfig(site_id,dir,uri,secret,silent_message)
   mymessage <- function(mes, silent=silent_message) if(silent==F)  message(mes)
   files <- pdaList(config)

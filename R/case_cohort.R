@@ -4,12 +4,7 @@
 # currently, we only provide Prentice weight; more options will be provided later
 ## this is Yudong's weight_CC() in functions_CC_1.R, can take multi-site data, or single-site as a list of length 1
 ## data_list contains list of ipdata, with columns: time, status, subcohort, and covariates
-<<<<<<< HEAD
-#' @keywords internal
-prepare_case_cohort <- function(data_list, method, full_cohort_size){
-=======
 prepare_case_cohort <- function(data_list, control, full_cohort_size) {
->>>>>>> left_truncation
   # for each site, pre-calculate the failure time points, the risk sets, and the respective weights
   # also, remove those sites with zero events
   call_obj <- str2lang(control$outcome)
@@ -215,13 +210,8 @@ hess_plk <- function(beta, cc_prep, site_num) {
 # this function fits Cox PH to case-cohort (survival::cch) with the pooled multi-site data
 # notice this assumes varying baseline hazard functions across sites
 # cc_prep is the output of prepare_case_cohort()
-<<<<<<< HEAD
 #' @keywords internal
 cch_pooled <- function(formula, data, subcoh='subcohort', site='site', variables_lev,
-=======
-#' @export
-cch_pooled <- function(formula, data, subcoh = "subcohort", site = "site", variables_lev,
->>>>>>> left_truncation
                        full_cohort_size, method = "Prentice", optim_method = "BFGS",
                        var_sandwich = T) {
   n <- nrow(data)
