@@ -257,76 +257,76 @@ hess_plk <- function(beta, X, failure_num, risk_sets) {
 
 
 
-# this function fits Cox PH to case-cohort (survival::cch) with the pooled multi-site data
-# notice this assumes varying baseline hazard functions across sites
-# pars except beta come from prepare_case_cohort()
-#' @keywords internal
-cch_pooled <- function(formula, data, subcoh='subcohort', site='site', variables_lev,
-                       full_cohort_size, method = "Prentice", optim_method = "BFGS",
-                       var_sandwich=T){
-  n = nrow(data)
-  site_uniq = unique(data[,site])
-  mf <- model.frame(formula, data, xlev=variables_lev)
-  
-  ipdata = data.table::data.table(site=data[,site],
-                                  time=as.numeric(model.response(mf))[1:n],
-                                  status=as.numeric(model.response(mf))[-c(1:n)],
-                                  subcohort = data[,subcoh],
-                                  model.matrix(formula, mf)[,-1])
-  ipdata = data.table(data.frame(ipdata))
-  risk_factor = colnames(ipdata)[-c(1:4)]
-  
-  # notice here we allow data degeneration (e.g. missing categories in some site)
-  px = ncol(ipdata)-4
-  initial_beta = rep(0, px)
-  names(initial_beta) = names(ipdata)[-c(1:4)]
-  # pool_fun <- function(beta) sum(sapply(site_uniq, function(site_id)
-  #   log_plk(beta, prepare_case_cohort(ipdata[site==site_id,-'site'], method, full_cohort_size[site_id]))))
-  
-  data_split <- split(ipdata, by=site, keep.by=F)
-  cc_prep = prepare_case_cohort(data_split, method, full_cohort_size)
-  K = cc_prep$site_num
-  pool_fun <- function(beta) { 
-    sum(vapply(1:K, function(i) rcpp_cc_log_plk(beta, site_num = i, 
-                                                covariate_list = cc_prep$covariate_list,
-                                                failure_position = cc_prep$failure_position,
-                                                failure_num = cc_prep$failure_num,
-                                                risk_sets = cc_prep$risk_sets,
-                                                risk_set_weights = cc_prep$risk_set_weights), numeric(1)))
-  }
-  
-  result <- optim(par = initial_beta, fn = pool_fun,
-                  control = list(fnscale = -1), method = optim_method, hessian = T)
-  b_pooled = result$par
-  
-  # calculate sandwich var estimate, degenerated data columns are given 0 coefs
-  if(var_sandwich==T){
-    block1 <- result$hessian
-    block2 <- NULL
-    data_split <- split(ipdata, ipdata$site)
-    
-    for(i in 1:length(site_uniq)){
-      site_id <- site_uniq[i]
-      ipdata_i = data_split[[i]]
-      col_deg = apply(ipdata_i[,-c(1:4)],2,var)==0    # degenerated X columns...
-      ipdata_i = ipdata_i[,-(which(col_deg)+4),with=F]
-      # use coxph(Surv(time_in, time, status)~.) to do cch...
-      precision <- min(diff(sort(ipdata_i$time))) / 2 #
-      ipdata_i$time_in = 0
-      ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
-      
-      formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)'))
-      cch_i <- tryCatch(coxph(formula_i, data=cbind(ID=1:nrow(ipdata_i), ipdata_i), init=b_pooled[!col_deg], iter=0), error=function(e) NULL)
-      score_resid <- resid(cch_i, type = "score")  # n x p matrix
-      S_i = matrix(0, px, px)   # this is the meat in sandwich var
-      S_i[!col_deg, !col_deg] <- crossprod(score_resid)
-      
-      block2[[i]] <- S_i
-    }
-    
-    var <- solve(block1) %*% Reduce("+", block2) %*% solve(block1)
-    result$var <- var # this is the output for variance estimates
-  }
-  
-  return(result)
-}
+#' # this function fits Cox PH to case-cohort (survival::cch) with the pooled multi-site data
+#' # notice this assumes varying baseline hazard functions across sites
+#' # pars except beta come from prepare_case_cohort()
+#' #' @keywords internal
+#' cch_pooled <- function(formula, data, subcoh='subcohort', site='site', variables_lev,
+#'                        full_cohort_size, method = "Prentice", optim_method = "BFGS",
+#'                        var_sandwich=T){
+#'   n = nrow(data)
+#'   site_uniq = unique(data[,site])
+#'   mf <- model.frame(formula, data, xlev=variables_lev)
+#'   
+#'   ipdata = data.table::data.table(site=data[,site],
+#'                                   time=as.numeric(model.response(mf))[1:n],
+#'                                   status=as.numeric(model.response(mf))[-c(1:n)],
+#'                                   subcohort = data[,subcoh],
+#'                                   model.matrix(formula, mf)[,-1])
+#'   ipdata = data.table(data.frame(ipdata))
+#'   risk_factor = colnames(ipdata)[-c(1:4)]
+#'   
+#'   # notice here we allow data degeneration (e.g. missing categories in some site)
+#'   px = ncol(ipdata)-4
+#'   initial_beta = rep(0, px)
+#'   names(initial_beta) = names(ipdata)[-c(1:4)]
+#'   # pool_fun <- function(beta) sum(sapply(site_uniq, function(site_id)
+#'   #   log_plk(beta, prepare_case_cohort(ipdata[site==site_id,-'site'], method, full_cohort_size[site_id]))))
+#'   
+#'   data_split <- split(ipdata, by=site, keep.by=F)
+#'   cc_prep = prepare_case_cohort(data_split, method, full_cohort_size)
+#'   K = cc_prep$site_num
+#'   pool_fun <- function(beta) { 
+#'     sum(vapply(1:K, function(i) rcpp_cc_log_plk(beta, site_num = i, 
+#'                                                 covariate_list = cc_prep$covariate_list,
+#'                                                 failure_position = cc_prep$failure_position,
+#'                                                 failure_num = cc_prep$failure_num,
+#'                                                 risk_sets = cc_prep$risk_sets,
+#'                                                 risk_set_weights = cc_prep$risk_set_weights), numeric(1)))
+#'   }
+#'   
+#'   result <- optim(par = initial_beta, fn = pool_fun,
+#'                   control = list(fnscale = -1), method = optim_method, hessian = T)
+#'   b_pooled = result$par
+#'   
+#'   # calculate sandwich var estimate, degenerated data columns are given 0 coefs
+#'   if(var_sandwich==T){
+#'     block1 <- result$hessian
+#'     block2 <- NULL
+#'     data_split <- split(ipdata, ipdata$site)
+#'     
+#'     for(i in 1:length(site_uniq)){
+#'       site_id <- site_uniq[i]
+#'       ipdata_i = data_split[[i]]
+#'       col_deg = apply(ipdata_i[,-c(1:4)],2,var)==0    # degenerated X columns...
+#'       ipdata_i = ipdata_i[,-(which(col_deg)+4),with=F]
+#'       # use coxph(Surv(time_in, time, status)~.) to do cch...
+#'       precision <- min(diff(sort(ipdata_i$time))) / 2 #
+#'       ipdata_i$time_in = 0
+#'       ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time"] - precision
+#'       
+#'       formula_i <- as.formula(paste("Surv(time_in, time, status) ~", paste(risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)'))
+#'       cch_i <- tryCatch(coxph(formula_i, data=cbind(ID=1:nrow(ipdata_i), ipdata_i), init=b_pooled[!col_deg], iter=0), error=function(e) NULL)
+#'       score_resid <- resid(cch_i, type = "score")  # n x p matrix
+#'       S_i = matrix(0, px, px)   # this is the meat in sandwich var
+#'       S_i[!col_deg, !col_deg] <- crossprod(score_resid)
+#'       
+#'       block2[[i]] <- S_i
+#'     }
+#'     
+#'     var <- solve(block1) %*% Reduce("+", block2) %*% solve(block1)
+#'     result$var <- var # this is the output for variance estimates
+#'   }
+#'   
+#'   return(result)
+#' }
