@@ -4,9 +4,7 @@
 \alias{pdaCatalog}
 \title{use this function to guide end-users step-by-step to identify best pda models for their tasks, and set up control.}
 \usage{
-pdaCatalog(task=c('Regression', 'Survival', 'Trial_emulation', 
-'Causal_inference', 'Design_analysis', 'Clustering'), 
-write_json_file_path=getwd(), optim_maxit,optim_method,init_method)
+pdaCatalog(task=c('Regression', 'Survival', 'Trial_emulation', 'Causal_inference', 'Design_analysis', 'Clustering'), write_json_file_path=getwd(), optim_maxit,optim_method,init_method)
 }
 \arguments{
 \item{task}{user-specified task, c('Regression', 'Survival', 'Trial_emulation', 'Causal_inference', 'Design_analysis', 'Clustering'). If no specify, display all models}

@@ -20,6 +20,6 @@ list(btilde = sol$par, Htilde = sol$hessian, site=control$mysite, site_size=nrow
 PDA ODACT surrogate estimation
 }
 \details{
-step-4: construct and solve surrogate logL at the master/lead site
+step-3: construct and solve surrogate logL at the Lead site
 }
 \keyword{internal}

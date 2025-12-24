@@ -4,8 +4,7 @@
 \alias{estimatePool}
 \title{Pooled estimation for COLA-GLM and COLA-GLM-H}
 \usage{
-estimatePool(KSiteIPD, formula, family = "binomial", 
-outcome_name, heter_intercept = FALSE)
+estimatePool(KSiteIPD, formula, family = "binomial", outcome_name, heter_intercept = FALSE)
 }
 \arguments{
 \item{KSiteIPD}{\code{glm} data}

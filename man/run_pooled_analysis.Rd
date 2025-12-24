@@ -4,7 +4,7 @@
 \alias{run_pooled_analysis}
 \title{Function to perform all data processing and pooled stratified analysis}
 \usage{
-run_pooled_analysis(data, outcome_id, outcome_time, sites)
+run_pooled_analysis(data, outcome_id, outcome_time, sites, treatment, xvars)
 }
 \arguments{
 \item{data}{The combined LATTE_ADRD data.}
