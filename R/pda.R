@@ -39,12 +39,12 @@ pdaPut <- function(obj,name,config,upload_without_confirm=F,silent_message=F,dig
   obj_Json <- jsonlite::toJSON(obj, digits = digits)  # RJSONIO::toJSON(tt) keep vec name?
   file_name <- paste0(name, '.json')  
   
-  if(!is.null(config$uri)){
-    mymessage(paste("Put",file_name,"on public cloud:"))
-  }else{
-    mymessage(paste("Put",file_name,"on local directory", config$dir, ':'))
-  }
-  mymessage(obj_Json)
+  # if(!is.null(config$uri)){
+  #   mymessage(paste("Put",file_name,"on public cloud:"))
+  # }else{
+  #   mymessage(paste("Put",file_name,"on local directory", config$dir, ':'))
+  # }
+  # mymessage(obj_Json)
   
   # if(interactive()) {
   if(upload_without_confirm==F) {
@@ -155,7 +155,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=
   } else if (pda_uri!='') {
     config$uri = pda_uri
   } else{
-    mymessage('no cloud uri found! ')
+    # mymessage('no cloud uri found! ')
   }
   
   if(!is.null(dir)) {
@@ -193,7 +193,8 @@ pdaCatalog <- function(task=c('Regression',
                        write_json_file_path=getwd(), 
                        optim_maxit,
                        optim_method,
-                       init_method){
+                       init_method, 
+                       digits=digits){
   # a = Hmisc::list.tree(object, fill = " | ", attr.print = F, size = F, maxlen = 1)     
   # library(data.tree)
   # library(jsonlite)
@@ -338,7 +339,7 @@ pdaCatalog <- function(task=c('Regression',
   control$upload_date = Sys.time()
   
   write_json_file = menu(c("Yes", "No"), title="\nDo you want to write control into a json file at your specified folder? ")  
-  if(write_json_file==1) write(toJSON(control, digits = 4), file=paste0(write_json_file_path, '/control.json'))
+  if(write_json_file==1) write(toJSON(control, digits = digits), file=paste0(write_json_file_path, '/control.json'))
   
   return(control) 
 }
