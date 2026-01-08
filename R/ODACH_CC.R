@@ -44,6 +44,11 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
   ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch... 
   
+  times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
+  precision <- min(diff(times)) / 2
+  ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time_out"] - precision
+
+
   ## 3 ways to do local est: cch, coxph with a tweak of the formula, and cch_pooled
   # to avoid numerical error using cch() indicated by Ali, we use coxph with a tweak of the formula...
   # generally cch, coxph and cch_pooled will generate almost identical b and close var (for continuous X, coxph has smaller S.E. than the other two)
@@ -51,7 +56,7 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", 
                                 paste(control$risk_factor[!col_deg], collapse = "+"), 
                                 "+ strata(strata_id) + cluster(ID)"))
-  fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
+  fit_i <- tryCatch(survival::coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
   
   if(!is.null(fit_i)){
     # for degenerated X, coef=0, var=Inf
@@ -69,15 +74,14 @@ ODACH_CC.initialize <- function(ipdata,control,config){
     # init$Vhat_i[init$Vhat_i==0] = NA # 20250106
   } else{
     warning('survival::coxph() failed!!!')
-    init <- list(bhat_i = NA,
-                 Vhat_i = NA,  
+    init <- list(bhat_i = rep(0,px),
+                 Vhat_i = rep(Inf,px),  
                  S_i = NA,
                  site = config$site_id,
                  site_size = nrow(ipdata),
                  # full_cohort_size = full_cohort_size, 
                  method = control$method)
   }
-  
   return(init)
 }
  
@@ -103,25 +107,66 @@ ODACH_CC.derive <- function(ipdata,control,config){
   ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
   ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch...  
   
+  times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
+  precision <- min(diff(times)) / 2
+  ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time_out"] - precision
+
   ## grad and hess
   bbar = control$beta_init
-  # full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  cc_prep = prepare_case_cohort(ipdata_i[,-'ID'])
+  
+  # cc_prep = prepare_case_cohort(ipdata_i[,-'ID'])
+  cc_prep = prepare_case_cohort(ipdata)
+  full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
+  # cc_prep__ <- prepare_case_cohort__(list(ipdata), control, full_cohort_size)
+
+  # print(cc_prep$X)
+  # print(cc_prep__$covariate_list[[1]])
+  # print(attributes(cc_prep$X))
+  # print(attributes(cc_prep__$covariate_list[[1]]))
+  # print(which(col_deg))
+  
+  # print(identical(cc_prep$X, cc_prep__$covariate_list[[1]][,-which(col_deg),drop=F]))
+  # print(identical(cc_prep$failure_position, cc_prep__$failure_position[[1]]))
+  # print(identical(cc_prep$failure_num, cc_prep__$failure_num[[1]]))
+  # print(identical(cc_prep$risk_sets, cc_prep__$risk_sets[[1]]))
+  
+  # print(bbar)
+  # stop("MES")
+
+
   logL_D1 <- rep(0, px) # is it 0？
   logL_D2 <- matrix(0, px, px)
-  logL_D1[!col_deg] <- rcpp_cc_grad_plk(beta = bbar,  
+  # logL_D1[!col_deg] <- rcpp_cc_grad_plk(beta = bbar,  
+  #                             X = cc_prep$X,
+  #                             failure_position = cc_prep$failure_position,
+  #                             failure_num = cc_prep$failure_num,
+  #                             risk_sets = cc_prep$risk_sets)
+  logL_D1 <- rcpp_cc_grad_plk(beta = bbar,  
                               X = cc_prep$X,
                               failure_position = cc_prep$failure_position,
                               failure_num = cc_prep$failure_num,
                               risk_sets = cc_prep$risk_sets)
-  logL_D2[!col_deg, !col_deg] <- rcpp_cc_hess_plk(beta = bbar,  
+  # print(cc_prep$failure_num)
+  # logL_D2[!col_deg, !col_deg] <- rcpp_cc_hess_plk(beta = bbar,  
+  #                             X = cc_prep$X,
+  #                             failure_num = cc_prep$failure_num,
+  #                             risk_sets = cc_prep$risk_sets)
+  logL_D2 <- rcpp_cc_hess_plk(beta = bbar,  
                               X = cc_prep$X,
                               failure_num = cc_prep$failure_num,
                               risk_sets = cc_prep$risk_sets)
   
+  # print(bbar)
   ## get intermediate (sandwich meat) for robust variance est of ODACH_CC  
   formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
-  fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick
+  fit_i <- tryCatch(survival::coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick
+  # print(fit_i)
+  # print(logL_D2)
+  # stop("MES")
+  # print(ipdata_i)
+  # print(fit_i)
+  # stop("MES")
+
   score_resid <- resid(fit_i, type = "score")  # n x p matrix  
   S_i = matrix(0, px, px)   # this is the meat in sandwich var
   S_i[!col_deg, !col_deg] <- crossprod(score_resid)
@@ -178,6 +223,11 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   bbar <- control$beta_init
   # full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
   cc_prep = prepare_case_cohort(ipdata_i[,-'ID']) 
+  # print(cc_prep$risk_sets[[1]])
+  # print(cc_prep$risk_sets[[348]])
+  # print(cc_prep$failure_num)
+  # print(cc_prep$failure_position)
+  # print(head(cc_prep$X))
   
   # logL at local site (mo negate or average)
   # logL_local <- function(beta) log_plk(beta, cc_prep)
@@ -220,9 +270,14 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   Stilde = solve(logL_tilde_D2) %*% control$S_i_sum %*% solve(logL_tilde_D2)
   setilde = sqrt(diag(Stilde))
   
-  surr <- list(# bbar=bbar, # full_cohort_size=full_cohort_size,  
+  surr <- list(bbar=bbar, #full_cohort_size=full_cohort_size,  
                btilde = sol$par, setilde=setilde, Htilde = sol$hessian,
                site=config$site_id, site_size=nrow(ipdata))
+  # print(cc_prep$risk_set_weights[[1]][[1]])
+  # print(logL_all_D1)
+  # print(logL_all_D2)
+  # print(surr)
+  # stop("MES")
   return(surr)
 }
 
