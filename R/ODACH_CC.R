@@ -114,58 +114,25 @@ ODACH_CC.derive <- function(ipdata,control,config){
   ## grad and hess
   bbar = control$beta_init
   
-  # cc_prep = prepare_case_cohort(ipdata_i[,-'ID'])
   cc_prep = prepare_case_cohort(ipdata)
   full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  # cc_prep__ <- prepare_case_cohort__(list(ipdata), control, full_cohort_size)
-
-  # print(cc_prep$X)
-  # print(cc_prep__$covariate_list[[1]])
-  # print(attributes(cc_prep$X))
-  # print(attributes(cc_prep__$covariate_list[[1]]))
-  # print(which(col_deg))
-  
-  # print(identical(cc_prep$X, cc_prep__$covariate_list[[1]][,-which(col_deg),drop=F]))
-  # print(identical(cc_prep$failure_position, cc_prep__$failure_position[[1]]))
-  # print(identical(cc_prep$failure_num, cc_prep__$failure_num[[1]]))
-  # print(identical(cc_prep$risk_sets, cc_prep__$risk_sets[[1]]))
-  
-  # print(bbar)
-  # stop("MES")
 
 
   logL_D1 <- rep(0, px) # is it 0？
   logL_D2 <- matrix(0, px, px)
-  # logL_D1[!col_deg] <- rcpp_cc_grad_plk(beta = bbar,  
-  #                             X = cc_prep$X,
-  #                             failure_position = cc_prep$failure_position,
-  #                             failure_num = cc_prep$failure_num,
-  #                             risk_sets = cc_prep$risk_sets)
   logL_D1 <- rcpp_cc_grad_plk(beta = bbar,  
                               X = cc_prep$X,
                               failure_position = cc_prep$failure_position,
                               failure_num = cc_prep$failure_num,
                               risk_sets = cc_prep$risk_sets)
-  # print(cc_prep$failure_num)
-  # logL_D2[!col_deg, !col_deg] <- rcpp_cc_hess_plk(beta = bbar,  
-  #                             X = cc_prep$X,
-  #                             failure_num = cc_prep$failure_num,
-  #                             risk_sets = cc_prep$risk_sets)
   logL_D2 <- rcpp_cc_hess_plk(beta = bbar,  
                               X = cc_prep$X,
                               failure_num = cc_prep$failure_num,
                               risk_sets = cc_prep$risk_sets)
   
-  # print(bbar)
   ## get intermediate (sandwich meat) for robust variance est of ODACH_CC  
   formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
   fit_i <- tryCatch(survival::coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick
-  # print(fit_i)
-  # print(logL_D2)
-  # stop("MES")
-  # print(ipdata_i)
-  # print(fit_i)
-  # stop("MES")
 
   score_resid <- resid(fit_i, type = "score")  # n x p matrix  
   S_i = matrix(0, px, px)   # this is the meat in sandwich var
@@ -200,11 +167,6 @@ ODACH_CC.derive <- function(ipdata,control,config){
 ODACH_CC.estimate <- function(ipdata,control,config) {
   # data sanity check ... 
   px <- ncol(ipdata) - 5
-  
-  # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
-  col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
-  ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
-  ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch...  
   # hasTies <- any(duplicated(ipdata$time))
   
   # download derivatives of other sites from the cloud
@@ -221,14 +183,8 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   
   # initial beta 
   bbar <- control$beta_init
-  # full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  cc_prep = prepare_case_cohort(ipdata_i[,-'ID']) 
-  # print(cc_prep$risk_sets[[1]])
-  # print(cc_prep$risk_sets[[348]])
-  # print(cc_prep$failure_num)
-  # print(cc_prep$failure_position)
-  # print(head(cc_prep$X))
-  
+  cc_prep = prepare_case_cohort(ipdata) 
+
   # logL at local site (mo negate or average)
   # logL_local <- function(beta) log_plk(beta, cc_prep)
   # logL_local_D1 <- function(beta) grad_plk(beta, cc_prep)
@@ -273,11 +229,6 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   surr <- list(bbar=bbar, #full_cohort_size=full_cohort_size,  
                btilde = sol$par, setilde=setilde, Htilde = sol$hessian,
                site=config$site_id, site_size=nrow(ipdata))
-  # print(cc_prep$risk_set_weights[[1]][[1]])
-  # print(logL_all_D1)
-  # print(logL_all_D2)
-  # print(surr)
-  # stop("MES")
   return(surr)
 }
 
