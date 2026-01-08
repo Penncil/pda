@@ -27,8 +27,9 @@ prepare_case_cohort <- function(ipdata_i){
     fpos_j <- failure_position[j]
     t_j    <- failure_times[j] 
     idx_strata <- strata_id == strata_id[fpos_j]
-    idx_time   <- (ipdata_i$time_in <= t_j) & (ipdata_i$time_out >= t_j) 
-    temp_risk[[j]] <- which(idx_strata & idx_time)
+    idx_time   <- (ipdata_i$subcohort == 1) & (ipdata_i$time_in <= t_j) & (ipdata_i$time_out >= t_j) 
+    idx_time_f_out   <- (ipdata_i$subcohort == 0) & (ipdata_i$time_out == t_j)
+    temp_risk[[j]] <- c(which(idx_strata & idx_time),which(idx_strata & idx_time_f_out))
   } 
 
   return(list(X = X,
