@@ -39,12 +39,12 @@ pdaPut <- function(obj,name,config,upload_without_confirm=F,silent_message=F,dig
   obj_Json <- jsonlite::toJSON(obj, digits = digits)  # RJSONIO::toJSON(tt) keep vec name?
   file_name <- paste0(name, '.json')  
   
-  # if(!is.null(config$uri)){
-  #   mymessage(paste("Put",file_name,"on public cloud:"))
-  # }else{
-  #   mymessage(paste("Put",file_name,"on local directory", config$dir, ':'))
-  # }
-  # mymessage(obj_Json)
+  if(!is.null(config$uri)){
+    mymessage(paste("Put",file_name,"on public cloud:"))
+  }else{
+    mymessage(paste("Put",file_name,"on local directory", config$dir, ':'))
+  }
+  mymessage(obj_Json)
   
   # if(interactive()) {
   if(upload_without_confirm==F) {
@@ -155,7 +155,7 @@ getCloudConfig <- function(site_id,dir=NULL,uri=NULL,secret=NULL,silent_message=
   } else if (pda_uri!='') {
     config$uri = pda_uri
   } else{
-    # mymessage('no cloud uri found! ')
+    mymessage('no cloud uri found! ')
   }
   
   if(!is.null(dir)) {
