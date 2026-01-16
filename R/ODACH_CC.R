@@ -153,7 +153,9 @@ ODACH_CC.derive <- function(ipdata,control,config){
   # precision <- min(diff(times)) / 2
   # ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
   ipdata$ID = 1:nrow(ipdata) # for running coxph/cch...  
-  formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor, collapse = "+"), '+ cluster(ID)')) 
+  formula_i <- as.formula(
+    paste("Surv(time_in, time_out, status) ~", 
+    paste(control$risk_factor, collapse = "+"), '+ strata(strata_id) + cluster(ID)')) 
   fit_i <- survival::coxph(
     formula_i, 
     data=ipdata, 
@@ -289,7 +291,9 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   # precision <- min(diff(times)) / 2
   # ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
   ipdata$ID = 1:nrow(ipdata) # for running coxph/cch...  
-  formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor, collapse = "+"), '+ cluster(ID)')) 
+  formula_i <- as.formula(
+    paste("Surv(time_in, time_out, status) ~", 
+    paste(control$risk_factor, collapse = "+"), '+ strata(strata_id) + cluster(ID)')) 
   fit_i <- survival::coxph(
     formula_i, 
     data=ipdata, 
