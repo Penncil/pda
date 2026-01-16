@@ -87,12 +87,63 @@ ODACH_CC.initialize <- function(ipdata,control,config){
  
 
 
+#' Compute First Derivative of the Log-Likelihood for a Cox Model
+#'
+#' This function extracts the score residuals from a fitted Cox proportional
+#' hazards model (`coxph` object) and computes the first derivative of the
+#' log-likelihood by summing these score residuals over all observations.
+#'
+#' @param coxph_fit A fitted Cox proportional hazards model object returned by
+#'   `survival::coxph()`.
+#'
+#' @return A numeric vector containing the first derivative of the log-likelihood
+#'   (score function) evaluated at the fitted model parameters.
+#'
+#' @details
+#' The score residuals correspond to the gradient of the log-likelihood with
+#' respect to each model parameter. Summing them provides the overall gradient
+#' vector, which is useful for diagnostics, optimization checks, or integration
+#' into custom estimation procedures.
+#'
+#' @examples
+#' \dontrun{
+#'   library(survival)
+#'   fit <- coxph(Surv(time, status) ~ age + sex, data = lung)
+#'   get_logL_D1(fit)
+#' }
 get_logL_D1 <- function(coxph_fit){
   grad <- colSums(stats::residuals(coxph_fit, type = "score"))
   logL_D1 <- as.vector(grad)
   return(logL_D1)
 }
 
+
+#' Compute Second Derivative (Hessian) of the Log-Likelihood for a Cox Model
+#'
+#' This function computes the observed information matrix (negative Hessian of 
+#' the log-likelihood) for a fitted Cox proportional hazards model. It extracts 
+#' per-event information matrices from `survival::coxph.detail()` and sums them 
+#' to obtain the full observed information matrix evaluated at the fitted model 
+#' parameters.
+#'
+#' @param coxph_fit A fitted Cox proportional hazards model object created by 
+#'   `survival::coxph()`.
+#'
+#' @return A numeric matrix representing the second derivative (Hessian) of the 
+#'   log-likelihood function. The matrix is returned without dimnames.
+#'
+#' @details
+#' The observed information matrix is computed as the negative sum of the 
+#' per-timepoint information matrices produced by `coxph.detail()`. This matrix 
+#' is useful for variance estimation, asymptotic inference, numerical 
+#' optimization procedures, and second‑order approximations of the likelihood.
+#'
+#' @examples
+#' \dontrun{
+#'   library(survival)
+#'   fit <- coxph(Surv(time, status) ~ age + sex, data = lung)
+#'   get_logL_D2(fit)
+#' }
 get_logL_D2 <- function(coxph_fit){
   det <- survival::coxph.detail(coxph_fit, riskmat = FALSE)
   I_total <- apply(det$imat, c(1, 2), sum)
