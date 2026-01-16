@@ -44,10 +44,6 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
   ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch... 
   
-  # times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
-  # precision <- min(diff(times)) / 2
-  # ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time_out"] - precision
-
 
   ## 3 ways to do local est: cch, coxph with a tweak of the formula, and cch_pooled
   # to avoid numerical error using cch() indicated by Ali, we use coxph with a tweak of the formula...
@@ -173,7 +169,6 @@ ODACH_CC.derive <- function(ipdata,control,config){
   bbar = control$beta_init
   
   # cc_prep = prepare_case_cohort(ipdata)
-  # full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
 
 
   # logL_D1 <- rep(0, px) # is it 0？
@@ -188,21 +183,8 @@ ODACH_CC.derive <- function(ipdata,control,config){
   #                             failure_num = cc_prep$failure_num,
   #                             risk_sets = cc_prep$risk_sets)
   
-  # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
-  # col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
-  # ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
-  # ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch...  
   
-  # times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
-  # precision <- min(diff(times)) / 2
-  # ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time_out"] - precision
   ## get intermediate (sandwich meat) for robust variance est of ODACH_CC  
-  # formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
-  # fit_i <- tryCatch(survival::coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick
-
-  # times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
-  # precision <- min(diff(times)) / 2
-  # ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
   ipdata$ID = 1:nrow(ipdata) # for running coxph/cch...  
   formula_i <- as.formula(
     paste("Surv(time_in, time_out, status) ~", 
@@ -214,57 +196,15 @@ ODACH_CC.derive <- function(ipdata,control,config){
     method = "breslow",
     control = survival::coxph.control(iter.max = 0)
     )
-  # y <- survival::Surv(ipdata$time_in, ipdata$time_out, ipdata$status)
-  # X <- cc_prep$X
-  # fit_i__ <- survival::coxph.fit(
-  #   x = X,
-  #   y = y, 
-  #   strata=ipdata$strata,  
-  #   init=bbar, 
-  #   method = "breslow",
-  #   rownames = as.character(seq_len(nrow(X))),
-  #   control = survival::coxph.control(iter.max = 0),)
-  # print(fit_i__$var)
-  # print(logL_D1)
-
-  # grad <- colSums(stats::residuals(fit_i, type = "score"))
-  # logL_D1 <- as.vector(grad)
-  logL_D1 <- get_logL_D1(fit_i)
   
-  # print(as.vector(grad))
-  # print(sum(abs(as.vector(grad)- logL_D1)))
-  # print(as.vector(coef(fit_i)))
-  # print(as.vector(coef(fit_i__)[!col_deg]))
-
-
+  logL_D1 <- get_logL_D1(fit_i)
+  logL_D2 <- get_logL_D2(fit_i)
+  
   score_resid <- resid(fit_i, type = "score")  # n x p matrix  
   S_i <- matrix(0, px, px)   # this is the meat in sandwich var
   # S_i[!col_deg, !col_deg] <- crossprod(score_resid)
   S_i <- crossprod(score_resid)
-  # print(S_i)
-  # print(as.vector(crossprod(resid(fit_i, type = "score"))))
-  # print(sum(abs(S_i- as.vector(crossprod(resid(fit_i__, type = "score"))))))
-  # print(logL_D2)
-  # print(-as.matrix(fit_i__$imat))
-  # print(str(fit_i__))
   
-
-  # det <- survival::coxph.detail(fit_i, riskmat = FALSE)
-  # # print(dim(det$imat))
-  # I_total <- apply(det$imat, c(1, 2), sum)
-  # logL_D2 <- -as.matrix(I_total)
-  # dimnames(logL_D2) <- NULL
-  logL_D2 <- get_logL_D2(fit_i)
-  
-  # print(sum(abs(Hessian - logL_D2)))
-  # I_surv <- Reduce(`+`, det$imat)
-  # H_surv <- -I_surv
-  # print(H_surv)
-
-  # print(logL_D2[1])
-  # print(as.matrix(solve(fit_i__$var))[1])
-  # print(sum(abs(logL_D2[!col_deg, !col_deg]+as.matrix(solve(fit_i__$var[!col_deg, !col_deg])))))
-  # stop("MES")
   # S_i[!col_deg, !col_deg] <- logL_D2[!col_deg, !col_deg] %*% fit_i$var %*% logL_D2[!col_deg, !col_deg] # Skhat in Yudong's note...
   
   derivatives <- list(bbar=bbar, 
@@ -338,9 +278,6 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   logL_tilde <- function(b) -(logL_local(b) + sum(b * logL_diff_D1) + 1/2 * t(b-bbar) %*% logL_diff_D2 %*% (b-bbar)) #  / n
   # logL_tilde_D1 <- function(b) -(logL_local_D1(b) / n + logL_diff_D1 + logL_diff_D2 %*% (b-bbar)) 
   
-  # times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
-  # precision <- min(diff(times)) / 2
-  # ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
   ipdata$ID = 1:nrow(ipdata) # for running coxph/cch...  
   formula_i <- as.formula(
     paste("Surv(time_in, time_out, status) ~", 
@@ -360,45 +297,6 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   logL_local_D2_bbar <- get_logL_D2(fit_i)
   logL_diff_D2 <- logL_all_D2 - logL_local_D2_bbar
   
-  # col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
-  # ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
-  # ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch... 
-  # formula <- as.formula(paste("Surv(time_in, time_out, status) ~", 
-  #                               paste(control$risk_factor[!col_deg], collapse = "+"), 
-  #                               "+ strata(strata_id) + cluster(ID)"))
-  # print(formula)
-  
-  # logL_tilde__ <- function(b){
-  #   fit <- survival::coxph(
-  #   formula_i, 
-  #   data=ipdata, 
-  #   init=b, 
-  #   method = "breslow",
-  #   control = survival::coxph.control(iter.max = 1)
-  #   )
-  #   res <-  -(fit$loglik[2] + sum(b * logL_diff_D1__) + 1/2 * t(b-bbar) %*% logL_diff_D2__ %*% (b-bbar))
-  #   return(res)
-  # }
-#   logL_tilde__ <- function(b) {
-#   fit <- try(
-#     survival::coxph(
-#       formula_i,
-#       data = ipdata,
-#       init = b,
-#       method = "breslow",
-#       control = survival::coxph.control(iter.max = 0)
-#     ),
-#     silent = TRUE
-#   )
-#   if (inherits(fit, "try-error")) {
-#     return(1e100)
-#   }
-#   res <-  -(fit$loglik[2] + sum(b * logL_diff_D1__) + 1/2 * t(b-bbar) %*% logL_diff_D2__ %*% (b-bbar))
-#   return(res)
-# } 
-  
-
-
   # optimize the surrogate logL 
   sol <- optim(par = bbar, 
                fn = logL_tilde,
