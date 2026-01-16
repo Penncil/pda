@@ -44,9 +44,9 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
   ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch... 
   
-  times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
-  precision <- min(diff(times)) / 2
-  ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time_out"] - precision
+  # times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
+  # precision <- min(diff(times)) / 2
+  # ipdata_i[ipdata_i$subcohort == 0, "time_in"] <- ipdata_i[ipdata_i$subcohort == 0, "time_out"] - precision
 
 
   ## 3 ways to do local est: cch, coxph with a tweak of the formula, and cch_pooled
@@ -149,9 +149,9 @@ ODACH_CC.derive <- function(ipdata,control,config){
   # formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
   # fit_i <- tryCatch(survival::coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick
 
-  times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
-  precision <- min(diff(times)) / 2
-  ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
+  # times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
+  # precision <- min(diff(times)) / 2
+  # ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
   ipdata$ID = 1:nrow(ipdata) # for running coxph/cch...  
   formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor, collapse = "+"), '+ cluster(ID)')) 
   fit_i <- survival::coxph(
@@ -285,9 +285,9 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   logL_tilde <- function(b) -(logL_local(b) + sum(b * logL_diff_D1) + 1/2 * t(b-bbar) %*% logL_diff_D2 %*% (b-bbar)) #  / n
   # logL_tilde_D1 <- function(b) -(logL_local_D1(b) / n + logL_diff_D1 + logL_diff_D2 %*% (b-bbar)) 
   
-  times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
-  precision <- min(diff(times)) / 2
-  ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
+  # times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
+  # precision <- min(diff(times)) / 2
+  # ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
   ipdata$ID = 1:nrow(ipdata) # for running coxph/cch...  
   formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor, collapse = "+"), '+ cluster(ID)')) 
   fit_i <- survival::coxph(

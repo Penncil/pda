@@ -686,10 +686,13 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
                                         strata_id = strata_id,
                                         # sampling_weight = ipdata$sampling_weight,
                                         model.matrix(formula, mf)[,-1])
-        precision <- min(diff(sort(ipdata$time_out))) / 2 # 
-        time_in = ifelse(ipdata$subcohort == 0, ipdata$time_out - precision, 0) 
-        ipdata = data.table(time_in=time_in, ipdata)
-      } 
+        ipdata$time_in <- 0
+      }
+      if(control$method == "Prentice"){
+        times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
+        precision <- min(diff(times)) / 2
+        ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
+      }
       
       # convert irregular risk factor names, e.g. `Group (A,B,C) B` to Group..A.B.C..B
       # this should (and will) apply to all other models...
