@@ -659,7 +659,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     if (!is.null(ipdata)){ 
       # create stratum ID with strata_names (e.g. center, sex)
       # this part of code was taken out of prepare_case_cohort()
-      if (is.null(control$strata_names)) {
+      if (is.null(control$strata_names) | length(control$strata_names) == 0) {
         strata_id <- rep.int(1L, nrow(ipdata))
       } else {
         strata_vars <- ipdata[, control$strata_names, drop = F]
