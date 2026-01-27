@@ -38,6 +38,7 @@ control <- list(project_name = 'Lung cancer study',
                 optim_maxit = 100,
                 lead_site = 'site1',
                 init_method = "meta",
+                optim_method = 'BFGS',
                 upload_date = as.character(Sys.time()) )
 
 
