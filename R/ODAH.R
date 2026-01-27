@@ -327,12 +327,14 @@ ODAH.estimate <- function(ipdata,control,config) {
                       fn = logL_tilde_zero,
                       # gr = logL_tilde_D1_zero,
                       hessian = TRUE,
+                      method = control$optim_method,
                       control = list(maxit=control$optim_maxit))
     
     sol_count <- optim(par = bbar_count,
                        fn = logL_tilde_count,
                        # gr = logL_tilde_D1_count,
                        hessian = TRUE,
+                       method = control$optim_method,
                        control = list(maxit=control$optim_maxit))
     
     

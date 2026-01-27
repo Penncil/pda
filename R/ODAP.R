@@ -43,7 +43,8 @@ my.ztpoisson.loglik <- function(betas, X, Y, offset){
 
 my.ztpoisson.fit <- function(X, Y, offset){
   fn <- function(betas) - my.ztpoisson.loglik(betas, X, Y, offset)
-  res <- optim(rep(0, ncol(X)), fn, hessian=T)
+  res <- optim(rep(0, ncol(X)), fn, hessian=T, 
+               method = control$optim_method)
   return(list(b=res$par, b.var=diag(solve(res$hessian))/nrow(X)))
 }
 
@@ -319,6 +320,7 @@ ODAP.estimate <- function(ipdata,control,config) {
                  fn = logL_tilde,
                  # gr = logL_tilde_D1,
                  hessian = TRUE,
+                 method = control$optim_method,
                  control = list(maxit=control$optim_maxit))
     
     if (dist == "quasipoisson") {
@@ -403,6 +405,7 @@ ODAP.estimate <- function(ipdata,control,config) {
                  fn = logL_tilde,
                  # gr = logL_tilde_D1,
                  hessian = TRUE,
+                 method = control$optim_method,
                  control = list(maxit=control$optim_maxit))
     
     if (dist == "ztquasipoisson") {
