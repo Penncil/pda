@@ -40,25 +40,32 @@ ODACH_CC.initialize <- function(ipdata,control,config){
   px = ncol(ipdata) - 5
   
   # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
-  col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
-  ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
-  ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch... 
+  # col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
+  # ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
+  # ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch... 
+  ipdata$ID = 1:nrow(ipdata) # for running coxph/cch... 
   
+
   ## 3 ways to do local est: cch, coxph with a tweak of the formula, and cch_pooled
   # to avoid numerical error using cch() indicated by Ali, we use coxph with a tweak of the formula...
   # generally cch, coxph and cch_pooled will generate almost identical b and close var (for continuous X, coxph has smaller S.E. than the other two)
   # but coxph only works for Prentice wt, so will look into it later (and may revert to cch_pooled...)
+  # formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", 
+  #                               paste(control$risk_factor[!col_deg], collapse = "+"), 
+  #                               "+ strata(strata_id) + cluster(ID)"))
+  # fit_i <- tryCatch(survival::coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
   formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", 
-                                paste(control$risk_factor[!col_deg], collapse = "+"), 
+                                paste(control$risk_factor, collapse = "+"), 
                                 "+ strata(strata_id) + cluster(ID)"))
-  fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T), error=function(e) NULL) 
-  
+  fit_i <- tryCatch(survival::coxph(formula_i, data=ipdata, robust=T), error=function(e) NULL) 
   if(!is.null(fit_i)){
     # for degenerated X, coef=0, var=Inf
     bhat_i = rep(0,px)
     Vhat_i = rep(Inf,px) 
-    bhat_i[!col_deg] <- fit_i$coef
-    Vhat_i[!col_deg] <- summary(fit_i)$coef[,"se(coef)"]^2 # don't use robust var diag(fit_i$var)
+    # bhat_i[!col_deg] <- fit_i$coef
+    # Vhat_i[!col_deg] <- summary(fit_i)$coef[,"se(coef)"]^2 # don't use robust var diag(fit_i$var)
+    bhat_i <- fit_i$coef
+    Vhat_i <- summary(fit_i)$coef[,"se(coef)"]^2 # don't use robust var diag(fit_i$var)
     
     init <- list(bhat_i = bhat_i,
                  Vhat_i = Vhat_i,  
@@ -69,18 +76,83 @@ ODACH_CC.initialize <- function(ipdata,control,config){
     # init$Vhat_i[init$Vhat_i==0] = NA # 20250106
   } else{
     warning('survival::coxph() failed!!!')
-    init <- list(bhat_i = NA,
-                 Vhat_i = NA,  
+    init <- list(bhat_i = rep(0,px),
+                 Vhat_i = rep(Inf,px),  
                  S_i = NA,
                  site = config$site_id,
                  site_size = nrow(ipdata),
                  # full_cohort_size = full_cohort_size, 
                  method = control$method)
   }
-  
   return(init)
 }
  
+
+
+#' Compute First Derivative of the Log-Likelihood for a Cox Model
+#'
+#' This function extracts the score residuals from a fitted Cox proportional
+#' hazards model (`coxph` object) and computes the first derivative of the
+#' log-likelihood by summing these score residuals over all observations.
+#'
+#' @param coxph_fit A fitted Cox proportional hazards model object returned by
+#'   `survival::coxph()`.
+#'
+#' @return A numeric vector containing the first derivative of the log-likelihood
+#'   (score function) evaluated at the fitted model parameters.
+#'
+#' @details
+#' The score residuals correspond to the gradient of the log-likelihood with
+#' respect to each model parameter. Summing them provides the overall gradient
+#' vector, which is useful for diagnostics, optimization checks, or integration
+#' into custom estimation procedures.
+#'
+#' @examples
+#' \dontrun{
+#'   library(survival)
+#'   fit <- coxph(Surv(time, status) ~ age + sex, data = lung)
+#'   get_logL_D1(fit)
+#' }
+get_logL_D1 <- function(coxph_fit){
+  grad <- colSums(stats::residuals(coxph_fit, type = "score"))
+  logL_D1 <- as.vector(grad)
+  return(logL_D1)
+}
+
+
+#' Compute Second Derivative (Hessian) of the Log-Likelihood for a Cox Model
+#'
+#' This function computes the observed information matrix (negative Hessian of 
+#' the log-likelihood) for a fitted Cox proportional hazards model. It extracts 
+#' per-event information matrices from `survival::coxph.detail()` and sums them 
+#' to obtain the full observed information matrix evaluated at the fitted model 
+#' parameters.
+#'
+#' @param coxph_fit A fitted Cox proportional hazards model object created by 
+#'   `survival::coxph()`.
+#'
+#' @return A numeric matrix representing the second derivative (Hessian) of the 
+#'   log-likelihood function. The matrix is returned without dimnames.
+#'
+#' @details
+#' The observed information matrix is computed as the negative sum of the 
+#' per-timepoint information matrices produced by `coxph.detail()`. This matrix 
+#' is useful for variance estimation, asymptotic inference, numerical 
+#' optimization procedures, and second‑order approximations of the likelihood.
+#'
+#' @examples
+#' \dontrun{
+#'   library(survival)
+#'   fit <- coxph(Surv(time, status) ~ age + sex, data = lung)
+#'   get_logL_D2(fit)
+#' }
+get_logL_D2 <- function(coxph_fit){
+  det <- survival::coxph.detail(coxph_fit, riskmat = FALSE)
+  I_total <- apply(det$imat, c(1, 2), sum)
+  logL_D2 <- -as.matrix(I_total)
+  dimnames(logL_D2) <- NULL
+  return(logL_D2)
+}
 
 #' @useDynLib pda
 #' @title Generate pda derivatives
@@ -98,33 +170,47 @@ ODACH_CC.initialize <- function(ipdata,control,config){
 ODACH_CC.derive <- function(ipdata,control,config){
   px <- ncol(ipdata) - 5
   
-  # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
-  col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
-  ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
-  ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch...  
-  
+
   ## grad and hess
   bbar = control$beta_init
-  # full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  cc_prep = prepare_case_cohort(ipdata_i[,-'ID'])
-  logL_D1 <- rep(0, px) # is it 0？
-  logL_D2 <- matrix(0, px, px)
-  logL_D1[!col_deg] <- rcpp_cc_grad_plk(beta = bbar,  
-                              X = cc_prep$X,
-                              failure_position = cc_prep$failure_position,
-                              failure_num = cc_prep$failure_num,
-                              risk_sets = cc_prep$risk_sets)
-  logL_D2[!col_deg, !col_deg] <- rcpp_cc_hess_plk(beta = bbar,  
-                              X = cc_prep$X,
-                              failure_num = cc_prep$failure_num,
-                              risk_sets = cc_prep$risk_sets)
+  
+  # cc_prep = prepare_case_cohort(ipdata)
+
+
+  # logL_D1 <- rep(0, px) # is it 0？
+  # logL_D2 <- matrix(0, px, px)
+  # logL_D1 <- rcpp_cc_grad_plk(beta = bbar,  
+  #                             X = cc_prep$X,
+  #                             failure_position = cc_prep$failure_position,
+  #                             failure_num = cc_prep$failure_num,
+  #                             risk_sets = cc_prep$risk_sets)
+  # logL_D2 <- rcpp_cc_hess_plk(beta = bbar,  
+  #                             X = cc_prep$X,
+  #                             failure_num = cc_prep$failure_num,
+  #                             risk_sets = cc_prep$risk_sets)
+  
   
   ## get intermediate (sandwich meat) for robust variance est of ODACH_CC  
-  formula_i <- as.formula(paste("Surv(time_in, time_out, status) ~", paste(control$risk_factor[!col_deg], collapse = "+"), '+ cluster(ID)')) 
-  fit_i <- tryCatch(coxph(formula_i, data=ipdata_i, robust=T, init=bbar[!col_deg], iter=0), error=function(e) NULL) # 20250326: init/iter trick
+  ipdata$ID = 1:nrow(ipdata) # for running coxph/cch...  
+  formula_i <- as.formula(
+    paste("Surv(time_in, time_out, status) ~", 
+    paste(control$risk_factor, collapse = "+"), '+ strata(strata_id) + cluster(ID)')) 
+  fit_i <- survival::coxph(
+    formula_i, 
+    data=ipdata, 
+    init=bbar, 
+    method = "breslow",
+    control = survival::coxph.control(iter.max = 0)
+    )
+  
+  logL_D1 <- get_logL_D1(fit_i)
+  logL_D2 <- get_logL_D2(fit_i)
+  
   score_resid <- resid(fit_i, type = "score")  # n x p matrix  
-  S_i = matrix(0, px, px)   # this is the meat in sandwich var
-  S_i[!col_deg, !col_deg] <- crossprod(score_resid)
+  S_i <- matrix(0, px, px)   # this is the meat in sandwich var
+  # S_i[!col_deg, !col_deg] <- crossprod(score_resid)
+  S_i <- crossprod(score_resid)
+  
   # S_i[!col_deg, !col_deg] <- logL_D2[!col_deg, !col_deg] %*% fit_i$var %*% logL_D2[!col_deg, !col_deg] # Skhat in Yudong's note...
   
   derivatives <- list(bbar=bbar, 
@@ -155,11 +241,6 @@ ODACH_CC.derive <- function(ipdata,control,config){
 ODACH_CC.estimate <- function(ipdata,control,config) {
   # data sanity check ... 
   px <- ncol(ipdata) - 5
-  
-  # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
-  col_deg = apply(ipdata[,-c(1:5)],2,var)==0    # degenerated X columns...
-  ipdata_i = ipdata[,-(which(col_deg)+5),with=F]
-  ipdata_i$ID = 1:nrow(ipdata_i) # for running coxph/cch...  
   # hasTies <- any(duplicated(ipdata$time))
   
   # download derivatives of other sites from the cloud
@@ -176,9 +257,8 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   
   # initial beta 
   bbar <- control$beta_init
-  # full_cohort_size = control$full_cohort_size[control$sites==config$site_id]
-  cc_prep = prepare_case_cohort(ipdata_i[,-'ID']) 
-  
+  cc_prep = prepare_case_cohort(ipdata) 
+
   # logL at local site (mo negate or average)
   # logL_local <- function(beta) log_plk(beta, cc_prep)
   # logL_local_D1 <- function(beta) grad_plk(beta, cc_prep)
@@ -188,21 +268,40 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
                                                failure_position = cc_prep$failure_position,
                                                failure_num = cc_prep$failure_num,
                                                risk_sets = cc_prep$risk_sets)
-  logL_local_D1 <- function(beta) rcpp_cc_grad_plk(beta,  
-                                                   X = cc_prep$X,
-                                                   failure_position = cc_prep$failure_position,
-                                                   failure_num = cc_prep$failure_num,
-                                                   risk_sets = cc_prep$risk_sets)
-  logL_local_D2 <- function(beta) rcpp_cc_hess_plk(beta, 
-                                                   X = cc_prep$X,
-                                                   failure_num = cc_prep$failure_num,
-                                                   risk_sets = cc_prep$risk_sets)
+  # logL_local_D1 <- function(beta) rcpp_cc_grad_plk(beta,  
+  #                                                  X = cc_prep$X,
+  #                                                  failure_position = cc_prep$failure_position,
+  #                                                  failure_num = cc_prep$failure_num,
+  #                                                  risk_sets = cc_prep$risk_sets)
+  # logL_local_D2 <- function(beta) rcpp_cc_hess_plk(beta, 
+  #                                                  X = cc_prep$X,
+  #                                                  failure_num = cc_prep$failure_num,
+  #                                                  risk_sets = cc_prep$risk_sets)
   
   # surrogate log-L and its gradient
-  logL_diff_D1 <- logL_all_D1 - logL_local_D1(bbar)  # / N / n (???? these loglik are not averaged)
-  logL_diff_D2 <- logL_all_D2 - logL_local_D2(bbar)  # / N / n
+  # logL_diff_D1 <- logL_all_D1 - logL_local_D1(bbar)  # / N / n (???? these loglik are not averaged)
+  # logL_diff_D2 <- logL_all_D2 - logL_local_D2(bbar)  # / N / n
   logL_tilde <- function(b) -(logL_local(b) + sum(b * logL_diff_D1) + 1/2 * t(b-bbar) %*% logL_diff_D2 %*% (b-bbar)) #  / n
   # logL_tilde_D1 <- function(b) -(logL_local_D1(b) / n + logL_diff_D1 + logL_diff_D2 %*% (b-bbar)) 
+  
+  ipdata$ID = 1:nrow(ipdata) # for running coxph/cch...  
+  formula_i <- as.formula(
+    paste("Surv(time_in, time_out, status) ~", 
+    paste(control$risk_factor, collapse = "+"), '+ strata(strata_id) + cluster(ID)')) 
+  fit_i <- survival::coxph(
+    formula_i, 
+    data=ipdata, 
+    init=bbar, 
+    method = "breslow",
+    control = survival::coxph.control(iter.max = 0)
+    )
+  
+
+  logL_local_D1_bbar <- get_logL_D1(fit_i)
+  logL_diff_D1 <- logL_all_D1 - logL_local_D1_bbar
+
+  logL_local_D2_bbar <- get_logL_D2(fit_i)
+  logL_diff_D2 <- logL_all_D2 - logL_local_D2_bbar
   
   # optimize the surrogate logL 
   sol <- optim(par = bbar, 
@@ -215,12 +314,16 @@ ODACH_CC.estimate <- function(ipdata,control,config) {
   # robust var estimate: see Yudong's note
   # setilde = sqrt(diag(solve(sol$hessian))/N)
   # hess of surrogate log-L at btilde, this is slightly diff than Yudong's, to avoid another iteration...
-  logL_tilde_D2 = logL_local_D2(bbar) + logL_diff_D2 
+  # logL_tilde_D2 = logL_local_D2(bbar) + logL_diff_D2 
+  logL_tilde_D2 = logL_local_D2_bbar + logL_diff_D2 
+  # print(sum(abs(logL_tilde_D2-logL_tilde_D2__)))
   # put together
-  Stilde = solve(logL_tilde_D2) %*% control$S_i_sum %*% solve(logL_tilde_D2)
+  # Stilde = solve(logL_tilde_D2) %*% control$S_i_sum %*% solve(logL_tilde_D2)
+  solve_logL_tilde_D2 <- solve(logL_tilde_D2)
+  Stilde = solve_logL_tilde_D2 %*% control$S_i_sum %*% solve_logL_tilde_D2
   setilde = sqrt(diag(Stilde))
   
-  surr <- list(# bbar=bbar, # full_cohort_size=full_cohort_size,  
+  surr <- list(bbar=bbar, #full_cohort_size=full_cohort_size,  
                btilde = sol$par, setilde=setilde, Htilde = sol$hessian,
                site=config$site_id, site_size=nrow(ipdata))
   return(surr)
