@@ -193,7 +193,8 @@ pdaCatalog <- function(task=c('Regression',
                        write_json_file_path=getwd(), 
                        optim_maxit,
                        optim_method,
-                       init_method){
+                       init_method, 
+                       digits=digits){
   # a = Hmisc::list.tree(object, fill = " | ", attr.print = F, size = F, maxlen = 1)     
   # library(data.tree)
   # library(jsonlite)
@@ -338,7 +339,7 @@ pdaCatalog <- function(task=c('Regression',
   control$upload_date = Sys.time()
   
   write_json_file = menu(c("Yes", "No"), title="\nDo you want to write control into a json file at your specified folder? ")  
-  if(write_json_file==1) write(toJSON(control, digits = 4), file=paste0(write_json_file_path, '/control.json'))
+  if(write_json_file==1) write(toJSON(control, digits = digits), file=paste0(write_json_file_path, '/control.json'))
   
   return(control) 
 }
@@ -658,7 +659,7 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
     if (!is.null(ipdata)){ 
       # create stratum ID with strata_names (e.g. center, sex)
       # this part of code was taken out of prepare_case_cohort()
-      if (is.null(control$strata_names)) {
+      if (is.null(control$strata_names) | length(control$strata_names) == 0) {
         strata_id <- rep.int(1L, nrow(ipdata))
       } else {
         strata_vars <- ipdata[, control$strata_names, drop = F]
@@ -685,10 +686,13 @@ pda <- function(ipdata=NULL,site_id,control=NULL,dir=NULL,uri=NULL,secret=NULL,
                                         strata_id = strata_id,
                                         # sampling_weight = ipdata$sampling_weight,
                                         model.matrix(formula, mf)[,-1])
-        precision <- min(diff(sort(ipdata$time_out))) / 2 # 
-        time_in = ifelse(ipdata$subcohort == 0, ipdata$time_out - precision, 0) 
-        ipdata = data.table(time_in=time_in, ipdata)
-      } 
+        ipdata$time_in <- 0
+      }
+      if(control$method == "Prentice"){
+        times <- sort(unique(c(ipdata$time_in, ipdata$time_out)))
+        precision <- min(diff(times)) / 2
+        ipdata[ipdata$subcohort == 0, "time_in"] <- ipdata[ipdata$subcohort == 0, "time_out"] - precision
+      }
       
       # convert irregular risk factor names, e.g. `Group (A,B,C) B` to Group..A.B.C..B
       # this should (and will) apply to all other models...
