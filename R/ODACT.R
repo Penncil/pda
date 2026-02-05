@@ -43,15 +43,15 @@ ODACT.initialize <- function(ipdata,control,config){
   # }
   
   # handle data degeneration (e.g. missing categories in some site). This could be in pda()?
+  px = ncol(ipdata) - 2 
   h = control$bandwidth
   evalt = control$times
   nT = length(evalt)
   col_deg = apply(ipdata[,-c(1:2)],2,var)==0    # degenerated X columns...
   ipdata_i = ipdata[,-(which(col_deg)+2),with=F] 
-  px = ncol(ipdata_i) - 2 
   
   # Cox with beta(t): local constant partial likelihood estimate
-  fit_i <- seq_fit_list(data.frame(ipdata_i), fn=llpl, times=evalt, h=h, betabar=rep(0,px), hessian=T) 
+  fit_i <- seq_fit_list(data.frame(ipdata_i), fn=llpl, times=evalt, h=h, betabar=rep(0, ncol(ipdata_i)-2), hessian=T) 
   
   if(!is.null(fit_i)){
     # for degenerated X, coef=0, var=Inf
@@ -65,7 +65,7 @@ ODACT.initialize <- function(ipdata,control,config){
                  Vhat_i = Vhat_i,   #   
                  site = config$site_id,
                  site_size = nrow(ipdata))
-    init$Vhat_i[init$Vhat_i==0] = NA
+    init$Vhat_i[init$Vhat_i==0] = Inf
   } else{
     init <- list(#T_i = T_i,
                  bhat_i = NA,
