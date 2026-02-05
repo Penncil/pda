@@ -44,9 +44,10 @@ ODAC.initialize <- function(ipdata,control,config){
   
   init <- list(bhat_i = fit_i$coef,
                # not as glm, coxph summary can keep NA's! but vcov fills 0's!
-               Vhat_i = summary(fit_i)$coef[,2]^2,     
+               Vhat_i = summary(fit_i)$coef[,"se(coef)"]^2,     
                site = config$site_id,
                site_size = nrow(ipdata))
+  init$Vhat_i[init$Vhat_i==0] = Inf
   
   # if assume no heterogeneity (i.e. ODAC, not ODACH), then also need unique event times
   if(control$heterogeneity == FALSE){
