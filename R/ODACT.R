@@ -49,16 +49,17 @@ ODACT.initialize <- function(ipdata,control,config){
   nT = length(evalt)
   col_deg = apply(ipdata[,-c(1:2)],2,var)==0    # degenerated X columns...
   ipdata_i = ipdata[,-(which(col_deg)+2),with=F] 
+  px_i = ncol(ipdata_i) - 2 
   
   # Cox with beta(t): local constant partial likelihood estimate
-  fit_i <- seq_fit_list(data.frame(ipdata_i), fn=llpl, times=evalt, h=h, betabar=rep(0, ncol(ipdata_i)-2), hessian=T) 
+  fit_i <- seq_fit_list(data.frame(ipdata_i), fn=llpl, times=evalt, h=h, betabar=rep(0, px_i), hessian=T) 
   
   if(!is.null(fit_i)){
     # for degenerated X, coef=0, var=Inf
     bhat_i = matrix(0,px,nT)    # px * nT 
     Vhat_i = matrix(Inf,px,nT)
     bhat_i[!col_deg,] <- sapply(fit_i, function(a) a$par) 
-    Vhat_i[!col_deg,] <- sapply(fit_i, function(a) diag(solve(a$hessian+diag(1e-7,px))*0.6/h) )  
+    Vhat_i[!col_deg,] <- sapply(fit_i, function(a) diag(solve(a$hessian+diag(1e-7,px_i))*0.6/h) )  
     
     init <- list(#T_i = T_i,
                  bhat_i = bhat_i,
