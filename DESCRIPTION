@@ -2,7 +2,7 @@ Package: pda
 Type: Package
 Title: Privacy-Preserving Distributed Algorithms
 Version: 1.3.2
-Date: 2025-12-06
+Date: 2026-02-05
 Authors@R: c(person("Chongliang", "Luo", role=c("cre"), email ="luocl3009@gmail.com"),
                 person("Rui", "Duan", role="aut"), person("Mackenzie", "Edmondson", role="aut"),
                 person("Jiayi", "Tong", role="aut"), person("Xiaokang", "Liu", role="aut"),
